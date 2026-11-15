@@ -1,0 +1,35 @@
+{
+  "version": "2.5.0",
+  "notes": "Yeni özellikler, performans iyileştirmeleri ve canlı lisans senkronizasyonu eklendi.",
+  "publishedAt": "2026-11-15T12:01:14.953Z",
+  "githubRepo": "emircevikoglu-maker",
+  "tenants": [
+    {
+      "tenantId": "DEFAULT",
+      "displayCode": "PICKYS-MASTER",
+      "businessName": "PICKY'S",
+      "status": "active",
+      "expiresAt": "unlimited",
+      "planType": "lifetime",
+      "licenseKey": "PROPOS-MASTER-UNLIMITED"
+    },
+    {
+      "tenantId": "PICKYSDENEME1",
+      "displayCode": "PICKYSDENEME1",
+      "businessName": "Picky' Deneme",
+      "status": "active",
+      "expiresAt": "2026-12-15T11:31:11.141Z",
+      "planType": "monthly",
+      "licenseKey": "PROPOS-2026-PICKY-ZB9J"
+    },
+    {
+      "tenantId": "MEMHMETBERBER1",
+      "displayCode": "MEMHMETBERBER1",
+      "businessName": "BERBER MEHMER",
+      "status": "active",
+      "expiresAt": "2027-11-15T11:38:23.563Z",
+      "planType": "yearly",
+      "licenseKey": "PROPOS-2026-MEMHM-JHEX"
+    }
+  ]
+}
