@@ -1,0 +1,1016 @@
+{
+    "version": "1.0",
+    "tenantId": "GDRTHDFTAH",
+    "rev": 1795014341838,
+    "exportedAt": "2026-11-18T15:05:41.831Z",
+    "adminPin": "1234",
+    "brandSettings": {
+        "businessName": "mami",
+        "subtitle": "mami",
+        "badgeText": "og",
+        "logoType": "text",
+        "logoText": "MM",
+        "logoEmoji": "💎",
+        "logoImageUrl": "",
+        "currency": "TRY",
+        "themeId": "Ocean",
+        "customPrimary": "#3b82f6",
+        "customSecondary": "#2563eb",
+        "customBg": "#050811",
+        "customPanel": "#0e1525"
+    },
+    "zones": [
+        "Bahçe",
+        "İç Mekan",
+        "Teras",
+        "Paket / Gel-Al"
+    ],
+    "categories": [
+        "Kahveler",
+        "Soğuk İçecekler",
+        "Tatlılar",
+        "Atıştırmalıklar",
+        "Ekstralar"
+    ],
+    "staffList": [
+        {
+            "id": "st-1",
+            "name": "drthdfthdh",
+            "role": "İşletme Sahibi & Kasa",
+            "color": "#10b981",
+            "avatar": "D"
+        }
+    ],
+    "ingredients": [
+        {
+            "id": "ing-1",
+            "name": "Espresso Çekirdeği",
+            "unit": "gr",
+            "stock": 4038,
+            "minLimit": 1000,
+            "unitCost": 0.85
+        },
+        {
+            "id": "ing-2",
+            "name": "Günlük Taze Süt",
+            "unit": "ml",
+            "stock": 12920,
+            "minLimit": 4000,
+            "unitCost": 0.045
+        },
+        {
+            "id": "ing-3",
+            "name": "Filtre Kahve Çekirdeği",
+            "unit": "gr",
+            "stock": 1810,
+            "minLimit": 600,
+            "unitCost": 0.75
+        },
+        {
+            "id": "ing-4",
+            "name": "Karamel Şurubu",
+            "unit": "ml",
+            "stock": 630,
+            "minLimit": 750,
+            "unitCost": 0.35
+        },
+        {
+            "id": "ing-5",
+            "name": "Beyaz Çikolata Sosu",
+            "unit": "ml",
+            "stock": 400,
+            "minLimit": 600,
+            "unitCost": 0.4
+        },
+        {
+            "id": "ing-6",
+            "name": "Çikolata Sosu (Mocha)",
+            "unit": "ml",
+            "stock": 1100,
+            "minLimit": 500,
+            "unitCost": 0.38
+        },
+        {
+            "id": "ing-7",
+            "name": "San Sebastian Dilim",
+            "unit": "adet",
+            "stock": 14,
+            "minLimit": 6,
+            "unitCost": 48
+        },
+        {
+            "id": "ing-8",
+            "name": "Magnolia (Çilekli)",
+            "unit": "adet",
+            "stock": 7,
+            "minLimit": 5,
+            "unitCost": 38
+        },
+        {
+            "id": "ing-9",
+            "name": "Tiramisu Porsiyon",
+            "unit": "adet",
+            "stock": 3,
+            "minLimit": 5,
+            "unitCost": 42
+        },
+        {
+            "id": "ing-10",
+            "name": "Kruvasan (Tereyağlı)",
+            "unit": "adet",
+            "stock": 10,
+            "minLimit": 5,
+            "unitCost": 28
+        },
+        {
+            "id": "ing-11",
+            "name": "Tost Ekmeği & Kaşar/Sucuk Set",
+            "unit": "adet",
+            "stock": 22,
+            "minLimit": 8,
+            "unitCost": 32
+        },
+        {
+            "id": "ing-12",
+            "name": "Takeaway Karton Bardak",
+            "unit": "adet",
+            "stock": 333,
+            "minLimit": 100,
+            "unitCost": 2.2
+        },
+        {
+            "id": "ing-13",
+            "name": "Matcha Tozu (Seremoni)",
+            "unit": "gr",
+            "stock": 234,
+            "minLimit": 100,
+            "unitCost": 3.5
+        },
+        {
+            "id": "ing-14",
+            "name": "Hibiskus & Orman Meyvesi Özü",
+            "unit": "ml",
+            "stock": 1900,
+            "minLimit": 500,
+            "unitCost": 0.25
+        },
+        {
+            "id": "ing-15",
+            "name": "Rize Dökme Çay Yaprağı",
+            "unit": "gr",
+            "stock": 3200,
+            "minLimit": 500,
+            "unitCost": 0.35
+        },
+        {
+            "id": "ing-16",
+            "name": "Türk Kahvesi (Taze Çekim)",
+            "unit": "gr",
+            "stock": 1300,
+            "minLimit": 300,
+            "unitCost": 0.65
+        },
+        {
+            "id": "ing-17",
+            "name": "Cam/Pet Su (330ml)",
+            "unit": "adet",
+            "stock": 95,
+            "minLimit": 24,
+            "unitCost": 4.5
+        }
+    ],
+    "products": [
+        {
+            "id": "prd-17",
+            "name": "Demleme Bardak Çay",
+            "category": "Kahveler",
+            "price": 25,
+            "isQuickFav": true,
+            "image": "🍵",
+            "recipe": [
+                {
+                    "ingredientId": "ing-15",
+                    "amount": 4
+                }
+            ]
+        },
+        {
+            "id": "prd-18",
+            "name": "Türk Kahvesi (Double/Klasik)",
+            "category": "Kahveler",
+            "price": 65,
+            "isQuickFav": true,
+            "image": "☕",
+            "recipe": [
+                {
+                    "ingredientId": "ing-16",
+                    "amount": 10
+                }
+            ]
+        },
+        {
+            "id": "prd-19",
+            "name": "Doğal Kaynak Suyu",
+            "category": "Soğuk İçecekler",
+            "price": 20,
+            "isQuickFav": true,
+            "image": "💧",
+            "recipe": [
+                {
+                    "ingredientId": "ing-17",
+                    "amount": 1
+                }
+            ]
+        },
+        {
+            "id": "prd-1",
+            "name": "Caffè Latte",
+            "category": "Kahveler",
+            "price": 95,
+            "isQuickFav": true,
+            "image": "☕",
+            "recipe": [
+                {
+                    "ingredientId": "ing-1",
+                    "amount": 18
+                },
+                {
+                    "ingredientId": "ing-2",
+                    "amount": 220
+                }
+            ]
+        },
+        {
+            "id": "prd-2",
+            "name": "Americano",
+            "category": "Kahveler",
+            "price": 85,
+            "isQuickFav": true,
+            "image": "🖤",
+            "recipe": [
+                {
+                    "ingredientId": "ing-1",
+                    "amount": 18
+                }
+            ]
+        },
+        {
+            "id": "prd-3",
+            "name": "Flat White",
+            "category": "Kahveler",
+            "price": 105,
+            "image": "🤎",
+            "recipe": [
+                {
+                    "ingredientId": "ing-1",
+                    "amount": 36
+                },
+                {
+                    "ingredientId": "ing-2",
+                    "amount": 160
+                }
+            ]
+        },
+        {
+            "id": "prd-4",
+            "name": "Filtre Kahve",
+            "category": "Kahveler",
+            "price": 75,
+            "image": "🫖",
+            "recipe": [
+                {
+                    "ingredientId": "ing-3",
+                    "amount": 20
+                }
+            ]
+        },
+        {
+            "id": "prd-5",
+            "name": "Cortado",
+            "category": "Kahveler",
+            "price": 90,
+            "image": "🥃",
+            "recipe": [
+                {
+                    "ingredientId": "ing-1",
+                    "amount": 18
+                },
+                {
+                    "ingredientId": "ing-2",
+                    "amount": 100
+                }
+            ]
+        },
+        {
+            "id": "prd-6",
+            "name": "Iced Caramel Macchiato",
+            "category": "Soğuk İçecekler",
+            "price": 115,
+            "image": "🧊",
+            "recipe": [
+                {
+                    "ingredientId": "ing-1",
+                    "amount": 18
+                },
+                {
+                    "ingredientId": "ing-2",
+                    "amount": 200
+                },
+                {
+                    "ingredientId": "ing-4",
+                    "amount": 25
+                },
+                {
+                    "ingredientId": "ing-12",
+                    "amount": 1
+                }
+            ]
+        },
+        {
+            "id": "prd-7",
+            "name": "Iced White Chocolate Mocha",
+            "category": "Soğuk İçecekler",
+            "price": 120,
+            "image": "🥤",
+            "recipe": [
+                {
+                    "ingredientId": "ing-1",
+                    "amount": 18
+                },
+                {
+                    "ingredientId": "ing-2",
+                    "amount": 200
+                },
+                {
+                    "ingredientId": "ing-5",
+                    "amount": 30
+                },
+                {
+                    "ingredientId": "ing-12",
+                    "amount": 1
+                }
+            ]
+        },
+        {
+            "id": "prd-8",
+            "name": "Iced Matcha Latte",
+            "category": "Soğuk İçecekler",
+            "price": 125,
+            "image": "🍵",
+            "recipe": [
+                {
+                    "ingredientId": "ing-13",
+                    "amount": 6
+                },
+                {
+                    "ingredientId": "ing-2",
+                    "amount": 220
+                },
+                {
+                    "ingredientId": "ing-12",
+                    "amount": 1
+                }
+            ]
+        },
+        {
+            "id": "prd-9",
+            "name": "Cool Berry Hibiscus",
+            "category": "Soğuk İçecekler",
+            "price": 105,
+            "image": "🌺",
+            "recipe": [
+                {
+                    "ingredientId": "ing-14",
+                    "amount": 80
+                },
+                {
+                    "ingredientId": "ing-12",
+                    "amount": 1
+                }
+            ]
+        },
+        {
+            "id": "prd-10",
+            "name": "San Sebastian Cheesecake",
+            "category": "Tatlılar",
+            "price": 145,
+            "image": "🍰",
+            "recipe": [
+                {
+                    "ingredientId": "ing-7",
+                    "amount": 1
+                },
+                {
+                    "ingredientId": "ing-6",
+                    "amount": 25
+                }
+            ]
+        },
+        {
+            "id": "prd-11",
+            "name": "Çilekli Magnolia",
+            "category": "Tatlılar",
+            "price": 115,
+            "image": "🍓",
+            "recipe": [
+                {
+                    "ingredientId": "ing-8",
+                    "amount": 1
+                }
+            ]
+        },
+        {
+            "id": "prd-12",
+            "name": "İtalyan Tiramisu",
+            "category": "Tatlılar",
+            "price": 130,
+            "image": "🍮",
+            "recipe": [
+                {
+                    "ingredientId": "ing-9",
+                    "amount": 1
+                }
+            ]
+        },
+        {
+            "id": "prd-13",
+            "name": "Tereyağlı Kruvasan",
+            "category": "Atıştırmalıklar",
+            "price": 85,
+            "image": "🥐",
+            "recipe": [
+                {
+                    "ingredientId": "ing-10",
+                    "amount": 1
+                }
+            ]
+        },
+        {
+            "id": "prd-14",
+            "name": "ProPos Bazlama Tost",
+            "category": "Atıştırmalıklar",
+            "price": 110,
+            "isQuickFav": true,
+            "image": "🥪",
+            "recipe": [
+                {
+                    "ingredientId": "ing-11",
+                    "amount": 1
+                }
+            ]
+        },
+        {
+            "id": "prd-15",
+            "name": "Ekstra Espresso Shot",
+            "category": "Ekstralar",
+            "price": 30,
+            "image": "⚡",
+            "recipe": [
+                {
+                    "ingredientId": "ing-1",
+                    "amount": 18
+                }
+            ]
+        },
+        {
+            "id": "prd-16",
+            "name": "Ekstra Karamel / Çikolata Sos",
+            "category": "Ekstralar",
+            "price": 25,
+            "image": "🍯",
+            "recipe": [
+                {
+                    "ingredientId": "ing-4",
+                    "amount": 15
+                }
+            ]
+        }
+    ],
+    "tables": [
+        {
+            "id": "tbl-1",
+            "name": "Bahçe 1",
+            "zone": "Bahçe",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-2",
+            "name": "Bahçe 2",
+            "zone": "Bahçe",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-3",
+            "name": "Bahçe 3",
+            "zone": "Bahçe",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-4",
+            "name": "Bahçe 4",
+            "zone": "Bahçe",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-5",
+            "name": "Bahçe 5",
+            "zone": "Bahçe",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-6",
+            "name": "Salon 1",
+            "zone": "İç Mekan",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-7",
+            "name": "Salon 2",
+            "zone": "İç Mekan",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-8",
+            "name": "Salon 3",
+            "zone": "İç Mekan",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-9",
+            "name": "Salon 4 (Loca)",
+            "zone": "İç Mekan",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-10",
+            "name": "Bar Masası",
+            "zone": "İç Mekan",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-11",
+            "name": "Teras 1",
+            "zone": "Teras",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-12",
+            "name": "Teras 2",
+            "zone": "Teras",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-13",
+            "name": "Teras 3",
+            "zone": "Teras",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-14",
+            "name": "Gel-Al (Hızlı Kasa 1)",
+            "zone": "Paket / Gel-Al",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-15",
+            "name": "Gel-Al (Hızlı Kasa 2)",
+            "zone": "Paket / Gel-Al",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        },
+        {
+            "id": "tbl-esnaf-fast",
+            "name": "⚡ Hızlı Esnaf / Tezgah",
+            "zone": "Paket / Gel-Al",
+            "status": "empty",
+            "openedAt": null,
+            "staffId": "st-1",
+            "discount": 0,
+            "paidAmount": 0,
+            "items": []
+        }
+    ],
+    "sales": [
+        {
+            "id": "sl-cari-1795014190510",
+            "timestamp": "2026-11-18T15:03:10.510Z",
+            "tableName": "⚡ Hızlı Esnaf / Tezgah ➔ BARGELLO",
+            "staffId": "st-1",
+            "paymentMethod": "Esnaf Cariye Yazıldı",
+            "subtotal": 310,
+            "discount": 31,
+            "total": 279,
+            "items": [
+                {
+                    "id": "oi-1795014183704-liyr",
+                    "productId": "prd-4",
+                    "name": "Filtre Kahve",
+                    "price": 75,
+                    "qty": 1,
+                    "note": ""
+                },
+                {
+                    "id": "oi-1795014184041-hw58",
+                    "productId": "prd-7",
+                    "name": "Iced White Chocolate Mocha",
+                    "price": 120,
+                    "qty": 1,
+                    "note": ""
+                },
+                {
+                    "id": "oi-1795014184318-9ack",
+                    "productId": "prd-6",
+                    "name": "Iced Caramel Macchiato",
+                    "price": 115,
+                    "qty": 1,
+                    "note": ""
+                }
+            ]
+        },
+        {
+            "id": "sl-cari-1795014108183",
+            "timestamp": "2026-11-18T15:01:48.183Z",
+            "tableName": "Bahçe 1 ➔ BARGELLO",
+            "staffId": "st-1",
+            "paymentMethod": "Esnaf Cariye Yazıldı",
+            "subtotal": 240,
+            "discount": 24,
+            "total": 216,
+            "items": [
+                {
+                    "id": "oi-1795014102594-r4wc",
+                    "productId": "prd-11",
+                    "name": "Çilekli Magnolia",
+                    "price": 115,
+                    "qty": 1,
+                    "note": ""
+                },
+                {
+                    "id": "oi-1795014102943-qqe7",
+                    "productId": "prd-8",
+                    "name": "Iced Matcha Latte",
+                    "price": 125,
+                    "qty": 1,
+                    "note": ""
+                }
+            ]
+        },
+        {
+            "id": "sl-cari-1795014092902",
+            "timestamp": "2026-11-18T15:01:32.902Z",
+            "tableName": "Bahçe 1 ➔ BARGELLO",
+            "staffId": "st-1",
+            "paymentMethod": "Esnaf Cariye Yazıldı",
+            "subtotal": 250,
+            "discount": 25,
+            "total": 225,
+            "items": [
+                {
+                    "id": "oi-1795014068038-r5f9",
+                    "productId": "prd-7",
+                    "name": "Iced White Chocolate Mocha",
+                    "price": 120,
+                    "qty": 1,
+                    "note": ""
+                },
+                {
+                    "id": "oi-1795014068775-saro",
+                    "productId": "prd-12",
+                    "name": "İtalyan Tiramisu",
+                    "price": 130,
+                    "qty": 1,
+                    "note": ""
+                }
+            ]
+        },
+        {
+            "id": "sl-1795013961284",
+            "timestamp": "2026-11-18T14:59:21.284Z",
+            "tableName": "Bahçe 4",
+            "staffId": "st-1",
+            "paymentMethod": "Kredi Kartı",
+            "subtotal": 130,
+            "discount": 0,
+            "total": 130,
+            "items": [
+                {
+                    "id": "oi-1795013959955-38e4",
+                    "productId": "prd-18",
+                    "name": "Türk Kahvesi (Double/Klasik)",
+                    "price": 65,
+                    "qty": 2,
+                    "note": ""
+                }
+            ]
+        },
+        {
+            "id": "sl-1795013957658",
+            "timestamp": "2026-11-18T14:59:17.658Z",
+            "tableName": "Bahçe 3",
+            "staffId": "st-1",
+            "paymentMethod": "Kredi Kartı",
+            "subtotal": 195,
+            "discount": 0,
+            "total": 195,
+            "items": [
+                {
+                    "id": "oi-1795013956605-wx6y",
+                    "productId": "prd-18",
+                    "name": "Türk Kahvesi (Double/Klasik)",
+                    "price": 65,
+                    "qty": 3,
+                    "note": ""
+                }
+            ]
+        },
+        {
+            "id": "sl-1795013954608",
+            "timestamp": "2026-11-18T14:59:14.608Z",
+            "tableName": "Bahçe 2",
+            "staffId": "st-1",
+            "paymentMethod": "Nakit",
+            "subtotal": 195,
+            "discount": 0,
+            "total": 195,
+            "items": [
+                {
+                    "id": "oi-1795013952005-5xzn",
+                    "productId": "prd-18",
+                    "name": "Türk Kahvesi (Double/Klasik)",
+                    "price": 65,
+                    "qty": 3,
+                    "note": ""
+                }
+            ]
+        },
+        {
+            "id": "sl-1795013950493",
+            "timestamp": "2026-11-18T14:59:10.493Z",
+            "tableName": "Bahçe 1",
+            "staffId": "st-1",
+            "paymentMethod": "Nakit",
+            "subtotal": 130,
+            "discount": 0,
+            "total": 130,
+            "items": [
+                {
+                    "id": "oi-1795013949224-j6ca",
+                    "productId": "prd-18",
+                    "name": "Türk Kahvesi (Double/Klasik)",
+                    "price": 65,
+                    "qty": 2,
+                    "note": ""
+                }
+            ]
+        },
+        {
+            "id": "sl-1795013947602",
+            "timestamp": "2026-11-18T14:59:07.602Z",
+            "tableName": "Salon 2",
+            "staffId": "st-1",
+            "paymentMethod": "Nakit",
+            "subtotal": 405,
+            "discount": 0,
+            "total": 405,
+            "items": [
+                {
+                    "id": "oi-1795013945312-4hfq",
+                    "productId": "prd-2",
+                    "name": "Americano",
+                    "price": 85,
+                    "qty": 1,
+                    "note": ""
+                },
+                {
+                    "id": "oi-1795013945944-bjq0",
+                    "productId": "prd-11",
+                    "name": "Çilekli Magnolia",
+                    "price": 115,
+                    "qty": 1,
+                    "note": ""
+                },
+                {
+                    "id": "oi-1795013946153-7an7",
+                    "productId": "prd-13",
+                    "name": "Tereyağlı Kruvasan",
+                    "price": 85,
+                    "qty": 1,
+                    "note": ""
+                },
+                {
+                    "id": "oi-1795013946362-4ozd",
+                    "productId": "prd-7",
+                    "name": "Iced White Chocolate Mocha",
+                    "price": 120,
+                    "qty": 1,
+                    "note": ""
+                }
+            ]
+        },
+        {
+            "id": "sl-1795013943865",
+            "timestamp": "2026-11-18T14:59:03.865Z",
+            "tableName": "Bahçe 1",
+            "staffId": "st-1",
+            "paymentMethod": "Nakit",
+            "subtotal": 415,
+            "discount": 0,
+            "total": 415,
+            "items": [
+                {
+                    "id": "oi-1795013941909-zhrh",
+                    "productId": "prd-6",
+                    "name": "Iced Caramel Macchiato",
+                    "price": 115,
+                    "qty": 1,
+                    "note": ""
+                },
+                {
+                    "id": "oi-1795013942326-h0vo",
+                    "productId": "prd-7",
+                    "name": "Iced White Chocolate Mocha",
+                    "price": 120,
+                    "qty": 1,
+                    "note": ""
+                },
+                {
+                    "id": "oi-1795013942560-dngx",
+                    "productId": "prd-4",
+                    "name": "Filtre Kahve",
+                    "price": 75,
+                    "qty": 1,
+                    "note": ""
+                },
+                {
+                    "id": "oi-1795013942778-gv6q",
+                    "productId": "prd-3",
+                    "name": "Flat White",
+                    "price": 105,
+                    "qty": 1,
+                    "note": ""
+                }
+            ]
+        }
+    ],
+    "expenses": [],
+    "esnafList": [
+        {
+            "id": "esn-1795014054596",
+            "name": "BARGELLO",
+            "shopType": "Çevre Esnaf",
+            "phone": "SGSGSG",
+            "discountRate": 10,
+            "balance": 720,
+            "note": "",
+            "transactions": [
+                {
+                    "id": "etr-1795014190510",
+                    "type": "charge",
+                    "timestamp": "2026-11-18T15:03:10.510Z",
+                    "staffId": "st-1",
+                    "amount": 279,
+                    "items": [
+                        {
+                            "name": "Filtre Kahve",
+                            "qty": 1,
+                            "price": 75,
+                            "note": ""
+                        },
+                        {
+                            "name": "Iced White Chocolate Mocha",
+                            "qty": 1,
+                            "price": 120,
+                            "note": ""
+                        },
+                        {
+                            "name": "Iced Caramel Macchiato",
+                            "qty": 1,
+                            "price": 115,
+                            "note": ""
+                        }
+                    ],
+                    "note": "⚡ Hızlı Esnaf / Tezgah adisyonu"
+                },
+                {
+                    "id": "etr-1795014108182",
+                    "type": "charge",
+                    "timestamp": "2026-11-18T15:01:48.182Z",
+                    "staffId": "st-1",
+                    "amount": 216,
+                    "items": [
+                        {
+                            "name": "Çilekli Magnolia",
+                            "qty": 1,
+                            "price": 115,
+                            "note": ""
+                        },
+                        {
+                            "name": "Iced Matcha Latte",
+                            "qty": 1,
+                            "price": 125,
+                            "note": ""
+                        }
+                    ],
+                    "note": "Bahçe 1 adisyonu"
+                },
+                {
+                    "id": "etr-1795014092902",
+                    "type": "charge",
+                    "timestamp": "2026-11-18T15:01:32.902Z",
+                    "staffId": "st-1",
+                    "amount": 225,
+                    "items": [
+                        {
+                            "name": "Iced White Chocolate Mocha",
+                            "qty": 1,
+                            "price": 120,
+                            "note": ""
+                        },
+                        {
+                            "name": "İtalyan Tiramisu",
+                            "qty": 1,
+                            "price": 130,
+                            "note": ""
+                        }
+                    ],
+                    "note": "BERKEYE KESİNLİKLE İNDİRİM UYGULAMA"
+                }
+            ]
+        }
+    ],
+    "updatedBy": "dev-6oorkjx"
+}

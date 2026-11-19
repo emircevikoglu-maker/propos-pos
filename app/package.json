@@ -1,0 +1,10 @@
+{
+  "name": "propos-enterprise-pos",
+  "version": "2.5.0",
+  "description": "ProPos — Modüler React & PHP Kurumsal POS ve ERP Sistemi",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.js",
+    "serve": "php -S 0.0.0.0:8586 backend/router.php"
+  }
+}

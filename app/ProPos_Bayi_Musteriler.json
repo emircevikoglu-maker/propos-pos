@@ -1,0 +1,30 @@
+[
+    {
+        "tenantId": "DEFAULT",
+        "displayCode": "PICKYS-MASTER",
+        "businessName": "PICKY'S",
+        "ownerName": "Kurucu / Ana Isletme",
+        "adminPin": "1234",
+        "licenseKey": "PROPOS-MASTER-UNLIMITED",
+        "planType": "lifetime",
+        "status": "active",
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "unlimited",
+        "themeId": "emerald",
+        "currency": "TRY"
+    },
+    {
+        "tenantId": "GDRTHDFTAH",
+        "displayCode": "GDRTHDFTAH",
+        "businessName": "wsergydrthdf",
+        "ownerName": "drthdfthdh",
+        "adminPin": "1234",
+        "licenseKey": "PROPOS-2026-GDRTH-7TRV",
+        "planType": "yearly",
+        "status": "active",
+        "createdAt": "2026-11-18T14:35:17.686Z",
+        "expiresAt": "2027-11-18T14:35:17.686Z",
+        "themeId": "emerald",
+        "currency": "TRY"
+    }
+]
