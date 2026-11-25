@@ -23,6 +23,11 @@ alter table public.propos_registry     enable row level security;
 revoke all on public.propos_tenant_state from anon, authenticated;
 revoke all on public.propos_registry     from anon, authenticated;
 
+-- Yeni Supabase projelerinde service_role'e otomatik yetki verilmeyebilir: açıkça ver (yalnızca sunucu bu rolü kullanır).
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.propos_tenant_state to service_role;
+grant select, insert, update, delete on public.propos_registry     to service_role;
+
 -- Keepalive: projenin duraklatılmaması için günlük çağrılır. Hiçbir veri döndürmez (sabit 1).
 create or replace function public.propos_keepalive() returns integer
 language sql stable security definer set search_path = public as $$ select 1 $$;
