@@ -3,6 +3,17 @@
 Biçim: [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/). Sürüm numarası `package.json` ile birlikte artar.
 Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 
+## [3.5.1] — 2026-11-25
+### Düzeltildi
+- CORS: `PROPOS_CORS_ORIGIN` ile ayrı alan adından erişimde ön kontrol (OPTIONS) `Cache-Control`/`Pragma` başlıklarına izin vermiyordu; `fetch({cache:"no-store"})` bu başlıkları eklediği için tarayıcı istekleri engelliyordu. Başlık izin listesi genişletildi, `Retry-After` açığa çıkarıldı, `Access-Control-Max-Age` eklendi.
+- `/api/keepalive` ön kontrolü de `Content-Type`/`Cache-Control`/`Pragma` başlıklarına izin verir.
+### Değişti
+- `PROPOS_CORS_ORIGIN` tek köken, virgülle ayrılmış liste ya da `*` kabul eder; liste verilirse yalnızca istek kökeni listedeyse yansıtılır (`Vary: Origin`).
+### Dokümantasyon
+- `docs/IDEAS.md` (fikir havuzu, 24 madde), `docs/API.md` (uç sözleşmesi), README ve CLAUDE.md kodla hizalandı (Supabase, çevrimdışı, PWA, ortam değişkenleri).
+### Testler
+- CORS ön kontrol testi: liste, başlık izni, yabancı köken, keepalive. Toplam 358.
+
 ## [3.5.0] — 2026-11-25
 ### Eklendi
 - Çevrimdışı çalışma: internet kopunca satış sürer; değişiklikler IndexedDB'de kalıcıdır, bağlantı gelince otomatik gönderilir. Üst çubukta "Çevrimdışı · bekleyen var". Tarayıcıda doğrulandı: sunucu kapatıldı → satış → sayfa yeniden açıldı (veri yerinde) → sunucu açıldı → sunucuya ulaştı.

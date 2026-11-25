@@ -259,3 +259,30 @@ t('apply-update (kurucu): HTML olmayan içerik reddedilir; yalnızca dist/ için
     assertContains($marker, jget(posUrl(), '/')['body'], 'test dist klasörüne yazılmalı');
     assertNotContains($marker, jget(controlUrl(), '/')['body'], 'panel etkilenmemeli');
 });
+
+t('CORS: PROPOS_CORS_ORIGIN listesi — ön kontrol Cache-Control/Pragma/X-ProPos-Token izni, yalnızca listedeki köken yansır', function () {
+    $php = PHP_BINARY;
+    $dir = tmpDir('cors');
+    $port = 0;
+    $s = @stream_socket_server('tcp://127.0.0.1:0', $en, $es);
+    if ($s) { $port = (int)explode(':', stream_socket_get_name($s, false))[1]; fclose($s); }
+    assertTrue($port > 0, 'boş port bulunamadı');
+    $env = array_merge(getenv(), ['PROPOS_DATA_DIR' => $dir, 'PROPOS_NO_DOTENV' => '1', 'PROPOS_CORS_ORIGIN' => 'https://app.example, https://pos.example/']);
+    $router = realpath(__DIR__ . '/../../../backend/router.php');
+    $proc = proc_open([$php, '-S', "127.0.0.1:$port", $router], [0 => ['pipe', 'r'], 1 => ['file', $dir . '/o.log', 'w'], 2 => ['file', $dir . '/e.log', 'w']], $pipes, null, $env);
+    try {
+        $base = "http://127.0.0.1:$port";
+        for ($i = 0; $i < 50; $i++) { $c = @fsockopen('127.0.0.1', $port, $en, $es, 0.2); if ($c) { fclose($c); break; } usleep(100000); }
+        $o = http($base, 'OPTIONS', '/api/sync', ['Origin' => 'https://pos.example', 'Access-Control-Request-Method' => 'POST', 'Access-Control-Request-Headers' => 'content-type,x-propos-token,cache-control,pragma']);
+        assertSame('https://pos.example', $o['headers']['access-control-allow-origin'] ?? null);
+        $allow = strtolower($o['headers']['access-control-allow-headers'] ?? '');
+        foreach (['content-type', 'x-propos-token', 'cache-control', 'pragma'] as $h) assertContains($h, $allow, "izin verilen başlık: $h");
+        assertContains('retry-after', strtolower($o['headers']['access-control-expose-headers'] ?? ''));
+        $x = http($base, 'GET', '/api/info', ['Origin' => 'https://evil.example']);
+        assertFalse(isset($x['headers']['access-control-allow-origin']), 'listede olmayan köken yansıtılmamalı');
+        $k = http($base, 'OPTIONS', '/api/keepalive', ['Origin' => 'https://x.example', 'Access-Control-Request-Method' => 'GET', 'Access-Control-Request-Headers' => 'cache-control']);
+        assertContains('cache-control', strtolower($k['headers']['access-control-allow-headers'] ?? ''));
+    } finally {
+        if (is_resource($proc)) proc_terminate($proc);
+    }
+});

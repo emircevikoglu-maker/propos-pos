@@ -213,6 +213,8 @@ class ApiController
     {
         header('Access-Control-Allow-Origin: *');
         header('Access-Control-Allow-Methods: GET, POST, HEAD, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Cache-Control, Pragma');
+        header('Access-Control-Expose-Headers: Retry-After');
         header('Access-Control-Max-Age: 86400');
         if ($method === 'OPTIONS') {
             http_response_code(204);

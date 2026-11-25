@@ -120,13 +120,26 @@ bootstrapStorage();
  */
 function sendApiHeaders(): void
 {
-    $origin = getenv('PROPOS_CORS_ORIGIN');
-    if ($origin) {
-        header('Access-Control-Allow-Origin: ' . $origin);
-        header('Vary: Origin');
-        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-        header('Access-Control-Allow-Headers: Content-Type, X-ProPos-Token');
-        header('Access-Control-Expose-Headers: Retry-After');
+    // PROPOS_CORS_ORIGIN: tek köken, virgülle ayrılmış liste ya da "*". Liste verilirse yalnızca istek kökeni listedeyse yansıtılır.
+    $allowed = trim((string)getenv('PROPOS_CORS_ORIGIN'));
+    if ($allowed !== '') {
+        $reqOrigin = (string)($_SERVER['HTTP_ORIGIN'] ?? '');
+        $list = array_values(array_filter(array_map('trim', explode(',', $allowed))));
+        $out = null;
+        if (in_array('*', $list, true)) {
+            $out = '*';
+        } elseif ($reqOrigin !== '' && in_array(rtrim($reqOrigin, '/'), array_map(fn($o) => rtrim($o, '/'), $list), true)) {
+            $out = $reqOrigin;
+        }
+        if ($out !== null) {
+            header('Access-Control-Allow-Origin: ' . $out);
+            header('Vary: Origin');
+            header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+            // fetch({cache:"no-store"}) tarayıcıda Cache-Control/Pragma istek başlığı ekler; ön kontrol bunlara da izin vermeli.
+            header('Access-Control-Allow-Headers: Content-Type, X-ProPos-Token, Cache-Control, Pragma');
+            header('Access-Control-Expose-Headers: Retry-After');
+            header('Access-Control-Max-Age: 600');
+        }
     }
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: SAMEORIGIN');

@@ -1,7 +1,7 @@
 # ProPos — Yapılacaklar (planlar)
 
 Biçim: her plan bir hedef + adımlar. `[ ]` yapılacak, `[x]` bitti, `[~]` kısmen, `[?]` karar bekliyor.
-Boyut: S (< 1 saat), M (yarım gün), L (1-2 gün), XL (daha fazla). Ayrıntı ve gerekçe: `docs/NOTES.md`. Bitenler: `CHANGELOG.md`.
+Boyut: S (< 1 saat), M (yarım gün), L (1-2 gün), XL (daha fazla). Ayrıntı ve gerekçe: `docs/NOTES.md`. Fikir havuzu: `docs/IDEAS.md` (İ-n). Bitenler: `CHANGELOG.md`.
 Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 
 ## Sıra (öneri)
@@ -131,6 +131,7 @@ Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 - [ ] Geri bildirimleri panelde ayrı sekmede listele/filtrele — S
 
 ## P8 — Güvenlik / üretim
+- [x] CORS: ön kontrol (preflight) `Cache-Control`/`Pragma` başlıklarını reddediyordu (fetch `cache:"no-store"`); `PROPOS_CORS_ORIGIN` artık virgüllü liste/`*` kabul eder, yalnızca listedeki köken yansır (3.5.1)
 - [ ] HTTPS zorunlu; HSTS — S
 - [ ] Ters vekil arkasında güvenilir `X-Forwarded-For` (hız sınırı + kilit IP'ye bağlı) — S, VDS'e geçmeden ŞART
 - [ ] POS'a CSP; QR'ı yerel üret (api.qrserver.com'a LAN adresi gidiyor) — S

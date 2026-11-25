@@ -10,6 +10,8 @@ Restoran/kafe POS + bayi/lisans yönetimi. Türkçe arayüz. Ürün olarak satı
 ## Kayıt dosyaları (her iş sonunda güncelle)
 - `TODO.md`: planlar (P0…P10), `[ ] [x] [~] [?]`, boyut S/M/L/XL. Yeni iş önce buraya plan olarak yazılır.
 - `CHANGELOG.md`: her değişiklik satırı (Eklendi/Değişti/Düzeltildi/Güvenlik/Kaldırıldı); sürüm `package.json` ile birlikte.
+- `docs/IDEAS.md`: fikir havuzu (İ-n); fikir iş sırasında araya sokulmaz, buraya yazılır.
+- `docs/API.md`: uç sözleşmesi + ortam değişkenleri; uç değişince aynı işte güncelle. README/CLAUDE.md kodu yansıtmalı.
 - `docs/NOTES.md`: kararlar, gerekçeler, teşhisler, fikir değerlendirmeleri, açık sorular.
 - Token kuralı: ağır düşünme dışındaki token-yüklü işler önce plana yazılır; tasarım prototipi gibi bağımsız işler ayrı oturuma.
 
@@ -27,13 +29,13 @@ Restoran/kafe POS + bayi/lisans yönetimi. Türkçe arayüz. Ürün olarak satı
 ## Mevcut yapı
 - `src/` React 18: `context/PosContext.jsx` (tek büyük context — bölünecek), `components/views/*`, `components/modals/*`,
   `components/auth/` (DeviceGate, PairingScreen, PinPad), `components/pos/OptionPicker`, `components/settings/ProductOptionsEditor`,
-  `services/apiService.js`, `utils/productOptions.js` (çeşit/fiyat saf mantığı), `admin/` (kontrol paneli: AdminApp, adminApi, validation — POS paketine girmez).
+  `services/{apiService,realtime,merge,syncEngine,localDb}.js` (eşitleme/çevrimdışı), `pwa/` (service worker, kayıt, ikonlar), `design/` (tokenlar, skin.css, kutlamalar), `utils/productOptions.js` (çeşit/fiyat saf mantığı), `admin/` (kontrol paneli: AdminApp, adminApi, validation — POS paketine girmez).
 - `backend/`: `bootstrap.php` (ortak yükleyici; müşteri paketine giren dosyaları ister), `router.php` (POS), `control.php` (panel, ayrı giriş),
   `static.php`, `config.php` (`qs()` güvenli sorgu okuyucu, env ayarları), `Controllers/{Api,Control}Controller.php`,
-  `Services/{Auth,Tenant,Pin,Package}Service.php`, `Throttle.php` (token bucket + hata sayacı, dosya tabanlı), `ZipBuilder.php`.
+  `Services/{Auth,Tenant,Pin,Package,Throttle,Realtime,ZipBuilder}.php`, `Services/Storage/{Storage,FileStorage,SupabaseStorage,CachedStorage,StorageFactory,StorageUnavailable}.php`, `env.php` (.env), `cron/keepalive.php`. Depo: `PROPOS_STORAGE=file|supabase`; tenant yazımında `withTenantLock` + `baseRev`.
 - `tests/`: `run.py` (koşucu), `php/index.php` + `php/lib.php` (bağımlılıksız çatı, ham soket HTTP), `php/suites/*`, `react/*.test.js(x)`.
 - Veri: `data/` (web'e kapalı): `default.json`, `tenants/<ID>.json`, `registry.json`, `config.json`, `audit.log`, `backups/`, `ratelimit/`.
-- Ortam: `PROPOS_DATA_DIR`, `PROPOS_DIST_DIR`, `PROPOS_FOUNDER_KEY`, `PROPOS_MAX_DB_BYTES`, `PROPOS_RL_POLL|ACTION|IP|CONTROL` ("kapasite:dolum/sn"), `PROPOS_RL_PENALTY`, `PROPOS_LOGIN_DELAY_MS`, `PROPOS_DEBUG` (yoksa hata çıktısı kapalı), `PROPOS_CORS_ORIGIN`.
+- Ortam: `PROPOS_DATA_DIR`, `PROPOS_DIST_DIR`, `PROPOS_FOUNDER_KEY`, `PROPOS_MAX_DB_BYTES`, `PROPOS_RL_POLL|ACTION|IP|CONTROL` ("kapasite:dolum/sn"), `PROPOS_RL_PENALTY`, `PROPOS_LOGIN_DELAY_MS`, `PROPOS_DEBUG` (yoksa hata çıktısı kapalı), `PROPOS_CORS_ORIGIN` (virgüllü liste/`*`), `PROPOS_STORAGE`, `PROPOS_CACHE[_TTL]`, `PROPOS_REALTIME`, `SUPABASE_*`. Tam liste: `docs/API.md`.
 
 ## Giriş modeli (3 katman)
 1. Cihaz eşleştirme (bir kez): işletme kodu + bağlantı anahtarı → `localStorage`. Eşleşmemiş cihazda POS hiç açılmaz (DeviceGate). Anahtar yenilenince (panel) eski anahtar VE onunla alınmış tüm oturumlar anında düşer (token'da anahtar parmak izi `k`).
@@ -62,14 +64,15 @@ Restoran/kafe POS + bayi/lisans yönetimi. Türkçe arayüz. Ürün olarak satı
 - Ana işletme verisi/PIN'i artık her derlemeye ve müşteri paketine gömülmüyor.
 - Yoklama 2 sn + `since`; bold normalizasyonu; Tailwind CDN → derlenmiş CSS; Z raporu (Finans sekmesi).
 
-## Bilinen riskler (öncelik sırasıyla)
-1. `localStorage` ~5 MB: satış ~317 B → 100 satış/gün ile birkaç ayda dolar. IndexedDB'ye taşınmalı.
-2. Whole-state senkron: satışlar sınırsız büyüyor; `PROPOS_MAX_DB_BYTES` 20 MB tavanı yoğun işletmede aylar içinde dolar. Defter (satışlar) ayrılıp sayfalanmalı.
-3. Son yazan kazanır: aynı adisyona iki cihaz → biri kaybolur. Varlık başına `rev` + optimistik eşzamanlılık; satışlar UUID ile idempotent.
-4. ~~Lisans kontrolü istemcide~~ (v3.1: sunucuda, girişte + her senkronda). Kalan: token TTL 12 saat (anahtar yenileme anında düşürüyor; yine de 15 dk + refresh düşünülebilir).
-5. ~~adminPin düz metin~~ (v3.1: hash, sunucuda). `syncKey` registry'de düz (panelde gösterilip teslim edildiği için); yetki hâlâ ekran düzeyinde: whole-state senkron yüzünden cihaz oturumu her şeyi yazabilir. Roller gelince ayrı uçlar + sunucu tarafı izin.
-6. Base64 görseller JSON içinde (logo ~6,8 KB) → ayrı varlık (WebP, hash'li URL, immutable cache).
-7. Proxy arkasında `REMOTE_ADDR` herkes için aynı → güvenilir proxy'den `X-Forwarded-For` (hız sınırı ve kaba kuvvet kilidi IP'ye bağlı; nginx arkasında bu ŞART). HTTPS zorunlu; panelde CSP var, POS'ta yok (QR için api.qrserver.com'a LAN adresi gidiyor → yerel QR üreticisine geçilmeli).
+## Bilinen riskler (3.5.1, öncelik sırasıyla)
+1. Gönderim tam durum: satışlar sınırsız büyür (`PROPOS_MAX_DB_BYTES`); defter ayrılıp sayfalanmalı (TODO P2-b).
+2. Aynı masada iki cihaz çevrimdışı kapatırsa çift satış (uyarı/çözüm yok; P2-d).
+3. Service worker HTTPS ister; LAN `http://` tabletlerinde çevrimdışı yeniden açılış yok (HTTPS rehberi P2-d).
+4. Proxy arkasında `REMOTE_ADDR` herkes için aynı → güvenilir `X-Forwarded-For` (hız sınırı/kilit IP'ye bağlı); POS'ta CSP yok, QR üçüncü tarafa gidiyor (P8).
+5. Hız sınırı kovaları ve denetim kaydı yerel diskte; çok sunuculu kurulumda paylaşılmaz.
+6. Yetki ekran düzeyinde: whole-state senkronla cihaz oturumu her şeyi yazabilir → roller + ayrı uçlar (P5).
+7. Base64 görseller JSON içinde → ayrı varlık.
+Çözülenler: localStorage 5 MB (IndexedDB), son-yazan-kazanır (baseRev + birleştirme), istemci lisansı, düz PIN.
 
 ## Hedef mimari (karar verildi)
 - Backend bizim VDS'imizde PHP. İleride Express/Go olabilir → API sözleşmesini sabit tut, `/api/v1` sürümle; iş mantığı controller'da değil servislerde.
@@ -80,12 +83,7 @@ Restoran/kafe POS + bayi/lisans yönetimi. Türkçe arayüz. Ürün olarak satı
 - Bildirim/periodik işler: başta cron (5 dk), ileride socket/push.
 
 ## Yol haritası
-1. Sıradaki kolay işler: yazıcı (adisyon + mutfak fişi, tarayıcı yazdırma 58/80 mm; çeşitler fişte görünmeli), geri bildirim butonu, demo veri/tanıtım turu, çeşit seçeneğine reçete (ekstra shot → stoktan espresso düş).
-2. Fiş/fatura: (a) bilgi fişi/adisyon (mali değil), (b) yerel yazdırma ajanı (sessiz baskı, ESC/POS, çekmece açma) — VDS restoran LAN'ındaki yazıcıya ulaşamaz, (c) e-Arşiv entegratörü, (d) ÖKC (PAVO/Beko/Ingenico/PAX) SDK'ları.
-3. Yoğunluk uyarısı (AI'sız): (gün, 15 dk dilim) bazında geçmiş 4-8 hafta; medyan + MAD / Poisson üst yüzdelik; reaktif (anlık sapma) + proaktif (30-60 dk önce). Soğuk başlangıç ~4 hafta. Mesaj açıklanabilir olmalı ("normalin 1,6 katı").
-4. Roller/izinler (sunucuda), personel PIN'i, müdür onayı; yüzeyler: garson/kasa/mutfak/arka ofis/patron.
-5. Senkron: delta + long-poll, defter ayrımı, IndexedDB + çevrimdışı kuyruk.
-6. UI yeniden tasarım (önce yedek al): tipografi sistemi, bileşenler, tek ikon seti.
+Güncel plan `TODO.md`, fikirler `docs/IDEAS.md`. Sıradaki: HTTPS rehberi (PWA için şart) → kampanya motoru → yazıcı ajanı (en son, çok önemli; marka/model/58-80 mm/bağlantı bilgisi kullanıcıdan beklenir) → roller → kalan yeniden tasarım.
 
 ## Arayüz kuralları
 - Ağırlık: 400 gövde, 500 etiket, 600 başlık, 700 yalnızca toplam tutar. `font-black`/`font-extrabold` YASAK. `<b>`/`<strong>` yerine `font-semibold`.
