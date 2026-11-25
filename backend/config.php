@@ -22,6 +22,12 @@ function qs(string $key, string $default = ''): string
     return is_string($v) ? $v : $default;
 }
 
+/** mbstring olmadan güvenli kırpma: UTF-8 karakter sınırında keser. */
+function mbSubstrSafe(string $s, int $max): string
+{
+    return preg_match('/^.{0,' . $max . '}/us', $s, $m) ? $m[0] : substr($s, 0, $max);
+}
+
 function envInt(string $name, int $default): int
 {
     $v = getenv($name);

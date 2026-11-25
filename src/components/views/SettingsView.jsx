@@ -51,6 +51,8 @@ export function SettingsView() {
     handleSaveProduct,
     newPrdEmoji,
     setNewPrdEmoji,
+    newPrdBarcode,
+    setNewPrdBarcode,
     newPrdCategory,
     setNewPrdCategory,
     categories,
@@ -698,7 +700,19 @@ export function SettingsView() {
                     </div>
                   )}
                 </div>
-                <ProductOptionsEditor value={newPrdOptions} onChange={setNewPrdOptions} />
+                <label className="block">
+                  <span className="text-[11px] font-medium text-stone-400 block mb-1">Barkod (isteğe bağlı — okuyucu ile satışta arama kutusuna okutulur)</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={newPrdBarcode}
+                    onChange={(e) => setNewPrdBarcode(e.target.value.replace(/[^A-Za-z0-9._-]/g, "").slice(0, 32))}
+                    placeholder="Örn: 8690000000012"
+                    className="w-full bg-stone-900 border border-stone-800 rounded-xl px-3 py-2 text-white font-mono text-xs"
+                    aria-label="Barkod"
+                  />
+                </label>
+                <ProductOptionsEditor value={newPrdOptions} onChange={setNewPrdOptions} ingredients={ingredients} />
                 <button
                   type="submit"
                   className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-medium text-xs"

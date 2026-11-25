@@ -273,6 +273,20 @@ export async function fetchRealtimeConfig(tenantId) {
   }
 }
 
+/** Çalışan geri bildirimi (sunucuda denetim günlüğüne yazılır). */
+export async function sendFeedback(tenantId, { kind, text, screen }) {
+  try {
+    const res = await authedFetch(tenantId, `/api/feedback?${q(tenantId)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, text: String(text || "").slice(0, 300), screen: String(screen || "").slice(0, 30) })
+    });
+    return res.ok ? { ok: true } : { ok: false, code: res.status };
+  } catch (e) {
+    return { ok: false, code: 0 };
+  }
+}
+
 // ---- Yönetici PIN'i (sunucuda doğrulanır) ----------------------------------
 
 export async function fetchPinStatus(tenantId) {

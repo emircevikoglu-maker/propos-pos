@@ -62,13 +62,37 @@ export function sanitizeOptionGroups(groups) {
       let cid = cleanId(c.id, "oc", ci);
       while (seenC.has(cid)) cid = `${cid}x`;
       seenC.add(cid);
-      return { id: cid, name: cname, price: cleanPrice(c.price) };
+      return { id: cid, name: cname, price: cleanPrice(c.price), recipe: sanitizeRecipe(c.recipe) };
     }).filter(Boolean);
     if (!name || choices.length === 0) return;
     const type = g.type === "multi" ? "multi" : "single";
     const maxRaw = Math.floor(Number(g.max));
     const max = type === "single" ? 1 : Math.max(1, Math.min(choices.length, Number.isFinite(maxRaw) && maxRaw > 0 ? maxRaw : choices.length));
     out.push({ id, name, type, required: g.required === true, max, choices });
+  });
+  return out;
+}
+
+/** Seçeneğin ek stok tüketimi: [{ingredientId, amount}] (ör. Ekstra shot → +18 g kahve). */
+export function sanitizeRecipe(r) {
+  if (!Array.isArray(r)) return [];
+  return r.slice(0, 10).map((x) => {
+    const id = cleanText(x && x.ingredientId, 40);
+    const amount = Number(x && x.amount);
+    return id && Number.isFinite(amount) && amount > 0 && amount <= 1e6 ? { ingredientId: id, amount: Math.round(amount * 100) / 100 } : null;
+  }).filter(Boolean);
+}
+
+/** Satır için toplam stok tüketimi: ürün reçetesi + seçilen çeşitlerin reçeteleri (adet ile çarpılır). */
+export function lineConsumption(product, item) {
+  const out = {};
+  const add = (ingredientId, amount) => { out[ingredientId] = (out[ingredientId] || 0) + amount * (Number(item && item.qty) || 0); };
+  ((product && product.recipe) || []).forEach((r) => add(r.ingredientId, Number(r.amount) || 0));
+  const groups = sanitizeOptionGroups(product && product.options);
+  ((item && item.options) || []).forEach((o) => {
+    const g = groups.find((x) => x.id === (o && o.groupId));
+    const c = g && g.choices.find((x) => x.id === o.choiceId);
+    (c ? c.recipe : []).forEach((r) => add(r.ingredientId, r.amount));
   });
   return out;
 }

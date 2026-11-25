@@ -20,7 +20,9 @@ import { PPMotion } from "../design/motion";
 import {
   loadCelebrationSettings, saveCelebrationSettings, applyCelebrationSettings, celebrateSale, celebrateZReport, goalProgress, isBusyNow
 } from "../design/celebrations";
-import { sanitizeOptionGroups, buildOrderLine, mergeIntoItems, optionSummary } from "../utils/productOptions";
+import { sanitizeOptionGroups, buildOrderLine, mergeIntoItems, optionSummary, lineConsumption } from "../utils/productOptions";
+import { applyStockAction, appendLog } from "../utils/stockLog";
+import { findByBarcode, cleanBarcode, barcodeTaken, normalizeGuests } from "../utils/posHelpers";
 import { exportExcelByCategory as runExcelExport } from "../utils/excelExport";
 import {
   copyCustomerDeliveryMessage as copyDeliveryMsg, downloadCustomerZipPackage as dlZipPkg,
@@ -98,6 +100,9 @@ export function PosProvider({ children }) {
   const [sales, setSales] = useState(() => INITIAL_DB_SNAPSHOT?.sales || generateInitialSales());
   const [expenses, setExpenses] = useState(() => INITIAL_DB_SNAPSHOT?.expenses || generateInitialExpenses());
   const [esnafList, setEsnafList] = useState(() => INITIAL_DB_SNAPSHOT?.esnafList || INITIAL_ESNAF);
+  const [stockLog, setStockLog] = useState(() => (Array.isArray(INITIAL_DB_SNAPSHOT?.stockLog) ? INITIAL_DB_SNAPSHOT.stockLog : []));
+  const [stockReason, setStockReason] = useState("Son kullanma");
+  const [newPrdBarcode, setNewPrdBarcode] = useState("");
 
   // Kutlamalar / hareket: cihaza özel (senkronlanmaz)
   const [celebration, setCelebrationState] = useState(() => loadCelebrationSettings(ACTIVE_TENANT_ID));
@@ -365,6 +370,7 @@ export function PosProvider({ children }) {
           if (d.sales) setSales(d.sales);
           if (d.expenses) setExpenses(d.expenses);
           if (d.esnafList) setEsnafList(d.esnafList);
+          if (Array.isArray(d.stockLog)) setStockLog(d.stockLog);
           localStorage.setItem(PROPOS_STORAGE_KEY, JSON.stringify(d));
           setLastSyncedAt(d.exportedAt || new Date().toISOString());
           setCloudStatus("online");
@@ -430,7 +436,7 @@ export function PosProvider({ children }) {
     lastCoreRevRef.current = nextRev;
     const payload = {
       version: "1.0", tenantId: ACTIVE_TENANT_ID, rev: nextRev, exportedAt: new Date().toISOString(),
-      brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList
+      brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog
     };
     const jsonStr = JSON.stringify(payload);
     localStorage.setItem(PROPOS_STORAGE_KEY, jsonStr);
@@ -441,7 +447,7 @@ export function PosProvider({ children }) {
       if (out?.rev) lastCoreRevRef.current = Number(out.rev);
       if (out?.ok) setCloudStatus("online");
     });
-  }, [brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList]);
+  }, [brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog]);
 
   // 429: sunucu "yavaşla" dedi. Kasada pop-up yok, kısa bir bilgi yeter; senkron kendini toparlar.
   useEffect(() => {
@@ -746,6 +752,13 @@ export function PosProvider({ children }) {
     }));
   };
 
+  /** Barkod okuyucu klavye gibi yazıp Enter basar: tam eşleşme varsa ürün eklenir; tek sonuç kaldıysa o eklenir. */
+  const handleSearchEnter = () => {
+    const hit = findByBarcode(products, posSearch);
+    if (hit && activeTable) { addProductToTable(hit); setPosSearch(""); return true; }
+    return false;
+  };
+
   const confirmOptionPicker = (selection) => {
     const prd = optionPickerProduct;
     setOptionPickerProduct(null);
@@ -764,10 +777,12 @@ export function PosProvider({ children }) {
       if (t.id !== activeTable.id) return t;
       const items = t.items.map((i) => (i.id === itemId ? { ...i, qty: i.qty + delta } : i)).filter((i) => i.qty > 0);
       const occ = items.length > 0;
-      return { ...t, status: occ ? "occupied" : "empty", openedAt: occ ? t.openedAt : null, discount: occ ? t.discount : 0, paidAmount: occ ? t.paidAmount : 0, items };
+      return { ...t, status: occ ? "occupied" : "empty", openedAt: occ ? t.openedAt : null, discount: occ ? t.discount : 0, paidAmount: occ ? t.paidAmount : 0, guests: occ ? t.guests : 0, items };
     }));
   };
 
+  // Göreli değişim (+1/−1): art arda hızlı dokunuşlar kaybolmasın diye önceki durumdan hesaplanır.
+  const changeTableGuests = (delta) => activeTable && setTables((prev) => prev.map((t) => (t.id === activeTable.id ? { ...t, guests: normalizeGuests((t.guests || 0) + delta) } : t)));
   const setTableStaff = (staffId) => activeTable && setTables((prev) => prev.map((t) => (t.id === activeTable.id ? { ...t, staffId } : t)));
   const setTableDiscount = (val) => activeTable && setTables((prev) => prev.map((t) => {
     if (t.id !== activeTable.id) return t;
@@ -782,9 +797,8 @@ export function PosProvider({ children }) {
   const deductRecipeIngredients = (orderItems) => {
     const deductions = {};
     orderItems.forEach((oi) => {
-      products.find((p) => p.id === oi.productId)?.recipe?.forEach((r) => {
-        deductions[r.ingredientId] = (deductions[r.ingredientId] || 0) + r.amount * oi.qty;
-      });
+      const consumption = lineConsumption(products.find((p) => p.id === oi.productId), oi);
+      Object.keys(consumption).forEach((id) => { deductions[id] = (deductions[id] || 0) + consumption[id]; });
     });
     setIngredients((prev) => prev.map((ing) => (deductions[ing.id] ? { ...ing, stock: Math.max(0, +(ing.stock - deductions[ing.id]).toFixed(1)) } : ing)));
   };
@@ -795,13 +809,13 @@ export function PosProvider({ children }) {
     const remainingTotal = Math.max(0, subtotal - (activeTable.discount || 0) - (activeTable.paidAmount || 0));
     // Kısmi ödemeler kendi satış kaydında sayıldı; burada yalnızca kalan brüt yazılır (Z raporu brütü şişmesin).
     const remainingGross = Math.max(0, subtotal - (activeTable.paidAmount || 0));
-    const newSale = { id: `sl-${Date.now()}`, timestamp: new Date().toISOString(), tableName: activeTable.name, staffId: activeTable.staffId || staffList[0]?.id, paymentMethod, subtotal: remainingGross, discount: Math.min(activeTable.discount || 0, remainingGross), total: remainingTotal, items: activeTable.items };
+    const newSale = { id: `sl-${Date.now()}`, timestamp: new Date().toISOString(), guests: normalizeGuests(activeTable.guests), tableName: activeTable.name, staffId: activeTable.staffId || staffList[0]?.id, paymentMethod, subtotal: remainingGross, discount: Math.min(activeTable.discount || 0, remainingGross), total: remainingTotal, items: activeTable.items };
     const snap = { tables, sales, ingredients };
     const closedName = activeTable.name;
     const staffName = staffList.find((st) => st.id === activeTable.staffId)?.name || "Personel";
     setSales((prev) => [newSale, ...prev]);
     deductRecipeIngredients(activeTable.items);
-    setTables((prev) => prev.map((t) => (t.id === activeTable.id ? { ...t, status: "empty", openedAt: null, discount: 0, paidAmount: 0, items: [] } : t)));
+    setTables((prev) => prev.map((t) => (t.id === activeTable.id ? { ...t, status: "empty", openedAt: null, discount: 0, paidAmount: 0, guests: 0, items: [] } : t)));
     setActiveTableId(null);
     // 5 sn içinde geri alınabilir; kutlama yalnızca kalıcılaşınca (geri alınan satış kutlanmaz).
     offerUndo(
@@ -855,7 +869,7 @@ export function PosProvider({ children }) {
       showToast(`${esnaf.name} carisine ${formatTL(chargeAmount)} kısmi hesap yazıldı!`);
     } else {
       deductRecipeIngredients(activeTable.items);
-      setTables((prev) => prev.map((t) => (t.id === activeTable.id ? { ...t, status: "empty", openedAt: null, discount: 0, paidAmount: 0, items: [] } : t)));
+      setTables((prev) => prev.map((t) => (t.id === activeTable.id ? { ...t, status: "empty", openedAt: null, discount: 0, paidAmount: 0, guests: 0, items: [] } : t)));
       showToast(`${esnaf.name} hesabına ${formatTL(chargeAmount)} yazıldı ve stoktan düşüldü!`);
       setActiveTableId(null);
     }
@@ -917,9 +931,9 @@ export function PosProvider({ children }) {
           const ex = mergedItems.find((m) => m.productId === src.productId && (m.note || "") === (src.note || "") && (m.optionKey || "") === (src.optionKey || "") && m.price === src.price);
           if (ex) ex.qty += src.qty; else mergedItems.push({ ...src });
         });
-        return { ...t, status: "occupied", openedAt: t.openedAt || activeTable.openedAt || new Date().toISOString(), discount: (t.discount || 0) + (activeTable.discount || 0), paidAmount: (t.paidAmount || 0) + (activeTable.paidAmount || 0), items: mergedItems };
+        return { ...t, status: "occupied", openedAt: t.openedAt || activeTable.openedAt || new Date().toISOString(), discount: (t.discount || 0) + (activeTable.discount || 0), paidAmount: (t.paidAmount || 0) + (activeTable.paidAmount || 0), guests: normalizeGuests((t.guests || 0) + (activeTable.guests || 0)), items: mergedItems };
       }
-      return t.id === activeTable.id ? { ...t, status: "empty", openedAt: null, discount: 0, paidAmount: 0, items: [] } : t;
+      return t.id === activeTable.id ? { ...t, status: "empty", openedAt: null, discount: 0, paidAmount: 0, guests: 0, items: [] } : t;
     }));
     showToast(`${activeTable.name} adisyonu ${targetTable.name} masasına aktarıldı!`);
     setTransferModalOpen(false); setActiveTableId(targetTableId);
@@ -928,14 +942,17 @@ export function PosProvider({ children }) {
   // Stock, Expense & Settings CRUD Operations
   const handleStockAdjustment = (e) => {
     e.preventDefault();
+    if (!stockModalIng) return;
+    const res = applyStockAction({ type: stockAdjustType, ingredient: stockModalIng, amount: stockAdjustAmount, reason: stockReason });
+    if (!res) return showToast("Geçerli bir miktar girin.");
     const val = Number(stockAdjustAmount);
-    if (!stockModalIng || isNaN(val) || val <= 0) return;
-    setIngredients((prev) => prev.map((ing) => (ing.id !== stockModalIng.id ? ing : { ...ing, stock: stockAdjustType === "add" ? ing.stock + val : stockAdjustType === "waste" ? Math.max(0, ing.stock - val) : val })));
+    setIngredients((prev) => prev.map((ing) => (ing.id !== stockModalIng.id ? ing : { ...ing, stock: +res.newStock.toFixed(2) })));
+    if (res.entry) setStockLog((prev) => appendLog(prev, res.entry));
     if (stockAdjustType === "add" && recordAsExpense) {
       const costAmount = Number(stockExpenseCost) || Math.round(val * stockModalIng.unitCost);
       if (costAmount > 0) setExpenses((prev) => [{ id: `exp-stk-${Date.now()}`, title: `Stok Alımı: ${stockModalIng.name} (+${val} ${stockModalIng.unit})`, category: "Toptancı / Malzeme", amount: costAmount, paymentMethod: "Kredi Kartı", timestamp: new Date().toISOString(), note: "Stok modülünden otomatik işlenen alım" }, ...prev]);
     }
-    showToast(`${stockModalIng.name} stok miktarı güncellendi!`);
+    showToast(res.entry ? `${stockModalIng.name}: ${res.entry.kind === "waste" ? "zayi" : "sayım farkı"} kaydedildi.` : `${stockModalIng.name} stok miktarı güncellendi!`);
     setStockModalIng(null); setStockAdjustAmount(""); setStockExpenseCost("");
   };
 
@@ -957,7 +974,9 @@ export function PosProvider({ children }) {
     e.preventDefault();
     const price = Number(newPrdPrice);
     if (!newPrdName.trim() || !price || price <= 0) return;
-    const itemData = { name: newPrdName.trim(), category: newPrdCategory, price, image: newPrdEmoji || "☕", isQuickFav: newPrdQuickFav, recipe: newPrdRecipe, options: sanitizeOptionGroups(newPrdOptions) };
+    const barcode = cleanBarcode(newPrdBarcode);
+    if (barcode && barcodeTaken(products, barcode, editingPrdId)) return showToast("Bu barkod başka bir üründe kayıtlı.");
+    const itemData = { name: newPrdName.trim(), category: newPrdCategory, price, image: newPrdEmoji || "☕", isQuickFav: newPrdQuickFav, recipe: newPrdRecipe, options: sanitizeOptionGroups(newPrdOptions), barcode };
     if (editingPrdId) {
       setProducts((prev) => prev.map((p) => (p.id === editingPrdId ? { ...p, ...itemData } : p)));
       showToast(`${itemData.name} ürünü güncellendi!`); setEditingPrdId(null);
@@ -965,12 +984,12 @@ export function PosProvider({ children }) {
       setProducts((prev) => [...prev, { id: `prd-${Date.now()}`, ...itemData }]);
       showToast(`${itemData.name} menüye ve reçete sistemine eklendi!`);
     }
-    setNewPrdName(""); setNewPrdPrice(""); setNewPrdEmoji("☕"); setNewPrdQuickFav(false); setNewPrdRecipe([]); setNewPrdOptions([]);
+    setNewPrdName(""); setNewPrdPrice(""); setNewPrdEmoji("☕"); setNewPrdQuickFav(false); setNewPrdRecipe([]); setNewPrdOptions([]); setNewPrdBarcode("");
   };
 
   const startEditProduct = (prd) => {
     setEditingPrdId(prd.id); setNewPrdName(prd.name); setNewPrdCategory(prd.category);
-    setNewPrdPrice(String(prd.price)); setNewPrdEmoji(prd.image || "☕"); setNewPrdQuickFav(Boolean(prd.isQuickFav)); setNewPrdRecipe(prd.recipe || []); setNewPrdOptions(sanitizeOptionGroups(prd.options));
+    setNewPrdPrice(String(prd.price)); setNewPrdEmoji(prd.image || "☕"); setNewPrdQuickFav(Boolean(prd.isQuickFav)); setNewPrdRecipe(prd.recipe || []); setNewPrdOptions(sanitizeOptionGroups(prd.options)); setNewPrdBarcode(prd.barcode || "");
   };
 
   const handleDeleteProduct = (prdId) => {
@@ -1107,7 +1126,7 @@ export function PosProvider({ children }) {
   };
 
   const exportFullBackupFile = () => {
-    const backupPayload = { version: "1.0", exportedAt: new Date().toISOString(), brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList };
+    const backupPayload = { version: "1.0", exportedAt: new Date().toISOString(), brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog };
     const url = URL.createObjectURL(new Blob([JSON.stringify(backupPayload, null, 2)], { type: "application/json" }));
     Object.assign(document.createElement("a"), { href: url, download: `ProPos_Tam_Sistem_Yedegi_${new Date().toISOString().slice(0, 10)}.json` }).click();
     URL.revokeObjectURL(url);
@@ -1132,6 +1151,7 @@ export function PosProvider({ children }) {
         if (p.sales) setSales(p.sales);
         if (p.expenses) setExpenses(p.expenses);
         if (p.esnafList) setEsnafList(p.esnafList);
+        if (Array.isArray(p.stockLog)) setStockLog(p.stockLog);
         showToast("✅ Yedek dosyası başarıyla geri yüklendi ve tüm cihazlarla eşitlendi!");
       } catch (err) {
         showToast("Yedek dosyası okunamadı.");
@@ -1163,6 +1183,7 @@ export function PosProvider({ children }) {
     ACTIVE_TENANT_ID, activeCurrencyObj, clientDeviceId: clientDeviceIdRef.current,
     activeTab, setActiveTab, handleTabNavigation, globalPeriod, setGlobalPeriod, customStartDate, setCustomStartDate, customEndDate, setCustomEndDate,
     cloudStatus, lastSyncedAt, syncModalOpen, setSyncModalOpen, installModalOpen, setInstallModalOpen,
+    stockLog, stockReason, setStockReason, newPrdBarcode, setNewPrdBarcode, changeTableGuests, handleSearchEnter,
     celebration, updateCelebration, goalProgressToday: goalProgress(sales, celebration.goal), celebrateZReport,
     isAdminUnlocked, pinBusy, handleChangePin, handleSetupFirstPin, handleUnpairDevice,
     optionPickerProduct, setOptionPickerProduct, confirmOptionPicker, newPrdOptions, setNewPrdOptions, setIsAdminUnlocked, pinModalOpen, setPinModalOpen, pinInput, setPinInput, pinError, setPinError, pendingProtectedTab, setPendingProtectedTab, newPinValue, setNewPinValue, handleVerifyPin, handleLockAdmin,

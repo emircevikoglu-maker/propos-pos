@@ -10,10 +10,12 @@ use ProPos\Services\Realtime;
 use ProPos\Services\Storage\StorageFactory;
 use ProPos\Services\TenantService;
 use ProPos\Services\Throttle;
+use function ProPos\audit;
 use function ProPos\clientIp;
 use function ProPos\detectLanIp;
 use function ProPos\envInt;
 use function ProPos\normalizeTenantId;
+use function ProPos\mbSubstrSafe;
 use function ProPos\qs;
 use function ProPos\sendApiHeaders;
 use function ProPos\sendJson;
@@ -109,6 +111,10 @@ class ApiController
 
             case '/api/sync':
                 $this->sync($method, $rawBody);
+                break;
+
+            case '/api/feedback':
+                $this->feedback($method, $rawBody);
                 break;
 
             case '/api/realtime':
@@ -229,6 +235,30 @@ class ApiController
             $ok = false;
         }
         sendJson(['ok' => $ok], $ok ? 200 : 503);
+    }
+
+    /** Çalışan geri bildirimi: doğrulanır, sınırlanır, denetim günlüğüne tek satır yazılır (kontrol karakterleri temizlenir). */
+    private function feedback(string $method, string $rawBody): void
+    {
+        if ($method !== 'POST') {
+            sendJson(['ok' => false, 'error' => 'POST gerekli'], 405);
+        }
+        $tenantId = normalizeTenantId(qs('tenantId', 'DEFAULT'));
+        $this->auth->requireTenant($tenantId);
+        [$cap, $refill] = Throttle::bucketConfig('PROPOS_RL_FEEDBACK', 10, 1 / 30);
+        $r = $this->throttle->hit('fb|' . $tenantId . '|' . clientIp(), $cap, $refill, 30);
+        if (!$r['ok']) {
+            sendJson(['ok' => false, 'code' => 'RATE_LIMIT', 'retryAfter' => $r['retryAfter']], 429, ['Retry-After: ' . $r['retryAfter']]);
+        }
+        $b = self::jsonBody($rawBody);
+        $kind = is_string($b['kind'] ?? null) ? $b['kind'] : '';
+        if (!in_array($kind, ['confusing', 'slow', 'bug', 'idea'], true)) {
+            sendJson(['ok' => false, 'error' => 'Geçersiz tür.'], 400);
+        }
+        $clean = static fn($v, int $max): string => mbSubstrSafe(trim((string)(preg_replace('/[\x00-\x1F\x7F]+/u', ' ', is_string($v) ? $v : '') ?? '')), $max);
+        $screen = preg_replace('/[^a-z]/', '', strtolower($clean($b['screen'] ?? '', 30))) ?: 'bilinmiyor';
+        audit('feedback', $tenantId . ' | ' . $kind . ' | ' . $screen . ' | ' . $clean($b['text'] ?? '', 300));
+        sendJson(['ok' => true]);
     }
 
     private function pinVerify(string $method, string $rawBody): void

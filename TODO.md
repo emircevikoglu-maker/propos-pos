@@ -15,7 +15,7 @@ Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 - [x] "API'yi patlatan rate limit": debounce, giriş fırtınası, gizli sekme yoklaması — M
 - [x] İlk PIN kurulumu (veri sıfırlanınca kilitlenme) — S
 - [ ] Gerçek cihazlarla deneme: 2 tablet + 1 PC aynı anda, 1 saat; 429 görülüyor mu, F12'de istek boyutları — kullanıcı
-- [ ] Ekranda geri bildirim butonu ("burası kafa karıştırıcı" → denetim kaydı) — S
+- [x] Geri bildirim (Sistem menüsü → denetim kaydı) — S
 - [ ] Demo veri + 3 adımlı tanıtım turu — M
 
 ## P1 — Yazdırma (en kritik özellik)
@@ -99,20 +99,28 @@ Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 - [ ] Zayıf Android tablette FPS ölçümü (kutlamalar.html FPS ölçer) — kullanıcı (plan: README "Uygulamaya opsiyonel modül olarak ekleme" — `src/celebrate/` lazy parça, saf `policy.js` + vitest, tenant ayarı/bayrağı, seri sunucuda)
 
 ## P7 — Özellikler (Kardo kıyasından, öncelik sırasıyla)
-- [ ] İkram ve atık kaydı (stok doğruluğu) — S
-- [ ] Çeşit seçeneğine reçete (ekstra shot → stoktan espresso düş) — S
+- [x] İkram (mevcut "İkram / Zayi Kapat") + atık/sayım kaydı (3.4.0) — S
+- [x] Çeşit seçeneğine reçete — S
 - [ ] Kampanya / happy hour kural motoru (saat, gün, ürün/kategori, %/tutar) — M
-- [ ] Stok sayımı + fark raporu — M
-- [ ] Kuver (kişi sayısı) + kuver raporu — S
-- [ ] Barkod alanı + odaklı giriş kutusu — S
+- [x] Stok sayımı + fark kaydı (3.4.0; ayrı "sayım oturumu" ekranı TODO) — M
+- [x] Kuver + Z raporunda kuver — S
+- [x] Barkod alanı + arama kutusunda okutma — S
 - [ ] QR menü (salt okunur) — M; masadan sipariş — L
 - [ ] Müşteri ekranı (ikinci monitör rotası) — S
 - [ ] Mutfak ekranı (KDS) — M (P1 ile)
 - [ ] Yoğunluk uyarısı (cron, medyan+MAD/Poisson) — M
 - [ ] i18n altyapısı (metinleri anahtara taşı) — M
-- [ ] Kasa kapanışı: sayım + fark girişi (Z raporu üstüne) — S
+- [x] Kasa kapanışı: sayım + fark (cihaza özel; sunucuya kayıt TODO) — S
 - [ ] Tedarikçi yönetimi (esnaf modülünden türet) — M
 - [ ] Patron yüzeyi (PWA): günlük özet, kâr, yoğunluk — M
+
+## P7b — Yeni küçük fikirler (3.4.0 sonrası)
+- [ ] Sayım oturumu: tüm malzemeleri tek ekranda say, topluca fark raporu — S
+- [ ] Kasa sayımı ve kuver verisini sunucuya yaz (cihazlar arası, Z geçmişi) — S
+- [ ] Z raporuna atık/sayım farkı satırı — S
+- [ ] Kuver girilmezse masa kapatırken (yalnızca kuver açıksa) hatırlatma YOK — POS'ta popup kuralı; ayarla isteğe bağlı varsayılan kişi sayısı — S
+- [ ] Barkod: okutunca ürün yoksa "yeni ürün olarak ekle" kısayolu (yönetici) — S
+- [ ] Geri bildirimleri panelde ayrı sekmede listele/filtrele — S
 
 ## P8 — Güvenlik / üretim
 - [ ] HTTPS zorunlu; HSTS — S

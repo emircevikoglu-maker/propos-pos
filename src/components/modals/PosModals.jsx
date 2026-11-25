@@ -1,5 +1,6 @@
 import React from "react";
 import { PinPad } from "../auth/PinPad";
+import { WASTE_REASONS } from "../../utils/stockLog";
 import { usePos } from "../../context/PosContext";
 import { QUICK_ORDER_NOTES } from "../../constants/initialData";
 import { formatTL, formatDateShort } from "../../utils/formatters";
@@ -88,6 +89,8 @@ export function PosModals() {
     handleStockAdjustment,
     stockAdjustType,
     setStockAdjustType,
+    stockReason,
+    setStockReason,
     stockAdjustAmount,
     setStockAdjustAmount,
     setStockExpenseCost,
@@ -722,7 +725,8 @@ export function PosModals() {
               <input
                 type="number"
                 required
-                min="1"
+                min={stockAdjustType === "set" ? "0" : "0.01"}
+                step="any"
                 value={stockAdjustAmount}
                 onChange={(e) => {
                   setStockAdjustAmount(e.target.value);
@@ -732,6 +736,17 @@ export function PosModals() {
                 className="w-full bg-stone-900 border border-stone-700 rounded-xl px-3 py-2 text-sm font-medium text-white"
               />
             </div>
+            {stockAdjustType === "waste" && (
+              <label className="block text-xs">
+                <span className="text-stone-400 block mb-1">Sebep</span>
+                <select value={stockReason} onChange={(e) => setStockReason(e.target.value)} className="w-full bg-stone-900 border border-stone-700 rounded-xl px-3 py-2 text-sm text-white">
+                  {WASTE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </label>
+            )}
+            {stockAdjustType === "set" && (
+              <p className="text-[11px] text-stone-400">Sayılan miktarı girin. Sistemdeki miktarla fark varsa eksik/fazla olarak kayda geçer.</p>
+            )}
             {stockAdjustType === "add" && (
               <div className="p-3 rounded-xl bg-stone-900 border border-stone-800 space-y-2 text-xs">
                 <label className="flex items-center gap-2 cursor-pointer">

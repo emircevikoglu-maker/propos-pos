@@ -3,6 +3,21 @@
 Biçim: [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/). Sürüm numarası `package.json` ile birlikte artar.
 Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 
+## [3.4.0] — 2026-11-25
+### Eklendi
+- Çeşit seçeneğine stok reçetesi: "Ekstra shot → +18 g kahve" gibi seçenek başına ek tüketim; satışta ürün reçetesi + seçilen çeşitlerin reçeteleri adetle çarpılarak düşülür (düzenleyicide seçenek satırında "+ stok").
+- Atık & sayım kaydı: zayi (sebep listesiyle) ve sayım farkı (eksik/fazla) maliyetiyle `stockLog` olarak kaydedilir ve senkronlanır; Stok ekranında son 30 gün özeti (maliyetler yalnızca yönetici açıkken) ve son 50 kayıt. Zayi stoktan fazlasını düşemez.
+- Kuver: adisyonda kişi sayısı (−/+), satışa `guests` yazılır, masa taşıma/birleştirmede toplanır; Z raporunda toplam kişi ve kişi başı ciro.
+- Barkod: ürüne barkod alanı (tekil; çakışma engellenir); POS arama kutusuna okutup Enter ile ürün eklenir (çeşitli üründe seçim penceresi açılır).
+- Kasa kapanışı: Z raporunda "Sayılan nakit" girişi; fark (tutuyor/eksik/fazla) anında gösterilir, gün başına cihazda saklanır.
+- Geri bildirim: Sistem menüsünden tek dokunuşla (kafa karıştırıcı/yavaş/hata/öneri) + kısa not; `POST /api/feedback` doğrulanır, hız sınırlıdır, denetim günlüğüne tek satır yazılır (satır sonu enjeksiyonu engelli).
+### Düzeltildi
+- Stok modalı sayım için 0 ve ondalık değere izin vermiyordu (`min=1`).
+- `ApiController` `audit` fonksiyonunu içe aktarmıyordu (yeni uç testle yakalandı).
+- Kişi sayısı art arda hızlı dokunuşta kayboluyordu (göreli güncelleme).
+### Testler
+- 39 yeni test (stok/atık/sayım, barkod, kuver, kasa farkı, çeşit reçetesi, geri bildirim bileşeni ve ucu). Toplam 281.
+
 ## [3.3.0] — 2026-11-25
 ### Eklendi
 - Depolama katmanı: `Storage` arayüzü, `FileStorage` (varsayılan) ve `SupabaseStorage` (PostgREST/curl; secret anahtar yalnızca sunucuda). `PROPOS_STORAGE=file|supabase`; yanlış yapılandırma sessizce dosyaya düşmez, açık hata verir. `.env` yükleyici (`backend/env.php`; gerçek ortam değişkeni `.env`'yi ezer).

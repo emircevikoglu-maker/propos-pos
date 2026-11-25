@@ -40,6 +40,8 @@ export function PosView() {
     updateOrderItemQty,
     posSearch,
     setPosSearch,
+    handleSearchEnter,
+    changeTableGuests,
     categories,
     posCategory,
     setPosCategory,
@@ -179,6 +181,7 @@ export function PosView() {
                   type="text"
                   value={posSearch}
                   onChange={(e) => setPosSearch(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && handleSearchEnter()) e.preventDefault(); }}
                   placeholder="Ürün ara (Çay, Latte, Tost...)"
                   className="w-full bg-stone-900 border border-stone-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
                 />
@@ -350,6 +353,11 @@ export function PosView() {
                   {activeTable.zone}
                 </span>
                 <h3 className="text-base sm:text-lg font-semibold text-white truncate">{activeTable.name} Adisyonu</h3>
+                <span className="inline-flex items-center gap-1 text-xs text-stone-300 shrink-0" title="Kuver (kişi sayısı)">
+                  <button type="button" aria-label="Kişi sayısını azalt" className="pp-tight w-8 h-8 rounded-lg bg-stone-800" onClick={() => changeTableGuests(-1)}>−</button>
+                  <span aria-label="Kişi sayısı" className="min-w-[3.2rem] text-center tabular-nums">{activeTable.guests || 0} kişi</span>
+                  <button type="button" aria-label="Kişi sayısını artır" className="pp-tight w-8 h-8 rounded-lg bg-stone-800" onClick={() => changeTableGuests(1)}>+</button>
+                </span>
               </div>
               <p className="text-[11px] sm:text-xs text-stone-400 mt-0.5 truncate">
                 {activeTable.openedAt

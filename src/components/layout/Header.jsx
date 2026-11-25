@@ -133,6 +133,7 @@ export function Header() {
                 </div>
                 {item(() => (isFounderUnlocked ? setInstallModalOpen(true) : setSyncModalOpen(true)), "Cihaz bağlama / QR")}
                 {item(() => checkRemoteUpdateFromGithub(false), isCheckingUpdate ? "Kontrol ediliyor…" : `Güncelleme kontrolü (v${appVersion})`)}
+                {item(() => window.dispatchEvent(new CustomEvent("propos-open-feedback")), "Geri bildirim gönder")}
                 {isFounderUnlocked && item(() => { setDealerStudioTab("tenants"); setInstallModalOpen(true); }, `Bayi & Lisans Paneli (${dealerTenants.length})`)}
                 {ACTIVE_TENANT_ID !== "DEFAULT" && !lockedPackage && (<><div className="pp-menu-sep" />{item(() => handleSwitchToTenant("DEFAULT"), "Ana işletmeye dön")}</>)}
               </div>

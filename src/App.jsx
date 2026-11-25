@@ -14,11 +14,12 @@ import { SettingsView } from "./components/views/SettingsView";
 import { DealerStudioModal } from "./components/modals/DealerStudioModal";
 import { PosModals } from "./components/modals/PosModals";
 import { DeviceGate } from "./components/auth/DeviceGate";
+import { FeedbackSheet } from "./components/auth/FeedbackSheet";
 import { OptionPicker } from "./components/pos/OptionPicker";
 import { formatTL } from "./utils/formatters";
 
 function PosShell() {
-  const { brandSettings, toast, activeTab, optionPickerProduct, setOptionPickerProduct, confirmOptionPicker } = usePos();
+  const { ACTIVE_TENANT_ID, brandSettings, toast, activeTab, optionPickerProduct, setOptionPickerProduct, confirmOptionPicker } = usePos();
 
   // Sekme başlığı: işletmenin adı + ürün adı (ör. "Kahve Durağı · ProPos").
   React.useEffect(() => {
@@ -126,6 +127,7 @@ function PosShell() {
 
       <DealerStudioModal />
       <PosModals />
+      <FeedbackSheet tenantId={ACTIVE_TENANT_ID} screen={activeTab} />
       {optionPickerProduct && (
         <OptionPicker
           product={optionPickerProduct}

@@ -2,6 +2,7 @@ import React from "react";
 import { usePos } from "../../context/PosContext";
 import { formatTL } from "../../utils/formatters";
 import { TriangleAlert } from "../Icons";
+import { summarizeStockLog } from "../../utils/stockLog";
 
 export function InventoryView() {
   const {
@@ -11,8 +12,11 @@ export function InventoryView() {
     setStockModalIng,
     setStockAdjustType,
     setStockAdjustAmount,
-    setStockExpenseCost
+    setStockExpenseCost,
+    stockLog,
+    isAdminUnlocked
   } = usePos();
+  const logSummary = React.useMemo(() => summarizeStockLog(stockLog, Date.now() - 30 * 86400000), [stockLog]);
 
   return (
     <div className="space-y-6">
@@ -153,6 +157,40 @@ export function InventoryView() {
           })}
         </div>
       </div>
+
+      <section className="p-5 rounded-2xl bg-[#161412] border border-stone-800 space-y-3" aria-label="Atık ve sayım kaydı">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-base font-semibold text-white">Atık &amp; sayım kaydı (son 30 gün)</h3>
+          {isAdminUnlocked && (
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="pp-pill is-warn">Atık {formatTL(logSummary.wasteCost)}</span>
+              <span className="pp-pill is-warn">Sayım eksiği {formatTL(Math.abs(logSummary.shortageCost))}</span>
+              <span className="pp-pill is-ok">Sayım fazlası {formatTL(logSummary.surplusCost)}</span>
+            </div>
+          )}
+        </div>
+        {(!stockLog || stockLog.length === 0) ? (
+          <p className="text-xs text-stone-400">Henüz kayıt yok. Malzeme kartından "Zayi / Düşüm" ya da "Sayım Sabitle" kullanın; her işlem burada görünür.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="text-stone-400"><tr><th className="p-2 font-medium">Zaman</th><th className="p-2 font-medium">Malzeme</th><th className="p-2 font-medium">Tür</th><th className="p-2 font-medium">Miktar</th><th className="p-2 font-medium">Sebep</th>{isAdminUnlocked && <th className="p-2 font-medium text-right">Maliyet</th>}</tr></thead>
+              <tbody>
+                {stockLog.slice(0, 50).map((e) => (
+                  <tr key={e.id} className="border-t border-stone-800">
+                    <td className="p-2 whitespace-nowrap">{new Date(e.timestamp).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}</td>
+                    <td className="p-2">{e.name}</td>
+                    <td className="p-2">{e.kind === "waste" ? "Zayi" : "Sayım"}</td>
+                    <td className="p-2 tabular-nums">{e.amount > 0 && e.kind === "count" ? "+" : ""}{e.amount} {e.unit}</td>
+                    <td className="p-2">{e.reason}</td>
+                    {isAdminUnlocked && <td className="p-2 text-right tabular-nums">{formatTL(e.cost)}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

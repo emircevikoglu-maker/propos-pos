@@ -2,6 +2,7 @@ import React from "react";
 import { usePos } from "../../context/PosContext";
 import { formatTL } from "../../utils/formatters";
 import { celebrateZReport } from "../../design/celebrations";
+import { coverStats, cashDifference } from "../../utils/posHelpers";
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const dayKey = (iso) => {
@@ -61,6 +62,13 @@ table{width:100%;border-collapse:collapse}td{padding:3px 0}.r{text-align:right}.
     celebrateZReport({ count: report.count, net: report.net, formatMoney: formatTL });
   };
 
+  const covers = React.useMemo(() => coverStats((sales || []).filter((s) => s.timestamp && dayKey(s.timestamp) === day)), [sales, day]);
+  const countKey = `propos_cashcount_${day}`;
+  const [counted, setCounted] = React.useState(() => { try { return localStorage.getItem(countKey) || ""; } catch (e) { return ""; } });
+  React.useEffect(() => { try { setCounted(localStorage.getItem(countKey) || ""); } catch (e) { setCounted(""); } }, [countKey]);
+  const saveCounted = (v) => { setCounted(v); try { if (v === "") localStorage.removeItem(countKey); else localStorage.setItem(countKey, v); } catch (e) {} };
+  const cash = cashDifference(report.drawer, counted === "" ? null : Number(counted));
+
   const Line = ({ label, value, strong }) => (
     <div className="flex items-center justify-between text-xs">
       <span className="text-stone-400">{label}</span>
@@ -100,6 +108,24 @@ table{width:100%;border-collapse:collapse}td{padding:3px 0}.r{text-align:right}.
           <Line label="Nakit satış" value={report.cashIn} />
           <Line label="Nakit gider" value={-report.cashOut} />
           <Line label="Çekmecede olmalı" value={report.drawer} strong />
+          <label className="flex items-center justify-between gap-2 text-xs pt-1">
+            <span className="text-stone-400">Sayılan nakit</span>
+            <input type="number" min="0" step="any" inputMode="decimal" value={counted} onChange={(e) => saveCounted(e.target.value)} aria-label="Sayılan nakit"
+              className="w-28 rounded-lg border border-stone-800 bg-stone-950 px-2 py-1 text-right text-white tabular-nums" placeholder="0" />
+          </label>
+          {cash.status !== "invalid" && (
+            <div role="status" className={`flex items-center justify-between text-xs ${cash.status === "ok" ? "text-emerald-400" : cash.status === "short" ? "text-rose-400" : "text-amber-400"}`}>
+              <span>{cash.status === "ok" ? "Kasa tutuyor" : cash.status === "short" ? "Kasa eksik" : "Kasa fazla"}</span>
+              <span className="tabular-nums">{cash.diff > 0 ? "+" : ""}{formatTL(cash.diff)}</span>
+            </div>
+          )}
+          {covers.guests > 0 && (
+            <div className="pt-2 border-t border-stone-800 space-y-1.5">
+              <div className="text-[10px] uppercase tracking-wider text-stone-500">Kuver</div>
+              <div className="flex items-center justify-between text-xs"><span className="text-stone-400">Toplam kişi</span><span className="text-stone-200 tabular-nums">{covers.guests}</span></div>
+              <div className="flex items-center justify-between text-xs"><span className="text-stone-400">Kişi başı ciro</span><span className="text-stone-200 tabular-nums">{formatTL(covers.perGuest)}</span></div>
+            </div>
+          )}
         </div>
       </div>
     </div>

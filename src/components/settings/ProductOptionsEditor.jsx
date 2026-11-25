@@ -7,7 +7,7 @@ const input = "bg-stone-950 border border-stone-800 rounded-lg px-2.5 py-2 text-
  * Ürün çeşitleri düzenleyicisi (içecek boyu, süt tipi, şeker, ekstra…).
  * props: value (gruplar), onChange(gruplar)
  */
-export function ProductOptionsEditor({ value, onChange }) {
+export function ProductOptionsEditor({ value, onChange, ingredients = [] }) {
   const groups = Array.isArray(value) ? value : [];
   const update = (gi, patch) => onChange(groups.map((g, i) => (i === gi ? { ...g, ...patch } : g)));
   const updateChoice = (gi, ci, patch) => update(gi, { choices: groups[gi].choices.map((c, i) => (i === ci ? { ...c, ...patch } : c)) });
@@ -75,6 +75,9 @@ export function ProductOptionsEditor({ value, onChange }) {
             <div key={c.id || ci} className="flex items-center gap-2">
               <input aria-label="Seçenek adı" value={c.name} onChange={(e) => updateChoice(gi, ci, { name: e.target.value.slice(0, 40) })} placeholder="Seçenek (ör. Orta)" className={`${input} flex-1`} />
               <input aria-label="Fiyat farkı" type="number" step="0.5" value={c.price} onChange={(e) => updateChoice(gi, ci, { price: e.target.value === "" ? 0 : Number(e.target.value) })} className={`${input} w-20`} title="Fiyat farkı (+/−)" />
+              {ingredients.length > 0 && (
+                <ChoiceRecipe ingredients={ingredients} recipe={c.recipe || []} onChange={(recipe) => updateChoice(gi, ci, { recipe })} />
+              )}
               <button type="button" aria-label="Seçeneği sil" disabled={g.choices.length <= 1} onClick={() => update(gi, { choices: g.choices.filter((_, i) => i !== ci) })} className="px-2 py-1 rounded-lg bg-stone-800 text-rose-400 text-xs disabled:opacity-40">✕</button>
             </div>
           ))}
@@ -89,6 +92,36 @@ export function ProductOptionsEditor({ value, onChange }) {
         </div>
       ))}
       {groups.length > 0 && <p className="text-[10px] text-stone-500">Fiyat farkı taban fiyata eklenir. Boş adlı seçenekler kaydedilmez.</p>}
+    </div>
+  );
+}
+
+/** Seçeneğin ek stok tüketimi (ör. Ekstra shot → +18 g kahve): tek satırlık kompakt düzenleyici. */
+function ChoiceRecipe({ ingredients, recipe, onChange }) {
+  const [ing, setIng] = React.useState("");
+  const [amt, setAmt] = React.useState("");
+  const name = (id) => (ingredients.find((i) => i.id === id) || {}).name || id;
+  const unit = (id) => (ingredients.find((i) => i.id === id) || {}).unit || "";
+  const add = () => {
+    const a = Number(amt);
+    if (!ing || !Number.isFinite(a) || a <= 0) return;
+    onChange([...recipe.filter((r) => r.ingredientId !== ing), { ingredientId: ing, amount: a }]);
+    setAmt("");
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-1 text-[11px]" title="Bu seçenek seçilince stoktan ek düşülür">
+      {recipe.map((r) => (
+        <span key={r.ingredientId} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-stone-800 text-stone-200">
+          +{r.amount} {unit(r.ingredientId)} {name(r.ingredientId)}
+          <button type="button" aria-label="Stok tüketimini kaldır" onClick={() => onChange(recipe.filter((x) => x.ingredientId !== r.ingredientId))}>✕</button>
+        </span>
+      ))}
+      <select aria-label="Stok malzemesi" value={ing} onChange={(e) => setIng(e.target.value)} className={`${input} w-28`}>
+        <option value="">+ stok…</option>
+        {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+      </select>
+      <input aria-label="Stok miktarı" type="number" min="0" step="any" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="miktar" className={`${input} w-16`} />
+      <button type="button" aria-label="Stok tüketimi ekle" onClick={add} className="px-2 py-1 rounded-lg bg-stone-800 text-amber-400">Ekle</button>
     </div>
   );
 }

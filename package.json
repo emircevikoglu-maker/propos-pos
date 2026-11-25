@@ -1,6 +1,6 @@
 {
   "name": "propos-enterprise-pos",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "ProPos — React & PHP Kurumsal POS ve ERP Sistemi",
   "private": true,
   "scripts": {
