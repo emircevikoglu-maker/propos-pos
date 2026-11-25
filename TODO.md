@@ -58,13 +58,15 @@ Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 - [ ] Testler: aynı PHP suite'leri iki depoyla da koşar (run.py `--storage=sqlite`)
 - Not: Supabase'e geçilecekse bu plan atlanır.
 
-## P4 — Altyapı kararı: Supabase + Vercel denemesi (spike) — L, [?] kullanıcı onayı
-- [ ] Güncel limit/fiyat doğrulaması (free plan duraklatma, realtime kota, Vercel cron sıklığı)
-- [ ] KVKK yurt dışı aktarım için hukuki görüş
-- [ ] Deneme: 1 tenant, satış olay tablosu, RLS (çapraz tenant engeli), realtime abonelik, Edge Function ile cihaz eşleştirme → JWT
-- [ ] Vercel cron: keepalive + günlük yedek (tenant başına JSON dökümü)
-- [ ] Mevcut saldırgan test senaryolarını RLS'e karşı koş
-- [ ] Karar notu → NOTES.md
+## P4 — Supabase geçişi (karar verildi: 25 Kasım) — XL, [?] bekleyen girdiler
+Önkoşullar (kullanıcıdan): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (yalnızca sunucu), `SUPABASE_ANON_KEY` (istemci); `.env`'de bugün yalnızca proje adı + DB parolası var → REST için yetmez. Bu PHP derlemesinde `pdo_pgsql`/`pdo_sqlite` YOK (yalnızca `pdo_mysql`, `curl`, `openssl`) → PHP, Supabase'e PostgREST (HTTPS/curl) ile konuşur; doğrudan Postgres gerekmez.
+- [ ] a. Şema (migration dosyası): `tenants`, `registry`, `tenant_state(tenant_id, rev, data jsonb)`, `sales_events(id uuid pk, tenant_id, …)`, `audit`, `kv(rate limit)`; RLS açık, anon rolüne hiçbir tablo yok
+- [ ] b. `StorageInterface` + `SupabaseStorage` (curl); `FileStorage` kalır (geliştirme/test); `PROPOS_STORAGE=file|supabase`
+- [ ] c. Realtime: istemci anon key ile yalnızca `tenant:<id>` broadcast kanalına abone (içerik yok, "rev değişti" sinyali) → sinyalde `GET /api/sync?since` (yoklama biter, hız sınırı sorunu kalkar). Kanal yetkisi: PHP'nin imzaladığı kısa ömürlü JWT (tenant claim)
+- [ ] d. Keepalive: `backend/cron/keepalive.php` (basit `select 1` benzeri; yanıt gövdesi içeriksiz `{ok:true}`), her hosttan çağrılabilir, ayrı token yok ama sıkı hız sınırı (≈7/hafta + tolerans); Vercel/cron-job.org günlük çağırır
+- [ ] e. Günlük yedek: cron ile tenant JSON dökümü (yerel indirme)
+- [ ] f. Testler: aynı PHP suite'leri `PROPOS_STORAGE=supabase` ile (test projesi/şeması) + RLS çapraz tenant testleri + keepalive hız sınırı
+- [ ] g. Manuel test: iki tarayıcı + çevrimdışı kesinti senaryosu
 
 ## P5 — Roller ve sunucuda yetki — L
 - [ ] Personel PIN'i (hash), hızlı kullanıcı değiştirme ekranı
