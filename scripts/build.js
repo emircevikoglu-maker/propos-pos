@@ -35,7 +35,7 @@ execFileSync(process.execPath, [
   "-i", path.join(root, "src", "styles", "base.css"),
   "-o", cssTmp, "--minify"
 ], { stdio: "inherit" });
-const designCss = ["design.css", "skin.css"].map((f) => fs.readFileSync(path.join(root, "src", "design", f), "utf8")).join(String.fromCharCode(10));
+const designCss = ["ui.css", "ui-extra.css", "skin.css"].map((f) => fs.readFileSync(path.join(root, "src", "design", f), "utf8")).join(String.fromCharCode(10));
 const css = fs.readFileSync(cssTmp, "utf8") + String.fromCharCode(10) + designCss;
 fs.unlinkSync(cssTmp);
 

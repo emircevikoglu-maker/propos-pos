@@ -12,6 +12,9 @@ npm run serve          # http://localhost:8586  (veya Mobil_ve_PC_Canli_Sunucu.p
 ```
 Apache/LiteSpeed: kök `.htaccess` her isteği `backend/router.php`'ye yönlendirir; `data/`, `backend/`, `src/` dışarıya kapalıdır.
 
+## Arayüz ve yönlendirme
+Tasarım kaynağı `design-prototype/` (tokenlar, bileşenler, hareket). Uygulamadaki karşılığı `src/design/ui.css` (prototipten birebir) ve `src/ui/*` (React). Adresler: `/masalar`, `/masalar/:id` (adisyon), `/stok`, `/esnaf`, `/analiz`, `/personel`, `/finans`, `/yonetim`; pencereler `?s=odeme|cesit|islem`. Geri tuşu önce pencereyi kapatır. Sunucu bilinmeyen yolları `index.html`'e düşürür.
+
 ## Depolama
 Varsayılan dosya (`data/`). `PROPOS_STORAGE=supabase` + `.env` (`.env.example`) ile Supabase; yazma-geçişli yerel önbellek ve Realtime sinyali dahil. Kurulum, SQL ve keepalive cron: `docs/SUPABASE.md`. `.env` asla commit edilmez.
 

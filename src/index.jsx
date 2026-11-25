@@ -1,5 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { registerServiceWorker } from "./pwa/register";
 
@@ -45,7 +46,9 @@ export function mountProPos() {
   const root = createRoot(container);
   root.render(
     <ErrorBoundary>
-      <App />
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

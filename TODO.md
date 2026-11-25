@@ -27,19 +27,25 @@ Doğrulananlar: (a) açık pencerede sunucu kapanınca satış sürüyor ama yö
 
 ## P13 — Yönlendirme (geri tuşu) — M
 Durum: `react-router-dom` YOK; sekme ve açık masa `useState`; geri tuşu uygulamadan çıkarıyor. Doğrulandı.
-- [ ] `react-router-dom` v6 (BrowserRouter; PHP `router.php`'de SPA yedek rota: `/api` ve dosya dışı yollar `index.html`, SW zaten `/` önbelleğinden döner). Rotalar: `/masalar`, `/masalar/:masaId` (adisyon), `/masalar/:masaId/odeme`, `/stok`, `/esnaf`, `/analiz`, `/calisan`, `/finans`, `/ayarlar`, `/yonetim`, `/patron`.
-- [ ] Geri tuşu: sheet/pencere/ödeme açıkken geri = kapat (geçmişe girdi eklenir); masadan geri = masalar; kök rotada geri uygulamadan çıkarmaz (replace + "çıkmak için tekrar bas" tostu yok, basitçe masalar).
-- [ ] Korumalı rotalar: PIN yoksa PIN ekranına yönlendir, doğrulayınca asıl rotaya dön; yenilemede açık adisyon yeniden açılır.
-- [ ] Derin bağlantı + yenileme + çok sekme testleri; `activeTab` state'i kaldırılır.
+- [x] (3.6.0) `react-router-dom` v6 (BrowserRouter; PHP `router.php`'de SPA yedek rota: `/api` ve dosya dışı yollar `index.html`, SW zaten `/` önbelleğinden döner). Rotalar: `/masalar`, `/masalar/:masaId` (adisyon), `/masalar/:masaId/odeme`, `/stok`, `/esnaf`, `/analiz`, `/calisan`, `/finans`, `/ayarlar`, `/yonetim`, `/patron`.
+- [x] (3.6.0) Geri tuşu: sheet/pencere/ödeme açıkken geri = kapat (geçmişe girdi eklenir); masadan geri = masalar; kök rotada geri uygulamadan çıkarmaz (replace + "çıkmak için tekrar bas" tostu yok, basitçe masalar).
+- [x] (3.6.0) Korumalı rotalar: PIN yoksa PIN ekranına yönlendir, doğrulayınca asıl rotaya dön; yenilemede açık adisyon yeniden açılır.
+- [~] Derin bağlantı + yenileme tarayıcıda doğrulandı, yönlendirme sözleşmesi test edildi; çok sekme ve geri/ileri bileşen testleri (Shell render) TODO; `activeTab` artık URL'den türetilir.
 - [ ] Prototipin `#masa=S2` kısayolları test için korunur.
+
+## P12 — yeni iş kalemleri (3.6.0 sonrası)
+- [ ] Giriş/eşleştirme/lisans ekranlarını prototip diline taşı — S
+- [ ] Arama ikonu (şu an "eye" yer tutucu), "Gönder" düğmesi (P1 ile), mobil alt çubuk ürün sayısı hizası — S
+- [ ] Yoğun saat çipi demo verisinde sürekli görünüyor (tohum satışlar son 10 dk'da): demo verisini zamana yay — S
+- [ ] Shell/OrderView için bileşen testleri (MemoryRouter + sahte bağlam): ürün ekle, çeşit penceresi, ödeme, geri tuşu — M
 
 ## P12 — Prototip tasarıma TAM geçiş (giydirme yaklaşımı başarısız, terk edildi) — XL
 Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını yeni renklere eşleme) geçersiz; ekranlar `design-prototype/` ile BİREBİR aynı düzen, boşluk ve hareketle yeniden yazılacak. Hata analizi: tokenlar taşındı ama düzen (3 sütun: kategori rayı / ürün ızgarası / adisyon), boşluk ölçeği, 56 px birincil eylemler, kademeli gösterim ve `PPMotion/PPCelebrate` akışları taşınmadı; eski ekranların kontrol yoğunluğu aynen kaldı (garson seçici, cari yaz, kredi, alman usulü, indirim, masa taşı tek panelde).
-- [ ] P12-0 Tasarım borcu envanteri: prototipteki her ekran/durum ↔ uygulamadaki karşılığı tablosu (özellik kaybı sıfır kontrol listesi). Prototipte olmayan ekranlar (Esnaf, Stok/Reçete, Çalışan, Finans, Analiz, Yönetim) AYNI sistemle tasarlanır; yeni ekran başına önce kısa taslak onayı.
-- [ ] P12-1 Tasarım sistemi gerçek CSS olarak: `tokens.css` + `ui.css` olduğu gibi (Tailwind eşleme yok); React bileşenleri: Button, Card, Sheet, Chip, Field, Tabs, Toast, Rail, Topbar.
-- [ ] P12-2 Kabuk: sol ray (ikon + etiket), üst çubuk (işletme, hedef çubuğu, seri, senkron noktası), dar ekranda alt gezinme.
-- [ ] P12-3 Masalar → Adisyon → Çeşit seçici → Ödeme (nakit/kart, para üstü) → 5 sn geri al; uçan ürün, sayaç sıçraması, rozet. Gerçek `motion.js` (prototipten); ikinci bir yeniden yazım değil.
-- [ ] P12-4 Kutlamalar: `PPCelebrate` kademe 0-3 gerçek kancalara bağlı; Z raporu basılı tut; yoğun saat/azaltılmış hareket kuralları; kutlamalar sayfası.
+- [~] P12-0 Tasarım borcu envanteri: prototipteki her ekran/durum ↔ uygulamadaki karşılığı tablosu (özellik kaybı sıfır kontrol listesi). Prototipte olmayan ekranlar (Esnaf, Stok/Reçete, Çalışan, Finans, Analiz, Yönetim) AYNI sistemle tasarlanır; yeni ekran başına önce kısa taslak onayı.
+- [x] (3.6.0) P12-1 Tasarım sistemi gerçek CSS olarak: `tokens.css` + `ui.css` olduğu gibi (Tailwind eşleme yok); React bileşenleri: Button, Card, Sheet, Chip, Field, Tabs, Toast, Rail, Topbar.
+- [x] (3.6.0) P12-2 Kabuk: sol ray (ikon + etiket), üst çubuk (işletme, hedef çubuğu, seri, senkron noktası), dar ekranda alt gezinme.
+- [x] (3.6.0) P12-3 Masalar → Adisyon → Çeşit seçici → Ödeme (nakit/kart, para üstü) → 5 sn geri al; uçan ürün, sayaç sıçraması, rozet. Gerçek `motion.js` (prototipten); ikinci bir yeniden yazım değil.
+- [~] P12-4 Kutlamalar: mevcut `celebrateSale/Z` kancaları yeni ödeme akışında çalışıyor; kademe 0-3 görsel doğrulaması, "kutlamalar" sayfası, hatasız sipariş serisi göstergesi TODO — `PPCelebrate` kademe 0-3 gerçek kancalara bağlı; Z raporu basılı tut; yoğun saat/azaltılmış hareket kuralları; kutlamalar sayfası.
 - [ ] P12-5 Patron görünümü (KPI, yoğunluk, menü mühendisliği, günün hikâyesi, hedef serisi).
 - [ ] P12-6 Kalan ekranlar (Esnaf, Stok/Reçete, Çalışan, Finans, Analiz, Ayarlar, Yönetim, Kuver/Atık/Sayım/Kasa) prototip diliyle.
 - [ ] P12-7 Tailwind + `skin.css` + eski ekran sınıfları tamamen kaldırılır; derleme boyutu ve `font-black` yasağı testleri.

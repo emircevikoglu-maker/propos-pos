@@ -1,3 +1,5 @@
+import { useLocation, useNavigate } from "react-router-dom";
+import { TAB_PATHS, tabFromPath, tableIdFromPath, tablePath } from "../ui/routes";
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from "react";
 import {
   DEALER_TENANTS_KEY, PROTECTED_TABS, THEME_PRESETS, INITIAL_BRAND_SETTINGS,
@@ -39,7 +41,23 @@ export const usePos = () => useContext(PosContext);
 export function PosProvider({ children }) {
   // Açılış anlık görüntüsü: DeviceGate IndexedDB'den önceden yükler (window.__PROPOS_BOOT__); yoksa eski localStorage.
   const INITIAL_DB_SNAPSHOT = useMemo(() => loadInitialProPosDb(ACTIVE_TENANT_ID), []);
-  const [activeTab, setActiveTab] = useState("pos");
+  // Sekme ve açık masa URL'den türetilir (react-router): geri tuşu, yenileme ve derin bağlantı çalışır.
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = tabFromPath(location.pathname);
+  const activeTableId = tableIdFromPath(location.pathname);
+  const setActiveTab = (tab) => navigate(TAB_PATHS[tab] || TAB_PATHS.pos);
+  // Geçmiş: masalar → masa (itme) → masa?s=pencere (itme). Kapatırken eklenen girdiler geri alınır, böylece geri tuşu
+  // kapanmış masaya dönmez; masa listesinden gelinmediyse (yenileme/derin bağlantı) yerine koyulur.
+  const setActiveTableId = (id) => {
+    const st = location.state || {};
+    if (!id) {
+      if (st.fromTables) navigate(st.sheet ? -2 : -1);
+      else navigate(TAB_PATHS.pos, { replace: true });
+      return;
+    }
+    navigate(tablePath(id), { replace: !!activeTableId, state: { fromTables: activeTableId ? !!st.fromTables : true } });
+  };
   const [globalPeriod, setGlobalPeriod] = useState("daily");
   const [customStartDate, setCustomStartDate] = useState(() => toDateInputValue(new Date(Date.now() - 7 * 86400000)));
   const [customEndDate, setCustomEndDate] = useState(() => toDateInputValue(new Date()));
@@ -124,7 +142,6 @@ export function PosProvider({ children }) {
 
   // UI View & Modal States
   const [selectedZone, setSelectedZone] = useState("Tümü");
-  const [activeTableId, setActiveTableId] = useState(null);
   const [mobilePosPanel, setMobilePosPanel] = useState("menu");
   const [posCategory, setPosCategory] = useState("Tümü");
   const [posSearch, setPosSearch] = useState("");
@@ -829,8 +846,9 @@ export function PosProvider({ children }) {
     );
   };
 
-  const handlePartialPayment = (paymentMethod) => {
-    const amount = Number(partialPayAmount);
+  // Tutar parametreli: eski pencere state'ten, yeni "Böl" akışı doğrudan hesaplanan paydan çağırır.
+  const handlePartialPayment = (paymentMethod, amountOverride) => {
+    const amount = Number(amountOverride !== undefined ? amountOverride : partialPayAmount);
     if (!activeTable || !amount || amount <= 0) return;
     const subtotal = activeTable.items.reduce((sum, i) => sum + i.price * i.qty, 0);
     if (amount >= subtotal - (activeTable.discount || 0) - (activeTable.paidAmount || 0)) {

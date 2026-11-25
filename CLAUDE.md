@@ -27,7 +27,7 @@ Restoran/kafe POS + bayi/lisans yönetimi. Türkçe arayüz. Ürün olarak satı
 - Test sunucusu için ayrı port kullan (örn. 8599); kapatırken `Get-NetTCPConnection -LocalPort 8599 -State Listen` ile PID bul (State filtresi olmadan PID 0 döner, hata yağar).
 
 ## Mevcut yapı
-- `src/` React 18: `context/PosContext.jsx` (tek büyük context — bölünecek), `components/views/*`, `components/modals/*`,
+- `src/` React 18: `ui/` (YENİ arayüz: Shell, TablesView, OrderView, PaySheet, OpsSheet, Sheet, routes — `design-prototype/` düzeninin birebir karşılığı), `design/ui.css` (prototipten üretilir, elle düzenleme), `design/ui-extra.css`, `context/PosContext.jsx` (tek büyük context — bölünecek; sekme/masa URL'den türetilir), `components/views/*`, `components/modals/*`,
   `components/auth/` (DeviceGate, PairingScreen, PinPad), `components/pos/OptionPicker`, `components/settings/ProductOptionsEditor`,
   `services/{apiService,realtime,merge,syncEngine,localDb}.js` (eşitleme/çevrimdışı), `pwa/` (service worker, kayıt, ikonlar), `design/` (tokenlar, skin.css, kutlamalar), `utils/productOptions.js` (çeşit/fiyat saf mantığı), `admin/` (kontrol paneli: AdminApp, adminApi, validation — POS paketine girmez).
 - `backend/`: `bootstrap.php` (ortak yükleyici; müşteri paketine giren dosyaları ister), `router.php` (POS), `control.php` (panel, ayrı giriş),
@@ -84,6 +84,12 @@ Restoran/kafe POS + bayi/lisans yönetimi. Türkçe arayüz. Ürün olarak satı
 
 ## Yol haritası
 Güncel plan `TODO.md`, fikirler `docs/IDEAS.md`. Sıradaki: HTTPS rehberi (PWA için şart) → kampanya motoru → yazıcı ajanı (en son, çok önemli; marka/model/58-80 mm/bağlantı bilgisi kullanıcıdan beklenir) → roller → kalan yeniden tasarım.
+
+## Arayüz çalışma kuralı (kullanıcı kararı, 25 Kasım)
+- Yeni ekran/bileşen `design-prototype/` ile BİREBİR aynı sınıf, boşluk ve hareketle yapılır (giydirme/eşleme YOK). Prototipte olmayan ekranlar aynı bileşenlerle tasarlanır, önce kısa taslak onayı alınır.
+- Görsel iş bitmeden kabul edilmez: prototiple yan yana ekran görüntüsü, 1024×768 / 1280×800 / 1920×1080 / 390×844.
+- Sıkışıklık yok: panel başına tek birincil eylem, ikincil işlemler sheet'te; metin kırpma yok; hedefler ≥ 44 px.
+- Büyük/bekletilemez değişiklik → doğrudan commit + push (main); önemli ama acil değilse onay bekle. Git yoksa değişen dosyalar paylaşılır.
 
 ## Arayüz kuralları
 - Ağırlık: 400 gövde, 500 etiket, 600 başlık, 700 yalnızca toplam tutar. `font-black`/`font-extrabold` YASAK. `<b>`/`<strong>` yerine `font-semibold`.

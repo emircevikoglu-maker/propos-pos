@@ -1,39 +1,20 @@
 import React from "react";
 import { PosProvider, usePos } from "./context/PosContext";
 import { hexToRgbTuple } from "./utils/formatters";
-import { CircleCheck } from "./components/Icons";
-import { Sidebar } from "./components/layout/Sidebar";
-import { Header } from "./components/layout/Header";
-import { PosView } from "./components/views/PosView";
-import { EsnafView } from "./components/views/EsnafView";
-import { InventoryView } from "./components/views/InventoryView";
-import { AnalyticsView } from "./components/views/AnalyticsView";
-import { StaffView } from "./components/views/StaffView";
-import { FinanceView } from "./components/views/FinanceView";
-import { SettingsView } from "./components/views/SettingsView";
 import { DealerStudioModal } from "./components/modals/DealerStudioModal";
 import { PosModals } from "./components/modals/PosModals";
+import { Shell } from "./ui/Shell";
 import { DeviceGate } from "./components/auth/DeviceGate";
 import { FeedbackSheet } from "./components/auth/FeedbackSheet";
-import { OptionPicker } from "./components/pos/OptionPicker";
-import { formatTL } from "./utils/formatters";
 
 function PosShell() {
-  const { ACTIVE_TENANT_ID, brandSettings, toast, activeTab, optionPickerProduct, setOptionPickerProduct, confirmOptionPicker } = usePos();
+  const { ACTIVE_TENANT_ID, brandSettings, activeTab } = usePos();
 
-  // Sekme başlığı: işletmenin adı + ürün adı (ör. "Kahve Durağı · ProPos").
-  React.useEffect(() => {
-    const name = String(brandSettings?.businessName || "").trim();
-    document.title = name && name !== "ProPos" ? `${name} · ProPos` : "ProPos";
-  }, [brandSettings?.businessName]);
   const primaryRgb = hexToRgbTuple(brandSettings.customPrimary);
   const secondaryRgb = hexToRgbTuple(brandSettings.customSecondary);
 
   return (
-    <div
-      style={{ backgroundColor: brandSettings.customBg || "var(--bg)" }}
-      className="min-h-[100dvh] lg:h-screen w-full text-stone-100 flex flex-col lg:flex-row font-sans selection:bg-amber-500 selection:text-stone-950 relative overflow-x-hidden lg:overflow-hidden"
-    >
+    <>
       <style>{`
         :root {
           --brand-primary: ${brandSettings.customPrimary || "#f59e0b"};
@@ -99,44 +80,12 @@ function PosShell() {
         ::-webkit-scrollbar-thumb:hover { background: var(--brand-primary); }
       `}</style>
 
-      {/* Bildirim Toast */}
-      {toast && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-5 sm:max-w-md z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border border-amber-400/50 bg-stone-950/95 backdrop-blur-xl text-amber-200 animate-view">
-          <div className="w-7 h-7 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
-            <CircleCheck className="w-4 h-4 text-emerald-400" />
-          </div>
-          <span className="text-xs sm:text-sm font-semibold tracking-wide leading-snug">{toast.message}</span>
-        </div>
-      )}
-
-      <Sidebar />
-
-      <main className="flex-1 lg:h-full flex flex-col min-w-0 lg:overflow-hidden z-10">
-        <Header />
-
-        <div key={activeTab} className="flex-1 lg:overflow-y-auto p-3 sm:p-5 lg:p-7 pb-24 lg:pb-8 animate-view">
-          {activeTab === "pos" && <PosView />}
-          {activeTab === "esnaf" && <EsnafView />}
-          {activeTab === "inventory" && <InventoryView />}
-          {activeTab === "analytics" && <AnalyticsView />}
-          {activeTab === "staff" && <StaffView />}
-          {activeTab === "finance" && <FinanceView />}
-          {activeTab === "settings" && <SettingsView />}
-        </div>
-      </main>
+      <Shell />
 
       <DealerStudioModal />
       <PosModals />
       <FeedbackSheet tenantId={ACTIVE_TENANT_ID} screen={activeTab} />
-      {optionPickerProduct && (
-        <OptionPicker
-          product={optionPickerProduct}
-          formatPrice={formatTL}
-          onConfirm={confirmOptionPicker}
-          onCancel={() => setOptionPickerProduct(null)}
-        />
-      )}
-    </div>
+    </>
   );
 }
 

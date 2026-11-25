@@ -1,0 +1,45 @@
+/* Prototipte olmayan, uygulamaya özgü eklemeler. Yalnızca tokenları kullanır; ui.css'e dokunmaz. */
+.search { display: flex; align-items: center; gap: 8px; min-height: var(--tap); padding: 0 12px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line-soft); color: var(--text-3); }
+.search:focus-within { border-color: var(--primary-line); }
+.search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--text-1); font-size: var(--fs-md); }
+.search input::placeholder { color: var(--text-3); }
+
+.field-input { min-height: var(--tap); padding: 0 14px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line-soft); color: var(--text-1); font-size: var(--fs-md); width: 100%; outline: 0; }
+.field-input:focus { border-color: var(--primary-line); }
+
+.rail { overflow-y: auto; scrollbar-width: none; }
+.rail::-webkit-scrollbar { display: none; }
+.rail-badge { position: absolute; top: 6px; right: 8px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--primary); color: var(--primary-ink); font-size: 11px; font-weight: var(--fw-head); display: grid; place-items: center; }
+.rail-badge.is-warn { background: var(--warning); }
+.rail-lock { position: absolute; top: 8px; right: 12px; width: 13px; height: 13px; color: var(--text-3); }
+.rail-lock .ic { width: 13px; height: 13px; }
+
+.icon-btn { min-width: var(--tap); min-height: var(--tap); border-radius: var(--r-md); display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--text-2); padding: 0 10px; }
+.icon-btn:hover { background: var(--surface-2); }
+.menu-pop { position: absolute; right: 0; top: calc(100% + 8px); min-width: 280px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 8px; box-shadow: var(--elev-2, 0 18px 40px rgba(0, 0, 0, .5)); z-index: 60; display: grid; gap: 2px; }
+.menu-pop button { text-align: left; min-height: var(--tap); padding: 0 12px; border-radius: var(--r-sm); color: var(--text-1); }
+.menu-pop button:hover { background: var(--surface-3); }
+.menu-pop .menu-note { padding: 8px 12px; font-size: var(--fs-xs); color: var(--text-3); }
+.menu-pop hr { border: 0; border-top: 1px solid var(--line-soft); margin: 4px 0; }
+
+.ops-section { margin-bottom: 20px; }
+.ops-title { font-size: var(--fs-sm); color: var(--text-3); font-weight: var(--fw-label); margin-bottom: 10px; }
+.ops-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ops-list { display: grid; gap: 8px; }
+.ops-list .btn { justify-content: flex-start; min-height: 56px; padding: 0 16px; }
+.pay-methods.is-4 { grid-template-columns: repeat(4, 1fr); }
+.pay-other { display: grid; gap: 10px; }
+.pay-other .btn { justify-content: flex-start; min-height: 56px; padding: 0 16px; }
+.line-opts, .line-note { display: block; }
+
+.page-card { max-width: 1100px; margin: 0 auto; }
+.ticket-discount { color: var(--success); }
+.offline-banner { margin: 12px 24px 0; padding: 12px 16px; border-radius: var(--r-md); background: var(--warning-soft); color: var(--warning); font-size: var(--fs-sm); display: flex; gap: 10px; align-items: center; }
+.legacy-view { padding: 20px 24px 40px; }
+@media (max-width: 900px) { .legacy-view { padding: 12px 12px 90px; } .pay-methods.is-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 900px) {
+  .cats .search { flex: 0 0 150px; }
+  .cats .order-back { flex: none; }
+  .busy-chip { display: none; }
+  .mobile-ticket-bar span { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+}

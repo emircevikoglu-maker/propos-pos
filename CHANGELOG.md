@@ -3,6 +3,25 @@
 Biçim: [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/). Sürüm numarası `package.json` ile birlikte artar.
 Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 
+## [3.6.0] — 2026-11-25
+Arayüz yeniden yazımı (P12) başladı: "giydirme" terk edildi, ekranlar `design-prototype/` düzeniyle yeniden yazılıyor. Yönlendirme (P13) tamam.
+### Eklendi
+- Tasarım sistemi birebir: `src/design/ui.css` = prototipin `tokens.css` + `ui.css` (tek fark `.table`→`.pp-table`, `.ring`→`.pp-ring`); uygulamaya özgü eklemeler `ui-extra.css`. Derleme `ui.css + ui-extra.css + skin.css` (skin yalnızca henüz taşınmamış eski ekranlar için).
+- Yeni kabuk (`src/ui/Shell.jsx`): sol ray (ikon + etiket, kilit/rozet), üst çubuk (işletme, günlük hedef çubuğu, yoğun saat, senkron durumu, saat, sistem menüsü), dar ekranda alt gezinme.
+- Yeni ekranlar: Masalar (`TablesView`, bölüm segmentleri, zaman halkası, 60 dk+ uyarısı), Adisyon (`OrderView`: kategori rayı / ürün ızgarası / adisyon), Çeşit seçimi, Ödeme (Nakit · Kart · Böl · Diğer; para üstü, eşit bölme), Masa işlemleri (garson, kişi sayısı, indirim, masa taşı). Hareketler prototipin `PPMotion`'ından: ürün adisyona uçar, sayaç sıçrar, rozet belirir, pencere giriş/çıkışı, 5 sn geri al.
+- `react-router-dom` 6.28: gerçek rotalar `/masalar`, `/masalar/:id`, `/stok`, `/esnaf`, `/analiz`, `/personel`, `/finans`, `/yonetim`. Sekme ve açık masa URL'den türetilir; geri tuşu pencereyi (`?s=odeme|cesit|islem`) kapatır, masadan masalara döner; ödeme sonrası geçmiş temizlenir (geri tuşu kapanmış masaya dönmez); yenileme/derin bağlantı açık adisyonu korur; korumalı sayfaya doğrudan adresle girilirse masalara dönüp PIN ister.
+- Testler: yönlendirme sözleşmesi, ödeme/kupür/toplam yardımcıları (+5).
+### Değişti
+- Kategori "Favoriler" artık ilk kategori (eski "Hızlı tek tık ekle" şeridi yerine; ürünler sabit konumda kalır).
+- Ödeme yöntemleri 5 düğme yerine 4 kutu: Yemek kartı, esnaf cariye yazma, tutarlı kısmi ödeme ve ikram/iptal "Diğer" altında (kademeli gösterim). `handlePartialPayment(method, amount)` tutar parametresi alır.
+- Dönem filtresi (Bugün/Dün/7 Gün…) yalnızca rapor sayfalarında, `.seg` olarak sayfa içinde.
+### Kaldırıldı
+- Eski `Header`, `Sidebar`, `PosView` bileşenleri (yeni kabuk ve ekranlar yerine).
+### Bilinen eksikler (P12 devam)
+- Esnaf, Stok, Analiz, Personel, Finans, Yönetim ve giriş/eşleştirme/lisans ekranları hâlâ eski (Tailwind) görünümde; yeni kabuğun içinde çalışır ama prototip diline taşınmadı (P12-6).
+- Patron görünümü (P12-5), kutlama sayfası, "Gönder" (mutfak/bar) düğmesi (P1), hatasız sipariş serisi göstergesi yok.
+- Çevrimdışı PIN ve lisans kirası (P14) yapılmadı.
+
 ## [3.5.1] — 2026-11-25
 ### Düzeltildi
 - CORS: `PROPOS_CORS_ORIGIN` ile ayrı alan adından erişimde ön kontrol (OPTIONS) `Cache-Control`/`Pragma` başlıklarına izin vermiyordu; `fetch({cache:"no-store"})` bu başlıkları eklediği için tarayıcı istekleri engelliyordu. Başlık izin listesi genişletildi, `Retry-After` açığa çıkarıldı, `Access-Control-Max-Age` eklendi.
