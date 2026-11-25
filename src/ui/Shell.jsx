@@ -11,7 +11,7 @@ import { TablesView } from "./TablesView";
 import { OrderView } from "./OrderView";
 import { EsnafView } from "./EsnafView";
 import { StockView } from "./StockView";
-import { AnalyticsView } from "../components/views/AnalyticsView";
+import { AnalyticsView } from "./AnalyticsView";
 import { StaffView } from "./StaffView";
 import { FinanceView } from "./FinanceView";
 import { SettingsView } from "../components/views/SettingsView";
@@ -209,7 +209,7 @@ export function Shell() {
             <Route path="/masalar/:tableId" element={<section className="view" aria-label="Adisyon" style={{ overflow: "hidden" }}><OrderView /></section>} />
             <Route path="/stok" element={<section className="view"><StockView /></section>} />
             <Route path="/esnaf" element={<section className="view"><EsnafView /></section>} />
-            <Route path="/analiz" element={<section className="view"><Legacy tab="analytics">{guard(isAdminUnlocked, <AnalyticsView />)}</Legacy></section>} />
+            <Route path="/analiz" element={<section className="view">{guard(isAdminUnlocked, <AnalyticsView />)}</section>} />
             <Route path="/personel" element={<section className="view">{guard(isAdminUnlocked, <StaffView />)}</section>} />
             <Route path="/finans" element={<section className="view">{guard(isAdminUnlocked, <FinanceView />)}</section>} />
             <Route path="/yonetim" element={<section className="view"><Legacy tab="settings">{guard(isAdminUnlocked, <SettingsView />)}</Legacy></section>} />

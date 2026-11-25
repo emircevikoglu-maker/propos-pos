@@ -95,3 +95,7 @@
 .tx-row { display: grid; gap: 4px; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface-2); }
 .tx-head { display: flex; justify-content: space-between; gap: 8px; font-weight: var(--fw-label); }
 @media (max-width: 700px) { .cari-row { grid-template-columns: 1fr; } .cari-side { justify-content: space-between; } }
+
+.rank.is-2 { grid-template-columns: repeat(2, 1fr); gap: 16px 32px; }
+.cell-clip { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 900px) { .rank.is-2 { grid-template-columns: 1fr; } }

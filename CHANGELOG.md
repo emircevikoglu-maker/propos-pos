@@ -3,6 +3,15 @@
 Biçim: [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/). Sürüm numarası `package.json` ile birlikte artar.
 Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 
+## [3.7.1] — 2026-11-25
+### Eklendi
+- Analiz (`src/ui/AnalyticsView.jsx`) prototip diliyle: Özet (KPI, ciro/gider çubuk grafiği prototipin `.heat` bileşeniyle, ödeme dağılımı, en çok satan 8 ürün) / Ürünler / Adisyonlar / Giderler bölümleri; filtreler üstte tek satır, tablolar `.dt`. Fişi incele ve kaydı sil mevcut akışlara bağlı.
+- Testler: Analiz için +3 (`tests/react/views.test.jsx`).
+### Kaldırıldı
+- Eski Tailwind `AnalyticsView` ve SVG eğri grafiği (yerine çubuk grafik; tooltip `title` ile).
+### Bilinen eksikler
+- Yönetim (Ayarlar) ve giriş/eşleştirme/lisans ekranları hâlâ eski görünümde.
+
 ## [3.7.0] — 2026-11-25
 P12-6 ilk dilim: Stok, Personel, Finans (+ Z raporu), Esnaf prototip diline taşındı. Analiz ve Yönetim hâlâ eski görünümde.
 ### Eklendi

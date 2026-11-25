@@ -11,6 +11,7 @@ import { StockView } from "../../src/ui/StockView";
 import { StaffView } from "../../src/ui/StaffView";
 import { EsnafView } from "../../src/ui/EsnafView";
 import { FinanceView } from "../../src/ui/FinanceView";
+import { AnalyticsView } from "../../src/ui/AnalyticsView";
 
 const wrap = (el, path = "/x") => render(<MemoryRouter initialEntries={[path]}>{el}</MemoryRouter>);
 const period = { globalPeriod: "daily", setGlobalPeriod: vi.fn(), customStartDate: "", setCustomStartDate: vi.fn(), customEndDate: "", setCustomEndDate: vi.fn() };
@@ -130,5 +131,45 @@ describe("FinanceView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Kira sil" }));
     const updater = ctx.setExpenses.mock.calls[0][0];
     expect(updater([{ id: "x1" }, { id: "x2" }])).toEqual([{ id: "x2" }]);
+  });
+});
+
+describe("AnalyticsView", () => {
+  const sale = { id: "s1", tableName: "Masa 1", staffId: "st1", paymentMethod: "Nakit", total: 120, timestamp: new Date().toISOString(), items: [{ qty: 2, name: "Latte" }] };
+  const base = () => ({
+    ...period, analyticsSubTab: "overview", setAnalyticsSubTab: vi.fn(), exportExcelByCategory: vi.fn(),
+    kpiMetrics: { grossRevenue: 1000, orderCount: 4, cariWrittenTotal: 0, netProfit: 600, totalExpenses: 400, avgTicket: 250, byMethod: { Nakit: 600, "Kredi Kartı": 400 } },
+    topProducts: [{ id: "p1", name: "Latte", category: "Sıcak", qty: 8, revenue: 800, costTotal: 200, profit: 600, share: 80 }],
+    trendChartData: [{ name: "08:00", Ciro: 100 }, { name: "09:00", Ciro: 300 }], categories: ["Sıcak"], staffList: [{ id: "st1", name: "Emirhan" }],
+    reportProductSearch: "", setReportProductSearch: vi.fn(), reportProductCategory: "Tümü", setReportProductCategory: vi.fn(), reportProductSort: "qty", setReportProductSort: vi.fn(),
+    reportReceiptSearch: "", setReportReceiptSearch: vi.fn(), reportReceiptMethod: "Tümü", setReportReceiptMethod: vi.fn(), reportReceiptStaff: "Tümü", setReportReceiptStaff: vi.fn(),
+    filteredSales: [sale], setInspectedSale: vi.fn(), handleDeleteSaleReceipt: vi.fn(),
+    reportExpenseSearch: "", setReportExpenseSearch: vi.fn(), reportExpenseCategory: "Tümü", setReportExpenseCategory: vi.fn(), filteredExpenses: [], setExpenses: vi.fn()
+  });
+
+  it("özet: KPI, grafik sütunları ve ödeme yüzdeleri; bölüm değişimi bağlama yazar", () => {
+    ctx = base();
+    wrap(<AnalyticsView />);
+    expect(document.querySelectorAll(".heat-col")).toHaveLength(2);
+    expect(screen.getByText(/%60/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Adisyonlar" }));
+    expect(ctx.setAnalyticsSubTab).toHaveBeenCalledWith("receipts");
+    fireEvent.click(screen.getByRole("button", { name: /Genel özet Excel/ }));
+    expect(ctx.exportExcelByCategory).toHaveBeenCalledWith("overview");
+  });
+
+  it("adisyonlar: fişi incele ve kaydı sil bağlıdır", () => {
+    ctx = { ...base(), analyticsSubTab: "receipts" };
+    wrap(<AnalyticsView />);
+    fireEvent.click(screen.getByRole("button", { name: "Masa 1 fişini incele" }));
+    expect(ctx.setInspectedSale).toHaveBeenCalledWith(expect.objectContaining({ id: "s1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Masa 1 kaydını sil" }));
+    expect(ctx.handleDeleteSaleReceipt).toHaveBeenCalledWith("s1");
+  });
+
+  it("ürünler: kategori filtresi ürünü eler", () => {
+    ctx = { ...base(), analyticsSubTab: "products", reportProductCategory: "Soğuk" };
+    wrap(<AnalyticsView />);
+    expect(screen.getByText(/Filtreye uyan ürün satışı yok/)).toBeTruthy();
   });
 });
