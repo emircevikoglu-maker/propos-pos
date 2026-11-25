@@ -25,7 +25,7 @@ function serveStatic(string $distDir, string $pathOnly, array $extraHeaders = []
     $mime = [
         'html' => 'text/html; charset=utf-8', 'json' => 'application/json; charset=utf-8',
         'js' => 'application/javascript; charset=utf-8', 'css' => 'text/css; charset=utf-8',
-        'svg' => 'image/svg+xml', 'png' => 'image/png', 'ico' => 'image/x-icon',
+        'svg' => 'image/svg+xml', 'png' => 'image/png', 'ico' => 'image/x-icon', 'webmanifest' => 'application/manifest+json; charset=utf-8',
     ];
     if (!isset($mime[$ext])) {
         http_response_code(404);
@@ -36,6 +36,9 @@ function serveStatic(string $distDir, string $pathOnly, array $extraHeaders = []
         header($h);
     }
     header('Content-Type: ' . $mime[$ext]);
+    if (basename($full) === 'sw.js') {
+        header('Service-Worker-Allowed: /');
+    }
     readfile($full);
     exit;
 }

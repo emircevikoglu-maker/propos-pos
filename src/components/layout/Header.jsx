@@ -45,9 +45,19 @@ export function Header() {
     isFounderUnlocked, setInstallModalOpen, setDealerStudioTab, dealerTenants, remoteUpdateInfo, isApplyingUpdate,
     applyRemoteOneClickUpdate, isCheckingUpdate, checkRemoteUpdateFromGithub, appVersion, handleSwitchToTenant,
     globalPeriod, setGlobalPeriod, customStartDate, setCustomStartDate, customEndDate, setCustomEndDate,
-    celebration, goalProgressToday
+    celebration, goalProgressToday, syncPending, storageInfo
   } = usePos();
   const [menuOpen, setMenuOpen] = React.useState(false);
+  // PWA: yeni sürüm hazır / uygulamayı yükle (tarayıcı olayları)
+  const [swUpdate, setSwUpdate] = React.useState(null);
+  const [installEvt, setInstallEvt] = React.useState(null);
+  React.useEffect(() => {
+    const onUpdate = (e) => setSwUpdate(e.detail || null);
+    const onInstall = (e) => { e.preventDefault(); setInstallEvt(e); };
+    window.addEventListener("propos-sw-update", onUpdate);
+    window.addEventListener("beforeinstallprompt", onInstall);
+    return () => { window.removeEventListener("propos-sw-update", onUpdate); window.removeEventListener("beforeinstallprompt", onInstall); };
+  }, []);
   const menuRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -70,7 +80,9 @@ export function Header() {
   ];
   const [title, TitleIcon] = TITLES[activeTab] || TITLES.pos;
   const openPin = () => { setPendingProtectedTab(null); setPinInput(""); setPinError(false); setPinModalOpen(true); };
-  const syncLabel = { online: "Senkron", saving: "Kaydediliyor", offline: "Çevrimdışı", connecting: "Bağlanıyor", error: "Yeniden bağlanıyor" }[cloudStatus] || "Senkron";
+  const syncLabel = cloudStatus === "offline"
+    ? (syncPending ? "Çevrimdışı · bekleyen var" : "Çevrimdışı")
+    : { online: "Senkron", saving: "Kaydediliyor", connecting: "Bağlanıyor", error: "Yetki gerekli" }[cloudStatus] || "Senkron";
   const syncTone = cloudStatus === "online" ? "is-ok" : cloudStatus === "saving" ? "is-primary" : "is-warn";
   const lockedPackage = typeof window !== "undefined" && !!window.__PROPOS_LOCKED_TENANT__;
   const item = (onClick, label) => (
@@ -133,6 +145,9 @@ export function Header() {
                 </div>
                 {item(() => (isFounderUnlocked ? setInstallModalOpen(true) : setSyncModalOpen(true)), "Cihaz bağlama / QR")}
                 {item(() => checkRemoteUpdateFromGithub(false), isCheckingUpdate ? "Kontrol ediliyor…" : `Güncelleme kontrolü (v${appVersion})`)}
+                {swUpdate && item(() => swUpdate.apply(), "Yeni sürümü uygula (sayfa yenilenir)")}
+                {installEvt && item(() => { installEvt.prompt(); setInstallEvt(null); }, "Uygulamayı cihaza yükle")}
+                {storageInfo && <div className="px-3 py-1 text-[11px]" style={{ color: "var(--text-3)" }}>Yerel depo: %{Math.round(storageInfo.ratio * 1000) / 10} kullanımda</div>}
                 {item(() => window.dispatchEvent(new CustomEvent("propos-open-feedback")), "Geri bildirim gönder")}
                 {isFounderUnlocked && item(() => { setDealerStudioTab("tenants"); setInstallModalOpen(true); }, `Bayi & Lisans Paneli (${dealerTenants.length})`)}
                 {ACTIVE_TENANT_ID !== "DEFAULT" && !lockedPackage && (<><div className="pp-menu-sep" />{item(() => handleSwitchToTenant("DEFAULT"), "Ana işletmeye dön")}</>)}

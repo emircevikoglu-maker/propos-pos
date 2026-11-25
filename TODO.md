@@ -42,11 +42,11 @@ Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 
 ## P2 — Senkron v2 + çevrimdışı + PWA
 ### P2-a İstemci (backend'den bağımsız; her iki altyapıda da lazım) — L
-- [ ] PWA: manifest, service worker (uygulama kabuğu önbelleği), kurulum yönergesi
-- [ ] IndexedDB (Dexie) ile localStorage yerine kalıcı depo; `navigator.storage.persist()`; kota göstergesi
-- [ ] Outbox: satışlar istemci UUID'li olay; çevrimdışıyken kuyrukta, bağlantı gelince sırayla gönder; sunucu idempotent
+- [x] PWA: manifest, service worker (kabuk önbelleği), kurulum menüsü (3.5.0)
+- [x] IndexedDB (bağımlılıksız sarmalayıcı) + `storage.persist()` + kota göstergesi (3.5.0)
+- [~] Outbox yerine "kirli durum + üç yönlü birleştirme" yapıldı (satış kimliğine göre birleşir, çift yok); olay-tabanlı gerçek outbox P2-b ile
 - [ ] Günlük yerel yedek (dosyaya) — ayar
-- [ ] Testler: çevrimdışı satış → çevrimiçi → tek kayıt (çift yok)
+- [x] Testler: çevrimdışı satış → çevrimiçi → tek kayıt (motor + tarayıcıda doğrulandı)
 ### P2-b Protokol — L
 - [ ] Durumu böl: katalog/ayar, canlı operasyon (masalar), defter (satış/gider, gün bazlı sayfalı)
 - [ ] Delta senkron (`since=N` → değişiklikler), long-poll ya da Supabase realtime (P4'e bağlı)
@@ -55,11 +55,19 @@ Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 - [x] Gönderim debounce'u (geçici iyileştirme, 24 Kasım)
 
 ## P2-c — İnternet kesintisi (sunucu + istemci tespiti) — L (P2-a ile birlikte)
-- [ ] İstemci: bağlantı durumu tek kaynak (Realtime soket durumu + son başarılı istek + `navigator.onLine` ipucu; yalnızca `onLine`'a güvenme); durum çubuğunda "Çevrimdışı — N işlem bekliyor"
-- [ ] Sunucu: cihaz `lastSeen` kaydı (yoklama/sinyal/kayıt); panelde "şu cihaz 3 dk'dır görünmüyor" uyarısı; depo (Supabase) erişilemezse yazma `503 STORAGE_DOWN` döner (veri kaybı yerine istemci kuyruğuna alır), okuma önbellekten sürer
-- [ ] Çevrimdışıyken ENGELLEME değil KUYRUĞA ALMA: satış/sipariş yerelde sürer; PIN doğrulama, yeni cihaz eşleştirme, lisans yenileme gibi sunucu şart işler "bağlantı gerekli" der
-- [ ] Çakışma politikası: satışlar UUID'li olay (idempotent); adisyon satırları UUID'li ekleme (iki cihaz aynı masaya satır eklerse birleşir); ödeme/kapama tek cihazda (kapama başka cihazda açık satır bırakırsa uyarı)
+- [x] İstemci: bağlantı durumu (ağ sonuçlarından; 3.5.0) (Realtime soket durumu + son başarılı istek + `navigator.onLine` ipucu; yalnızca `onLine`'a güvenme); durum çubuğunda "Çevrimdışı — N işlem bekliyor"
+- [~] Sunucu: `503 STORAGE_DOWN` yapıldı; cihaz `lastSeen` + panel uyarısı TODO — S (yoklama/sinyal/kayıt); panelde "şu cihaz 3 dk'dır görünmüyor" uyarısı; depo (Supabase) erişilemezse yazma `503 STORAGE_DOWN` döner (veri kaybı yerine istemci kuyruğuna alır), okuma önbellekten sürer
+- [x] Çevrimdışıyken ENGELLEME değil KUYRUĞA ALMA (PIN doğrulama gibi sunucu şart işler "bağlantı gerekli" der): satış/sipariş yerelde sürer; PIN doğrulama, yeni cihaz eşleştirme, lisans yenileme gibi sunucu şart işler "bağlantı gerekli" der
+- [~] Çakışma politikası: kimlikli birleştirme + delta yapıldı; kapama çakışması (aynı masada iki cihaz) uyarısı TODO — satışlar UUID'li olay (idempotent); adisyon satırları UUID'li ekleme (iki cihaz aynı masaya satır eklerse birleşir); ödeme/kapama tek cihazda (kapama başka cihazda açık satır bırakırsa uyarı)
 - [ ] Lisans çevrimdışı tolerans süresi (örn. 72 sa) — sunucu doğrulayamazsa kilitlemez, süre bitince salt okunur
+
+## P2-d — Çevrimdışı sonrası iyileştirmeler
+- [ ] Aynı masada iki cihaz çevrimdışı kapadı → çift satış uyarısı ve tek tıkla düzeltme — M
+- [ ] Cihaz `lastSeen` + panelde "X dk'dır görünmüyor" — S
+- [ ] Lisans çevrimdışı tolerans (72 sa) sunucu tarafı — S
+- [ ] HTTPS kurulum rehberi (VDS + otomatik sertifika, ya da yerelde Caddy) — S, PWA için ŞART
+- [ ] Background Sync (Chromium) ile sekme kapalıyken gönderim — M
+- [ ] Çevrimdışıyken yeni cihaz eşleştirme yapılamaz: arayüzde açıkça belirt — S
 
 ## P3 — Depolama: PDO (SQLite / MySQL) — [?] P4 kararına bağlı, M
 - [ ] `StorageInterface` (tenant verisi, registry, throttle sayaçları, denetim kaydı); `FileStorage` (bugünkü), `PdoStorage`

@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { registerServiceWorker } from "./pwa/register";
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -48,6 +49,8 @@ export function mountProPos() {
     </ErrorBoundary>
   );
 }
+
+registerServiceWorker();
 
 if (typeof document !== "undefined") {
   if (document.readyState === "loading") {

@@ -134,15 +134,16 @@ describe("DeviceGate (giriş akışı)", () => {
   it("eşleşmiş cihazda uygulama açılır; anahtar geçersizleşince eşleştirme ekranı üstte açılır", async () => {
     localStorage.setItem("propos_sync_key_DEFAULT", "SYNC-K");
     render(<DeviceGate><div>POS-ICERIK</div></DeviceGate>);
-    expect(screen.getByText("POS-ICERIK")).toBeTruthy();
+    expect(await screen.findByText("POS-ICERIK")).toBeTruthy();
     act(() => { window.dispatchEvent(new CustomEvent("propos-auth-required", { detail: { tenantId: "DEFAULT" } })); });
     expect(screen.getByText(/anahtarı geçersiz ya da yenilendi/)).toBeTruthy();
     expect(screen.getByText("POS-ICERIK")).toBeTruthy();
   });
 
-  it("lisans olayı lisans ekranını açar", () => {
+  it("lisans olayı lisans ekranını açar", async () => {
     localStorage.setItem("propos_sync_key_DEFAULT", "SYNC-K");
     render(<DeviceGate><div>POS-ICERIK</div></DeviceGate>);
+    await screen.findByText("POS-ICERIK");
     act(() => { window.dispatchEvent(new CustomEvent("propos-license-blocked", { detail: { message: "Lisans süresi dolmuş." } })); });
     expect(screen.getByText("Lisans etkin değil")).toBeTruthy();
     expect(screen.getByText("Lisans süresi dolmuş.")).toBeTruthy();

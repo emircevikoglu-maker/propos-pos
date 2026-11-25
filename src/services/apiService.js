@@ -65,6 +65,7 @@ export function rateLimitState() { return { ...blockedUntil }; }
 export function _resetApiStateForTests() {
   blockedUntil.poll = 0;
   blockedUntil.action = 0;
+  online = true;
   pendingPush = null;
   if (pushRetryTimer) clearTimeout(pushRetryTimer);
   pushRetryTimer = null;
@@ -149,6 +150,8 @@ async function getToken(tenantId, { preferManager = false } = {}) {
   if (key) {
     const r = await loginWithKey(tenantId, key);
     if (r.ok) return safeGet(sessionStorage, tokenKey(tenantId)) || safeGet(sessionStorage, FOUNDER_TOKEN_KEY);
+    // Ağ yok: oturum alınamadı ama anahtar GEÇERSİZ değil → çevrimdışı say (eşleştirme ekranı açma, anahtarı silme).
+    if (r.code === "NETWORK") throw new TypeError("offline");
     if (r.code === "BAD_KEY") {
       // Anahtar geçersiz (veri sıfırlandı / panelden yenilendi): bir daha deneme, eşleştirme iste.
       rejectedKeys.add(key);
@@ -259,6 +262,67 @@ export function flushQueuedPush() {
   return pushTenantSync(q.tenantId, q.deviceId, q.rev, q.jsonStr)
     .then((out) => { if (q.onDone) q.onDone(out); return out; })
     .catch(() => null);
+}
+
+// ---- Eşitleme motoru için sonuç-türlü çağrılar (hata ayrımı: offline / limited / auth / conflict) ----
+
+/** @returns {Promise<{kind:'ok',rev:number}|{kind:'conflict',rev:number,data:object}|{kind:'limited',retryAfter:number}|{kind:'offline'}|{kind:'auth'}|{kind:'error',status:number}>} */
+export async function pushState(tenantId, deviceId, baseRev, jsonStr) {
+  if (Date.now() < blockedUntil.action) return { kind: "limited", retryAfter: Math.ceil((blockedUntil.action - Date.now()) / 1000) };
+  let res;
+  try {
+    res = await authedFetch(tenantId, `/api/sync?${q(tenantId)}&deviceId=${encodeURIComponent(deviceId)}&baseRev=${Math.max(0, Math.floor(Number(baseRev) || 0))}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: jsonStr,
+      keepalive: jsonStr.length < 60000
+    });
+  } catch (e) {
+    noteConnectivity(false);
+    return { kind: "offline" };
+  }
+  if (res.status === 429) { const sec = noteRateLimit(res, "action"); noteConnectivity(true); return { kind: "limited", retryAfter: sec }; }
+  if (res.status === 401 || res.status === 403) return { kind: "auth" };
+  if (res.status === 0 || res.status >= 500) { noteConnectivity(res.status !== 0); return { kind: "offline", status: res.status }; }
+  noteConnectivity(true);
+  const out = await res.json().catch(() => null);
+  if (res.status === 409 && out && out.code === "CONFLICT" && out.data && typeof out.data === "object") return { kind: "conflict", rev: Number(out.rev) || 0, data: out.data };
+  if (res.ok && out && out.ok) return { kind: "ok", rev: Number(out.rev) || 0 };
+  return { kind: "error", status: res.status };
+}
+
+/** @returns {Promise<{kind:'unchanged'}|{kind:'data',rev:number,data:object}|{kind:'limited',retryAfter:number}|{kind:'offline'}|{kind:'auth'}|{kind:'error',status:number}>} */
+export async function pullState(tenantId, since, deviceId = "") {
+  if (Date.now() < blockedUntil.poll) return { kind: "limited", retryAfter: Math.ceil((blockedUntil.poll - Date.now()) / 1000) };
+  const sinceNum = Number.isFinite(Number(since)) ? Number(since) : -1;
+  let res;
+  try {
+    res = await authedFetch(tenantId, `/api/sync?${q(tenantId)}&since=${sinceNum}&deviceId=${encodeURIComponent(deviceId)}`, { cache: "no-store" });
+  } catch (e) {
+    noteConnectivity(false);
+    return { kind: "offline" };
+  }
+  if (res.status === 429) { const sec = noteRateLimit(res, "poll"); noteConnectivity(true); return { kind: "limited", retryAfter: sec }; }
+  if (res.status === 401 || res.status === 403) return { kind: "auth" };
+  if (res.status === 0 || res.status >= 500) { noteConnectivity(res.status !== 0); return { kind: "offline", status: res.status }; }
+  const out = await res.json().catch(() => null);
+  if (!res.ok || !out || !out.ok) return { kind: "error", status: res.status };
+  noteConnectivity(true);
+  if (out.packetRegistry === undefined && Array.isArray(out.registry)) lastRegistry = out.registry;
+  if (out.unchanged) return { kind: "unchanged" };
+  return { kind: "data", rev: Number(out.rev) || 0, data: out.data && typeof out.data === "object" ? out.data : {}, lanIp: out.lanIp, registry: out.registry };
+}
+
+let lastRegistry = null;
+export const getLastRegistry = () => lastRegistry;
+
+// ---- Bağlantı durumu: ağ hatası = çevrimdışı; yanıt (4xx dahil) = sunucuya ulaşıldı ----
+let online = true;
+export const isNetworkOnline = () => online;
+function noteConnectivity(ok) {
+  if (ok === online) return;
+  online = ok;
+  emit("propos-connectivity", { online: ok });
 }
 
 /** Realtime sinyal kanalı bilgisi (Supabase kapalıysa {enabled:false}). */

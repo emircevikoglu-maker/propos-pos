@@ -16,14 +16,15 @@ final class FakeRemote implements Storage
     public ?string $registry = null;
     public int $reads = 0;
     public bool $failWrites = false;
+    public bool $down = false;
 
     public function name(): string { return 'supabase'; }
-    public function readTenant(string $id): ?string { $this->reads++; return $this->tenants[$id] ?? null; }
-    public function writeTenant(string $id, string $json, int $rev, string $by): bool { if ($this->failWrites) return false; $this->tenants[$id] = $json; return true; }
+    public function readTenant(string $id): ?string { if ($this->down) throw new \ProPos\Services\Storage\StorageUnavailable('down'); $this->reads++; return $this->tenants[$id] ?? null; }
+    public function writeTenant(string $id, string $json, int $rev, string $by): bool { if ($this->down) throw new \ProPos\Services\Storage\StorageUnavailable('down'); if ($this->failWrites) return false; $this->tenants[$id] = $json; return true; }
     public function deleteTenant(string $id): ?string { $r = $this->tenants[$id] ?? null; unset($this->tenants[$id]); return $r; }
     public function stats(array $ids): array { return []; }
-    public function readRegistry(): ?string { $this->reads++; return $this->registry; }
-    public function writeRegistry(string $json): bool { if ($this->failWrites) return false; $this->registry = $json; return true; }
+    public function readRegistry(): ?string { if ($this->down) throw new \ProPos\Services\Storage\StorageUnavailable('down'); $this->reads++; return $this->registry; }
+    public function writeRegistry(string $json): bool { if ($this->down) throw new \ProPos\Services\Storage\StorageUnavailable('down'); if ($this->failWrites) return false; $this->registry = $json; return true; }
     public function registryVersion(): string { return 'remote'; }
     public function ping(): bool { return true; }
 }
@@ -110,4 +111,43 @@ t('TenantService CachedStorage üzerinde: kaydet/yükle/PIN, uzak okuma sayısı
     assertSame($before, $remote->reads, 'okumalar uzak depoya gitmemeli');
     assertTrue((new PinService($ts))->verify('CACHE-1', '2468')['ok']);
     assertNotContains('2468', (string)$remote->tenants['CACHE-1'], 'uzak depoda düz PIN yok');
+});
+
+t('StorageUnavailable: önbellek yutmaz, TenantService "kayıt yok" sanıp üzerine YAZMAZ', function () {
+    $remote = new FakeRemote();
+    $remote->down = true;
+    $c = new CachedStorage($remote, new FileStorage(tmpDir('cache')), 900);
+    $threw = false;
+    try { $c->readTenant('A'); } catch (\ProPos\Services\Storage\StorageUnavailable $e) { $threw = true; }
+    assertTrue($threw, 'erişilemezlik "yok" gibi görünmemeli');
+    $ts = new TenantService($c);
+    $threw = false;
+    try { $ts->saveTenant('A', json_encode(minimalState()), 'dev'); } catch (\ProPos\Services\Storage\StorageUnavailable $e) { $threw = true; }
+    assertTrue($threw, 'depo kapalıyken kayıt reddedilmeli (sessiz veri kaybı yok)');
+    assertSame([], $remote->tenants, 'hiçbir şey yazılmamalı');
+});
+
+t('saveTenant: baseRev uyuşmazlığı yazmaz ve güncel veriyi döner; eşleşince yazar', function () {
+    [$ts] = freshServices();
+    unitTenant($ts, 'CC-1');
+    $a = $ts->saveTenant('CC-1', json_encode(minimalState(['marker' => 'A'])), 'dev1');
+    $stale = $ts->saveTenant('CC-1', json_encode(minimalState(['marker' => 'B'])), 'dev2', $a['rev'] - 5);
+    assertTrue(!empty($stale['conflict']) && $stale['ok'] === false);
+    assertSame($a['rev'], $stale['rev']);
+    assertSame('A', $ts->loadTenant('CC-1')['data']['marker']);
+    $ok = $ts->saveTenant('CC-1', json_encode(minimalState(['marker' => 'C'])), 'dev2', $a['rev']);
+    assertTrue($ok['ok']);
+    assertSame('C', $ts->loadTenant('CC-1')['data']['marker']);
+});
+
+t('Müşteri paketi PWA dosyalarını içerir (çevrimdışı açılış kurulumda da çalışsın)', function () {
+    [$ts] = freshServices();
+    unitTenant($ts, 'PWA-1');
+    foreach (['index.html' => '<html><head></head><body>x</body></html>', 'sw.js' => 'const VERSION="abc";', 'manifest.webmanifest' => '{"name":"x"}', 'icon-192.png' => "\x89PNG", 'icon-512.png' => "\x89PNG", 'icon-maskable-512.png' => "\x89PNG", 'apple-touch-icon.png' => "\x89PNG"] as $f => $c) {
+        file_put_contents(PROPOS_DIST_DIR . DIRECTORY_SEPARATOR . $f, $c);
+    }
+    $files = readZip((new \ProPos\Services\PackageService($ts))->buildCustomerZip('PWA-1', '', '', '3.0.0')['bytes']);
+    foreach (['dist/sw.js', 'dist/manifest.webmanifest', 'dist/icon-192.png', 'dist/icon-512.png', 'dist/icon-maskable-512.png', 'dist/apple-touch-icon.png'] as $need) {
+        assertTrue(isset($files[$need]), "pakette eksik: $need");
+    }
 });

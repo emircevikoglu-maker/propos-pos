@@ -14,6 +14,7 @@ use function ProPos\audit;
 use function ProPos\clientIp;
 use function ProPos\detectLanIp;
 use function ProPos\envInt;
+use function ProPos\installExceptionHandler;
 use function ProPos\normalizeTenantId;
 use function ProPos\mbSubstrSafe;
 use function ProPos\qs;
@@ -80,6 +81,7 @@ class ApiController
 
     public function handle(string $method, string $path): void
     {
+        installExceptionHandler();
         $method = strtoupper($method);
         if ($path === '/api/keepalive') {
             $this->keepalive($method);
@@ -337,7 +339,15 @@ class ApiController
         }
         if ($method === 'POST') {
             $deviceId = trim(qs('deviceId', 'unknown'));
-            $result = $this->tenants->saveTenant($tenantId, $rawBody, $deviceId);
+            $baseRevRaw = qs('baseRev', '');
+            if ($baseRevRaw !== '' && (!ctype_digit($baseRevRaw) || strlen($baseRevRaw) > 15)) {
+                sendJson(['ok' => false, 'error' => 'Geçersiz baseRev.'], 400);
+            }
+            $baseRev = $baseRevRaw !== '' ? (int)$baseRevRaw : null;
+            $result = $this->tenants->saveTenant($tenantId, $rawBody, $deviceId, $baseRev);
+            if (!empty($result['conflict'])) {
+                sendJson(['ok' => false, 'code' => 'CONFLICT'] + $result, 409);
+            }
             if ($result['ok'] && Realtime::enabled()) {
                 // Yanıt istemciye gittikten sonra sinyal yayınla (kayıt gecikmesini artırmasın).
                 $auth = $this->auth;

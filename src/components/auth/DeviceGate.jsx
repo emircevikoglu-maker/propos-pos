@@ -2,6 +2,7 @@ import React from "react";
 import { PairingScreen, LicenseBlockedScreen } from "./PairingScreen";
 import { fetchServerInfo, isDevicePaired, pairDevice, unpairDevice } from "../../services/apiService";
 import { getProPosStorageKey, resolveActiveTenantId } from "../../utils/formatters";
+import { preloadLocal } from "../../services/localDb";
 
 const hasLocalData = (tid) => { try { return !!localStorage.getItem(getProPosStorageKey(tid)); } catch (e) { return false; } };
 
@@ -20,6 +21,14 @@ export function DeviceGate({ children }) {
   const [reason, setReason] = React.useState("");
   const [licenseMsg, setLicenseMsg] = React.useState("");
   const [offline, setOffline] = React.useState(false);
+  const [booted, setBooted] = React.useState(false);
+
+  // IndexedDB'deki son yerel durumu uygulama açılmadan yükle (çevrimdışı açılışta veri hazır olsun).
+  React.useEffect(() => {
+    let on = true;
+    preloadLocal(tenantId, getProPosStorageKey(tenantId)).finally(() => { if (on) setBooted(true); });
+    return () => { on = false; };
+  }, [tenantId]);
 
   const probe = React.useCallback(async () => {
     const info = await fetchServerInfo();
@@ -68,6 +77,9 @@ export function DeviceGate({ children }) {
     />
   );
 
+  if (!booted) {
+    return <div className="fixed inset-0 flex items-center justify-center bg-[#080706] text-sm text-stone-400">ProPos açılıyor…</div>;
+  }
   if (state === "checking") {
     return <div className="fixed inset-0 flex items-center justify-center bg-[#080706] text-sm text-stone-400">ProPos açılıyor…</div>;
   }

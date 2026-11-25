@@ -87,7 +87,41 @@ class TenantService
     /**
      * @return array{ok: bool, tenantId: string, rev: int, updatedBy: string, error?: string}
      */
-    public function saveTenant(string $tenantId, string $rawJson, string $deviceId = 'unknown'): array
+    /**
+     * İşletme başına süreç kilidi: oku-karşılaştır-yaz bölümü atomik olsun (iki eşzamanlı POST birbirini ezmesin).
+     * @template T @param callable():T $fn @return T
+     */
+    private function withTenantLock(string $tenantId, callable $fn)
+    {
+        $dir = PROPOS_DATA_DIR . DIRECTORY_SEPARATOR . 'locks';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0750, true);
+        }
+        $fh = @fopen($dir . DIRECTORY_SEPARATOR . $tenantId . '.lock', 'c');
+        if ($fh === false) {
+            return $fn();
+        }
+        flock($fh, LOCK_EX);
+        try {
+            return $fn();
+        } finally {
+            flock($fh, LOCK_UN);
+            fclose($fh);
+        }
+    }
+
+    /**
+     * $baseRev verilirse iyimser eşzamanlılık: istemcinin bildiği rev sunucudakiyle farklıysa YAZILMAZ,
+     * ['conflict' => true, 'rev' => güncel, 'data' => güncel (PIN'siz)] döner; istemci birleştirip yeniden dener.
+     * Verilmezse (eski istemci) davranış öncekiyle aynı: son yazan kazanır.
+     */
+    public function saveTenant(string $tenantId, string $rawJson, string $deviceId = 'unknown', ?int $baseRev = null): array
+    {
+        $norm = normalizeTenantId($tenantId);
+        return $this->withTenantLock($norm, fn() => $this->saveTenantLocked($norm, $rawJson, $deviceId, $baseRev));
+    }
+
+    private function saveTenantLocked(string $tenantId, string $rawJson, string $deviceId, ?int $baseRev): array
     {
         $norm = normalizeTenantId($tenantId);
         $fail = static fn(string $msg): array => ['ok' => false, 'tenantId' => $norm, 'rev' => 0, 'updatedBy' => $deviceId, 'error' => $msg];
@@ -107,6 +141,10 @@ class TenantService
         // PIN sunucuda tutulur: istemciden gelen PIN/hash yok sayılır, mevcut hash korunur.
         $currentLoaded = $this->loadTenant($norm);
         $current = $currentLoaded['data'];
+        if ($baseRev !== null && $baseRev !== (int)($current['rev'] ?? 0)) {
+            return ['ok' => false, 'conflict' => true, 'tenantId' => $norm, 'rev' => (int)($current['rev'] ?? 0),
+                'updatedBy' => (string)($current['updatedBy'] ?? ''), 'data' => self::publicData($current), 'error' => 'Çakışma: başka cihaz daha yeni kaydetti.'];
+        }
         $incomingPlainPin = isset($decoded['adminPin']) && is_string($decoded['adminPin']) ? $decoded['adminPin'] : null;
         foreach (self::DATA_SECRET_FIELDS as $f) {
             unset($decoded[$f]);

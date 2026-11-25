@@ -8,6 +8,7 @@ use ProPos\Services\PackageService;
 use ProPos\Services\TenantService;
 use ProPos\Services\Throttle;
 use function ProPos\clientIp;
+use function ProPos\installExceptionHandler;
 use function ProPos\sendApiHeaders;
 use function ProPos\qs;
 use function ProPos\sendJson;
@@ -56,6 +57,7 @@ class ControlController
 
     public function handle(string $method, string $path): void
     {
+        installExceptionHandler();
         $method = strtoupper($method);
         if ($method === 'OPTIONS') {
             http_response_code(204);

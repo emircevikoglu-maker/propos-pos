@@ -10,11 +10,13 @@ import {
   loadInitialProPosDb, resolveGithubBaseRawUrl
 } from "../utils/formatters";
 import {
-  fetchTenantSync, pushTenantSync, postDealerTenants, postPrepareGithubRelease, postApplyHtmlUpdate,
+  pushTenantSync, pushState, pullState, postDealerTenants, postPrepareGithubRelease, postApplyHtmlUpdate,
   loginWithKey, clearFounderSession, hasFounderSession,
   verifyManagerPin, changeManagerPin, clearManagerSession, unpairDevice,
-  queuePush, flushQueuedPush, hasPendingPush, fetchRealtimeConfig
+  fetchRealtimeConfig, isNetworkOnline
 } from "../services/apiService";
+import { createSyncEngine } from "../services/syncEngine";
+import { saveState as saveLocalState, saveBase as saveLocalBase, saveMeta as saveLocalMeta, requestPersistence, storageEstimate } from "../services/localDb";
 import { createRealtime } from "../services/realtime";
 import { PPMotion } from "../design/motion";
 import {
@@ -30,26 +32,26 @@ import {
 } from "../utils/packageBuilder";
 
 const ACTIVE_TENANT_ID = resolveActiveTenantId();
-const PROPOS_STORAGE_KEY = getProPosStorageKey(ACTIVE_TENANT_ID);
-const INITIAL_DB_SNAPSHOT = loadInitialProPosDb(ACTIVE_TENANT_ID);
 const PosContext = createContext(null);
 
 export const usePos = () => useContext(PosContext);
 
 export function PosProvider({ children }) {
+  // Açılış anlık görüntüsü: DeviceGate IndexedDB'den önceden yükler (window.__PROPOS_BOOT__); yoksa eski localStorage.
+  const INITIAL_DB_SNAPSHOT = useMemo(() => loadInitialProPosDb(ACTIVE_TENANT_ID), []);
   const [activeTab, setActiveTab] = useState("pos");
   const [globalPeriod, setGlobalPeriod] = useState("daily");
   const [customStartDate, setCustomStartDate] = useState(() => toDateInputValue(new Date(Date.now() - 7 * 86400000)));
   const [customEndDate, setCustomEndDate] = useState(() => toDateInputValue(new Date()));
   const [cloudStatus, setCloudStatus] = useState("connecting");
+  const [syncPending, setSyncPending] = useState(false);
+  const [storageInfo, setStorageInfo] = useState(null);
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [installModalOpen, setInstallModalOpen] = useState(false);
 
   const isRemoteUpdateRef = useRef(false);
   const isInitialMountRef = useRef(true);
-  const hasHydratedFromServerRef = useRef(false);
-  const lastCoreRevRef = useRef(Number(INITIAL_DB_SNAPSHOT?.rev || (INITIAL_DB_SNAPSHOT?.exportedAt ? Date.parse(INITIAL_DB_SNAPSHOT.exportedAt) : 0) || 0));
   const clientDeviceIdRef = useRef(`dev-${Math.random().toString(36).slice(2, 9)}`);
 
   // Security & Admin PIN
@@ -339,54 +341,62 @@ export function PosProvider({ children }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // PHP Backend Live Sync Polling & Auto-Save
+  // ---- Eşitleme: IndexedDB'de kalıcı yerel durum + sunucuyla üç yönlü birleştirme (services/syncEngine.js) ----
+  const stateRef = useRef(null);
+  stateRef.current = { brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog };
+  const engineRef = useRef(null);
+
+  const applySyncedState = (st, { remote }) => {
+    if (remote) isRemoteUpdateRef.current = true;
+    if (st.brandSettings) setBrandSettings(st.brandSettings);
+    if (Array.isArray(st.zones)) setZones(st.zones);
+    if (Array.isArray(st.categories)) setCategories(st.categories);
+    if (Array.isArray(st.staffList)) setStaffList(st.staffList);
+    if (Array.isArray(st.ingredients)) setIngredients(st.ingredients);
+    if (Array.isArray(st.products)) setProducts(st.products);
+    if (Array.isArray(st.tables)) setTables(st.tables);
+    if (Array.isArray(st.sales)) setSales(st.sales);
+    if (Array.isArray(st.expenses)) setExpenses(st.expenses);
+    if (Array.isArray(st.esnafList)) setEsnafList(st.esnafList);
+    if (Array.isArray(st.stockLog)) setStockLog(st.stockLog);
+    setLastSyncedAt(new Date().toISOString());
+    if (remote) setTimeout(() => { isRemoteUpdateRef.current = false; }, 250);
+  };
+
   useEffect(() => {
     let active = true;
-    const pullFromLocalServer = async () => {
-      try {
-        const packet = await fetchTenantSync(ACTIVE_TENANT_ID, lastCoreRevRef.current, clientDeviceIdRef.current);
-        if (active && packet?.ok && packet.unchanged) { hasHydratedFromServerRef.current = true; setCloudStatus(navigator.onLine ? "online" : "offline"); return; }
-        if (!active || !packet?.ok || !packet.data) return;
-        // Gönderilmemiş yerel değişiklik varken uzak durumu uygulama (önce bizimki gitsin).
-        if (hasPendingPush()) return;
-        if (packet.lanIp) window.__PROPOS_LAN_IP__ = packet.lanIp;
-        if (Array.isArray(packet.registry) && packet.registry.length > 0) {
-          setDealerTenants(packet.registry);
-          localStorage.setItem(DEALER_TENANTS_KEY, JSON.stringify(packet.registry));
+    const boot = typeof window !== "undefined" && window.__PROPOS_BOOT__ && window.__PROPOS_BOOT__.tenantId === ACTIVE_TENANT_ID ? window.__PROPOS_BOOT__ : null;
+    const engine = createSyncEngine({
+      tenantId: ACTIVE_TENANT_ID,
+      deviceId: clientDeviceIdRef.current,
+      push: (rev, json) => pushState(ACTIVE_TENANT_ID, clientDeviceIdRef.current, rev, json),
+      pull: async (since) => {
+        const r = await pullState(ACTIVE_TENANT_ID, since, clientDeviceIdRef.current);
+        if (r.kind === "data" || r.kind === "unchanged") {
+          if (r.lanIp) window.__PROPOS_LAN_IP__ = r.lanIp;
+          if (Array.isArray(r.registry) && r.registry.length > 0) {
+            setDealerTenants(r.registry);
+            try { localStorage.setItem(DEALER_TENANTS_KEY, JSON.stringify(r.registry)); } catch (e) {}
+          }
         }
-        const incomingRev = Number(packet.data?.rev || packet.rev || (packet.data?.exportedAt ? Date.parse(packet.data.exportedAt) : 0) || 0);
-        if (incomingRev > lastCoreRevRef.current && packet.updatedBy !== clientDeviceIdRef.current) {
-          hasHydratedFromServerRef.current = true;
-          isRemoteUpdateRef.current = true;
-          lastCoreRevRef.current = incomingRev;
-          const d = { ...packet.data, rev: incomingRev };
-          if (d.brandSettings) setBrandSettings(d.brandSettings);
-          if (d.zones) setZones(d.zones);
-          if (d.categories) setCategories(d.categories);
-          if (d.staffList) setStaffList(d.staffList);
-          if (d.ingredients) setIngredients(d.ingredients);
-          if (d.products) setProducts(d.products);
-          if (d.tables) setTables(d.tables);
-          if (d.sales) setSales(d.sales);
-          if (d.expenses) setExpenses(d.expenses);
-          if (d.esnafList) setEsnafList(d.esnafList);
-          if (Array.isArray(d.stockLog)) setStockLog(d.stockLog);
-          localStorage.setItem(PROPOS_STORAGE_KEY, JSON.stringify(d));
-          setLastSyncedAt(d.exportedAt || new Date().toISOString());
-          setCloudStatus("online");
-          setTimeout(() => { isRemoteUpdateRef.current = false; }, 200);
-        } else if (lastCoreRevRef.current > incomingRev && !hasHydratedFromServerRef.current) {
-          hasHydratedFromServerRef.current = true;
-          const localRaw = localStorage.getItem(PROPOS_STORAGE_KEY);
-          if (localRaw) pushTenantSync(ACTIVE_TENANT_ID, clientDeviceIdRef.current, lastCoreRevRef.current, localRaw).catch(() => {});
-        } else {
-          hasHydratedFromServerRef.current = true;
-          setCloudStatus("online");
-        }
-      } catch (e) {
-        hasHydratedFromServerRef.current = true;
+        return r;
+      },
+      store: {
+        saveState: (st) => saveLocalState(ACTIVE_TENANT_ID, st),
+        saveBase: (b) => saveLocalBase(ACTIVE_TENANT_ID, b),
+        saveMeta: (m) => saveLocalMeta(ACTIVE_TENANT_ID, m)
+      },
+      applyState: (st, info) => applySyncedState(st, info),
+      onStatus: ({ status, pending, conflicts }) => {
+        if (!active) return;
+        setSyncPending(pending);
+        setCloudStatus({ synced: "online", pending: "saving", offline: "offline", blocked: "error", connecting: "connecting" }[status] || "connecting");
+        if (conflicts && conflicts.length > 0) showToast(`🔀 Başka cihazla ${conflicts.length} çakışma vardı; sizin değişikliğiniz korundu.`, "warning");
       }
-    };
+    });
+    engineRef.current = engine;
+    engine.init({ state: boot?.state || stateRef.current, base: boot?.base || null, meta: boot?.meta || { serverRev: 0, dirty: false } });
+
     // Görünür sekmede 3 sn; gizli sekmede 30 sn. Realtime sinyal kanalı bağlıysa yoklama yalnızca emniyet için
     // (60 sn / 120 sn): değişiklik sinyalle anında gelir, istek sayısı ~20 kat düşer.
     let lastPollAt = 0;
@@ -396,15 +406,15 @@ export function PosProvider({ children }) {
       const gap = rtConnected ? (hidden ? 120000 : 60000) : (hidden ? 30000 : 2900);
       if (Date.now() - lastPollAt < gap) return;
       lastPollAt = Date.now();
-      pullFromLocalServer();
+      engine.pull();
     };
     let signalTimer = null;
     const realtime = createRealtime({
-      onStatus: (c) => { rtConnected = c; if (c) { lastPollAt = 0; } },
+      onStatus: (c) => { rtConnected = c; if (c) { lastPollAt = 0; engine.onOnline(); } },
       onSignal: ({ rev, by }) => {
-        if (by === clientDeviceIdRef.current || rev <= lastCoreRevRef.current) return;
+        if (by === clientDeviceIdRef.current || rev <= engine.state().serverRev) return;
         if (signalTimer) clearTimeout(signalTimer);
-        signalTimer = setTimeout(() => { lastPollAt = Date.now(); pullFromLocalServer(); }, 120);
+        signalTimer = setTimeout(() => { lastPollAt = Date.now(); engine.pull(); }, 120);
       }
     });
     // Supabase kapalıysa sessizce yoklamaya devam edilir.
@@ -412,41 +422,35 @@ export function PosProvider({ children }) {
     tick();
     const intervalId = setInterval(tick, 1000);
     const onVisible = () => {
-      if (document.hidden) { flushQueuedPush(); return; }
+      if (document.hidden) { engine.flushNow(); return; }
       lastPollAt = 0;
       tick();
     };
-    const onPageHide = () => { flushQueuedPush(); };
+    const onPageHide = () => { engine.flushNow(); };
+    const onNet = (e) => { if (e.detail && e.detail.online) { lastPollAt = 0; engine.onOnline(); } };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("propos-connectivity", onNet);
+    // Kalıcı depolama izni + kota (tarayıcı veriyi baskı altında silmesin)
+    requestPersistence().then(() => storageEstimate()).then((info) => { if (active && info) setStorageInfo(info); }).catch(() => {});
     return () => {
       active = false;
+      engine.destroy();
+      engineRef.current = null;
       realtime.stop();
       if (signalTimer) clearTimeout(signalTimer);
       clearInterval(intervalId);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("propos-connectivity", onNet);
     };
   }, []);
 
+  // Yerel değişiklik → kalıcı depo (hemen) + eşitleme motoru (debounce ile gönderim)
   useEffect(() => {
     if (isInitialMountRef.current) { isInitialMountRef.current = false; return; }
     if (isRemoteUpdateRef.current) return;
-    const nextRev = Date.now();
-    lastCoreRevRef.current = nextRev;
-    const payload = {
-      version: "1.0", tenantId: ACTIVE_TENANT_ID, rev: nextRev, exportedAt: new Date().toISOString(),
-      brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog
-    };
-    const jsonStr = JSON.stringify(payload);
-    localStorage.setItem(PROPOS_STORAGE_KEY, jsonStr);
-    setLastSyncedAt(payload.exportedAt);
-    setCloudStatus(navigator.onLine ? "online" : "offline");
-    // Debounce: hızlı art arda değişiklikler (yazma, +/- basma) tek gönderime iner.
-    queuePush(ACTIVE_TENANT_ID, clientDeviceIdRef.current, nextRev, jsonStr, (out) => {
-      if (out?.rev) lastCoreRevRef.current = Number(out.rev);
-      if (out?.ok) setCloudStatus("online");
-    });
+    if (engineRef.current) engineRef.current.localChanged(stateRef.current);
   }, [brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog]);
 
   // 429: sunucu "yavaşla" dedi. Kasada pop-up yok, kısa bir bilgi yeter; senkron kendini toparlar.
@@ -464,8 +468,8 @@ export function PosProvider({ children }) {
   useEffect(() => {
     setCloudStatus(navigator.onLine ? "online" : "offline");
     setLastSyncedAt(new Date().toISOString());
-    const onOnline = () => { setCloudStatus("online"); showToast("🌐 İnternet bağlantısı geri geldi! Veriler senkronize ediliyor."); };
-    const onOffline = () => { setCloudStatus("offline"); showToast("⚠️ İnternet kesildi! İşlemleriniz güvende, bağlantı gelince otomatik eşitlenecek.", "warning"); };
+    const onOnline = () => { showToast("🌐 İnternet bağlantısı geri geldi! Bekleyen değişiklikler gönderiliyor."); if (engineRef.current) engineRef.current.onOnline(); };
+    const onOffline = () => { setCloudStatus("offline"); showToast("⚠️ İnternet kesildi. Satışa devam edebilirsiniz; değişiklikler bu cihazda saklanır, bağlantı gelince otomatik eşitlenir.", "warning"); };
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
     return () => { window.removeEventListener("online", onOnline); window.removeEventListener("offline", onOffline); };
@@ -1118,11 +1122,10 @@ export function PosProvider({ children }) {
   };
 
   const handleManualForceSync = async () => {
-    setLastSyncedAt(new Date().toISOString());
-    setCloudStatus(navigator.onLine ? "online" : "offline");
-    const localRaw = localStorage.getItem(PROPOS_STORAGE_KEY);
-    if (localRaw) await pushTenantSync(ACTIVE_TENANT_ID, clientDeviceIdRef.current, Date.now(), localRaw).catch(() => {});
-    showToast("☁️ Tüm veriler yerel sunucu ve bağlı cihazlarla anında eşitlendi!");
+    const eng = engineRef.current;
+    if (eng) { await eng.pull(); await eng.flushNow(); }
+    const st = eng ? eng.state() : null;
+    showToast(st && st.dirty ? "⏳ Bağlantı yok: değişiklikler bu cihazda saklandı, bağlantı gelince gönderilecek." : "☁️ Tüm veriler bağlı cihazlarla eşitlendi!");
   };
 
   const exportFullBackupFile = () => {
@@ -1183,7 +1186,7 @@ export function PosProvider({ children }) {
     ACTIVE_TENANT_ID, activeCurrencyObj, clientDeviceId: clientDeviceIdRef.current,
     activeTab, setActiveTab, handleTabNavigation, globalPeriod, setGlobalPeriod, customStartDate, setCustomStartDate, customEndDate, setCustomEndDate,
     cloudStatus, lastSyncedAt, syncModalOpen, setSyncModalOpen, installModalOpen, setInstallModalOpen,
-    stockLog, stockReason, setStockReason, newPrdBarcode, setNewPrdBarcode, changeTableGuests, handleSearchEnter,
+    syncPending, storageInfo, stockLog, stockReason, setStockReason, newPrdBarcode, setNewPrdBarcode, changeTableGuests, handleSearchEnter,
     celebration, updateCelebration, goalProgressToday: goalProgress(sales, celebration.goal), celebrateZReport,
     isAdminUnlocked, pinBusy, handleChangePin, handleSetupFirstPin, handleUnpairDevice,
     optionPickerProduct, setOptionPickerProduct, confirmOptionPicker, newPrdOptions, setNewPrdOptions, setIsAdminUnlocked, pinModalOpen, setPinModalOpen, pinInput, setPinInput, pinError, setPinError, pendingProtectedTab, setPendingProtectedTab, newPinValue, setNewPinValue, handleVerifyPin, handleLockAdmin,

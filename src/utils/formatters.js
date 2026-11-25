@@ -136,6 +136,11 @@ export function loadInitialDealerTenants() {
 
 export function loadInitialProPosDb(tenantId) {
   const storageKey = getProPosStorageKey(tenantId);
+  // IndexedDB'den DeviceGate'in önceden yüklediği son yerel durum (çevrimdışı açılışta da çalışır).
+  try {
+    const boot = typeof window !== "undefined" ? window.__PROPOS_BOOT__ : null;
+    if (boot && boot.tenantId === tenantId && boot.state && boot.state.tables && boot.state.products) return boot.state;
+  } catch (e) {}
   try {
     const raw = localStorage.getItem(storageKey);
     if (raw) {

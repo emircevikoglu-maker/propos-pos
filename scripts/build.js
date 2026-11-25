@@ -71,9 +71,8 @@ const html = `<!DOCTYPE html>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="${icon}">
 <style>${css}</style>
-<script>
-if ('serviceWorker' in navigator) { navigator.serviceWorker.getRegistrations().then(function (r) { r.forEach(function (x) { x.unregister(); }); }).catch(function () {}); }
-</script>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body class="bg-[#080706] text-stone-100 select-none">
 <div id="root"></div>
@@ -82,6 +81,24 @@ if ('serviceWorker' in navigator) { navigator.serviceWorker.getRegistrations().t
 </html>
 `;
 fs.writeFileSync(path.join(distDir, "index.html"), html);
+
+// PWA: manifest, ikonlar, service worker (sürüm = HTML özeti → içerik değişince önbellek yenilenir)
+const crypto = require("crypto");
+const version = crypto.createHash("sha1").update(html).digest("hex").slice(0, 10);
+const pwaSrc = path.join(root, "src", "pwa");
+for (const f of ["icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"]) fs.copyFileSync(path.join(pwaSrc, f), path.join(distDir, f));
+fs.writeFileSync(path.join(distDir, "sw.js"), fs.readFileSync(path.join(pwaSrc, "sw.template.js"), "utf8").replace(/__VERSION__/g, version));
+fs.writeFileSync(path.join(distDir, "manifest.webmanifest"), JSON.stringify({
+  name: "ProPos — Restoran & Kafe POS", short_name: "ProPos", description: "Masa, adisyon ve stok yönetimi; çevrimdışı çalışır.",
+  start_url: "/", scope: "/", display: "standalone", orientation: "any", lang: "tr",
+  background_color: "#100e0c", theme_color: "#080706",
+  icons: [
+    { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+    { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+    { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" }
+  ]
+}, null, 2));
+console.log(`PWA hazır: sw.js sürüm ${version}`);
 const adminDir = path.join(root, "dist-admin");
 fs.mkdirSync(adminDir, { recursive: true });
 const adminHtml = page("ProPos — Kontrol Paneli", "bg-stone-950 text-stone-100 min-h-screen", adminJs, '<meta name="robots" content="noindex, nofollow">');

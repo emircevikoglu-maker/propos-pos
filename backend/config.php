@@ -28,6 +28,31 @@ function mbSubstrSafe(string $s, int $max): string
     return preg_match('/^.{0,' . $max . '}/us', $s, $m) ? $m[0] : substr($s, 0, $max);
 }
 
+/**
+ * İşlenmeyen istisnalar JSON olarak döner ve ayrıntı sızdırmaz: depo erişilemezse 503 STORAGE_DOWN (istemci kuyruğa alır),
+ * diğerleri 500 SERVER. Hata ayrıntısı yalnızca sunucu günlüğüne gider.
+ */
+function installExceptionHandler(): void
+{
+    set_exception_handler(static function (\Throwable $e): void {
+        error_log('ProPos: ' . get_class($e) . ': ' . $e->getMessage());
+        if (!headers_sent()) {
+            if ($e instanceof \ProPos\Services\Storage\StorageUnavailable) {
+                http_response_code(503);
+                header('Retry-After: 10');
+            } else {
+                http_response_code(500);
+            }
+            header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: no-store');
+        }
+        echo $e instanceof \ProPos\Services\Storage\StorageUnavailable
+            ? '{"ok":false,"code":"STORAGE_DOWN","error":"Depo geçici olarak erişilemiyor. İşlemleriniz kuyruğa alınır."}'
+            : '{"ok":false,"code":"SERVER","error":"Sunucu hatası."}';
+        exit;
+    });
+}
+
 function envInt(string $name, int $default): int
 {
     $v = getenv($name);

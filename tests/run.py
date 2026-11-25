@@ -107,7 +107,9 @@ def prepare_dist(tmp: Path) -> Path:
     dist.mkdir(parents=True, exist_ok=True)
     src = ROOT / "dist" / "index.html"
     if src.is_file():
-        shutil.copy(src, dist / "index.html")
+        for f in (ROOT / "dist").iterdir():  # index.html + PWA dosyaları (sw.js, manifest, ikonlar)
+            if f.is_file():
+                shutil.copy(f, dist / f.name)
     else:
         (dist / "index.html").write_text('<!DOCTYPE html><html><head></head><body><div id="root"></div></body></html>', encoding="utf-8")
     return dist
@@ -174,7 +176,7 @@ def stage_build() -> list[dict]:
             ("Panel paketinde POS kodu yok", "propos-rate-limited" not in adm),
             ("Paketlerde sabit kurucu/senkron anahtarı yok", not any(s in pos + adm for s in ["PICKYS9999", "SYNC-6CMY"])),
             # Paket içindeki "</script" dizeleri kaçışlı olmalı; yalnızca gerçek etiketler kapanır.
-            ("</script> kaçışı doğru (POS 2, panel 1 gerçek etiket)", pos.count("</script") == 2 and adm.count("</script") == 1),
+            ("</script> kaçışı doğru (POS 1, panel 1 gerçek etiket)", pos.count("</script") == 1 and adm.count("</script") == 1),
         ]
         for name, ok in checks:
             res.append({"suite": "build", "name": name, "status": "passed" if ok else "failed", "ms": 0, "message": ""})

@@ -3,6 +3,25 @@
 Biçim: [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/). Sürüm numarası `package.json` ile birlikte artar.
 Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 
+## [3.5.0] — 2026-11-25
+### Eklendi
+- Çevrimdışı çalışma: internet kopunca satış sürer; değişiklikler IndexedDB'de kalıcıdır, bağlantı gelince otomatik gönderilir. Üst çubukta "Çevrimdışı · bekleyen var". Tarayıcıda doğrulandı: sunucu kapatıldı → satış → sayfa yeniden açıldı (veri yerinde) → sunucu açıldı → sunucuya ulaştı.
+- Üç yönlü birleştirme (`services/merge.js`): çevrimdışı cihaz başkasının değişikliğini ezmez. Satış/gider/stok kaydı kimliğe göre birleşir (çift satış yok); stok ve adet sayaçları delta ile birleşir (iki cihaz da düştüyse ikisi de uygulanır); aynı alanda gerçek çakışmada yerel kazanır ve bildirilir.
+- Eşitleme motoru (`services/syncEngine.js`): debounce'lu gönderim, üstel geri çekilme (3→60 sn), 429/yetki/çevrimdışı ayrımı, ilk başarılı çekmeden önce gönderim yok, açılışta kirli durum + taban ile devam.
+- Sunucu iyimser eşzamanlılık: `POST /api/sync?baseRev=` uyuşmuyorsa `409 CONFLICT` + güncel veri (yazılmaz); geçersiz baseRev 400; işletme başına süreç kilidi. `baseRev` yoksa eski davranış.
+- `503 STORAGE_DOWN`: depo (Supabase) erişilemezse "kayıt yok" sanılmaz, yazma durur (sessiz veri kaybı yok); genel hata yakalayıcı sır sızdırmaz.
+- IndexedDB yerel depo (`services/localDb.js`): localStorage ~5 MB tavanı kalktı; eski veri bir kez taşınır; IndexedDB yoksa localStorage/belleğe düşer; açılış ön yüklemesi (3 sn zaman aşımı); `navigator.storage.persist()` ve kota göstergesi.
+- PWA: `manifest.webmanifest`, 4 ikon (`tools/make_icons.py`), service worker (kabuk önbelleği, ağ-öncelikli gezinme + 3 sn zaman aşımı, `/api/*` asla önbelleğe alınmaz, yeni sürüm kullanıcı onayıyla), Sistem menüsünde "Uygulamayı yükle" ve "Yeni sürümü uygula". Müşteri paketine PWA dosyaları eklendi.
+### Değişti
+- Eski "service worker'ı sil" betiği derlemeden kaldırıldı.
+- Bağlantı durumu ağ sonuçlarından türetilir (`navigator.onLine` yalnızca ipucu); ağ yokken oturum alınamaması anahtarı GEÇERSİZ saymaz ve eşleştirme ekranı açmaz.
+### Testler
+- 76 yeni test: birleştirme (24), eşitleme motoru (18), yerel depo (12), service worker (13), PHP eşzamanlılık/PWA/depo kesintisi. Toplam 357.
+### Bilinen sınırlar
+- Service worker yalnızca HTTPS/localhost'ta çalışır: düz `http://LAN-IP` üzerinde "çevrimdışıyken sayfayı yeniden aç" ve "uygulamayı yükle" yok (çevrimdışı çalışma ve IndexedDB yine var). Üretimde HTTPS şart.
+- Aynı masada iki cihazın çevrimdışı kapama/ödemesi çift satış üretebilir (uyarı verilir, otomatik çözülmez).
+- Gönderim hâlâ tam durum (delta değil): büyük işletmede P2-b gerekli.
+
 ## [3.4.0] — 2026-11-25
 ### Eklendi
 - Çeşit seçeneğine stok reçetesi: "Ekstra shot → +18 g kahve" gibi seçenek başına ek tüketim; satışta ürün reçetesi + seçilen çeşitlerin reçeteleri adetle çarpılarak düşülür (düzenleyicide seçenek satırında "+ stok").

@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/Services/ZipBuilder.php';
 require_once __DIR__ . '/Services/Throttle.php';
+require_once __DIR__ . '/Services/Storage/StorageUnavailable.php';
 require_once __DIR__ . '/Services/Storage/Storage.php';
 require_once __DIR__ . '/Services/Storage/FileStorage.php';
 require_once __DIR__ . '/Services/Storage/SupabaseStorage.php';

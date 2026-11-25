@@ -83,6 +83,13 @@ class PackageService
             $html = (string)file_get_contents($indexHtmlPath);
             $locked = preg_replace('/<\/head>/i', str_replace('\\', '\\\\', $boot) . '</head>', $html, 1) ?? $html;
             $zip->addText('dist/index.html', $locked);
+            // PWA dosyaları (service worker, manifest, ikonlar): müşteri kurulumunda da çevrimdışı açılış çalışsın.
+            foreach (['sw.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'] as $asset) {
+                $assetPath = PROPOS_DIST_DIR . DIRECTORY_SEPARATOR . $asset;
+                if (is_file($assetPath)) {
+                    $zip->addBytes('dist/' . $asset, (string)file_get_contents($assetPath));
+                }
+            }
         }
 
         $state = $this->tenantService->loadTenant($normTenant);
@@ -97,6 +104,7 @@ class PackageService
             'backend/bootstrap.php',
             'backend/config.php',
             'backend/env.php',
+            'backend/Services/Storage/StorageUnavailable.php',
             'backend/Services/Storage/Storage.php',
             'backend/Services/Storage/FileStorage.php',
             'backend/Services/Storage/SupabaseStorage.php',

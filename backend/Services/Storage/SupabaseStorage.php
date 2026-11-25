@@ -73,6 +73,15 @@ class SupabaseStorage implements Storage
         return ['status' => $status, 'body' => (string)$res];
     }
 
+    /** Ağ hatası ya da 5xx → erişilemez (null döndürmek "kayıt yok" anlamına gelir ve veri kaybına yol açar). */
+    private function guard(array $r): array
+    {
+        if ($r['status'] === 0 || $r['status'] >= 500) {
+            throw new StorageUnavailable('Supabase erişilemiyor (' . ($this->lastError ?: 'HTTP ' . $r['status']) . ')');
+        }
+        return $r;
+    }
+
     private function id(string $tenantId): string
     {
         return rawurlencode(normalizeTenantId($tenantId));
@@ -80,7 +89,7 @@ class SupabaseStorage implements Storage
 
     public function readTenant(string $tenantId): ?string
     {
-        $r = $this->request('GET', '/rest/v1/propos_tenant_state?tenant_id=eq.' . $this->id($tenantId) . '&select=data&limit=1');
+        $r = $this->guard($this->request('GET', '/rest/v1/propos_tenant_state?tenant_id=eq.' . $this->id($tenantId) . '&select=data&limit=1'));
         if ($r['status'] !== 200) {
             return null;
         }
@@ -97,7 +106,7 @@ class SupabaseStorage implements Storage
         // $json zaten doğrulanmış geçerli JSON; yeniden kodlamadan gövdeye gömülür (büyük veride bellek/zaman tasarrufu).
         $body = '{"tenant_id":' . json_encode(normalizeTenantId($tenantId)) . ',"rev":' . $rev . ',"updated_by":' . json_encode($updatedBy)
             . ',"updated_at":' . json_encode(gmdate('c')) . ',"data":' . $json . '}';
-        $r = $this->request('POST', '/rest/v1/propos_tenant_state?on_conflict=tenant_id', $body, ['Prefer: resolution=merge-duplicates,return=minimal']);
+        $r = $this->guard($this->request('POST', '/rest/v1/propos_tenant_state?on_conflict=tenant_id', $body, ['Prefer: resolution=merge-duplicates,return=minimal']));
         return $r['status'] >= 200 && $r['status'] < 300;
     }
 
@@ -127,7 +136,7 @@ class SupabaseStorage implements Storage
 
     public function readRegistry(): ?string
     {
-        $r = $this->request('GET', '/rest/v1/propos_registry?id=eq.1&select=data&limit=1');
+        $r = $this->guard($this->request('GET', '/rest/v1/propos_registry?id=eq.1&select=data&limit=1'));
         if ($r['status'] !== 200) {
             return null;
         }
@@ -141,7 +150,7 @@ class SupabaseStorage implements Storage
     public function writeRegistry(string $json): bool
     {
         $body = '{"id":1,"updated_at":' . json_encode(gmdate('c')) . ',"data":' . $json . '}';
-        $r = $this->request('POST', '/rest/v1/propos_registry?on_conflict=id', $body, ['Prefer: resolution=merge-duplicates,return=minimal']);
+        $r = $this->guard($this->request('POST', '/rest/v1/propos_registry?on_conflict=id', $body, ['Prefer: resolution=merge-duplicates,return=minimal']));
         return $r['status'] >= 200 && $r['status'] < 300;
     }
 

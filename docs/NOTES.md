@@ -92,6 +92,14 @@ Nüanslar / riskler
 ## Önbellek kararı (25 Kasım)
 - Ölçüm: Supabase'e her istek ≈0,45 sn (bağlantı yeniden kullanımıyla bile); senkron GET 2 uzak okuma = 1,2 sn. Çözüm: PHP tek yazıcı olduğu için yazma-geçişli yerel önbellek. Çok sunuculu kurulumda önbellek TTL'si yanlış okuma riski taşır (TTL kısaltılır ya da Realtime sinyaliyle geçersiz kılınır).
 
+## Çevrimdışı mimarisi (3.5.0, 25 Kasım)
+- Katmanlar: IndexedDB (yerel gerçek) → eşitleme motoru (dirty bayrağı + taban) → sunucu (baseRev ile iyimser eşzamanlılık). Her yerel değişiklik ÖNCE kalıcı depoya yazılır (çökmeye karşı), sonra gönderilir.
+- Neden "olay kuyruğu" değil de "durum + üç yönlü birleştirme": mevcut veri modeli tam durum; olay-tabanlı outbox için sunucu tarafında defter tablosu ve sayfalama gerekir (P2-b). Birleştirme bugünkü modelde en az değişiklikle doğru sonucu verir: defterler kimlikle birleşir, sayaçlar delta, varlıklar alan alan.
+- Taban (base) = sunucunun bildiğimiz son durumu. Taban olmadan (ilk eşitleme) "boş liste dolu listeyi ezmez" kuralı geçerli.
+- Güvenlik: depo erişilemezken sunucu "kayıt yok" sanıp üzerine yazmaz (`StorageUnavailable` → 503); `baseRev` yarışları 409'a çevirir.
+- HTTPS kısıtı: service worker ve "uygulamayı yükle" yalnızca güvenli bağlamda. LAN'daki `http://192.168.x.x` tabletlerinde çevrimdışı ÇALIŞMA vardır (sayfa açıkken, IndexedDB), ama kapatıp çevrimdışı yeniden açma yoktur. Çözüm: yerelde bile HTTPS (örn. Caddy ile yerel sertifika) ya da VDS'te HTTPS + tablet bulut adresinden açar.
+- Tarayıcı veri silme riski: `storage.persist()` istenir; kurulu PWA'da genellikle verilir. Safari kurulu olmayan sitenin verisini 7 gün kullanılmazsa silebilir → iOS'ta PWA olarak kurmak önerilir; ayrıca sunucuda zaten kopya var (son güvence).
+
 ## Açık sorular (kullanıcıya)
 1. Yazıcı: marka/model, 58 mm mi 80 mm mi, bağlantı (USB/ağ/Bluetooth), mutfak ve bar ayrı yazıcı mı?
 2. Altyapı: Supabase denemesi yapılsın mı, yoksa PHP VDS'te kalıp PDO (SQLite/MySQL) mı?
