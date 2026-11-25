@@ -59,8 +59,13 @@ function assertStatusIn(array $expected, array $res, string $msg = ''): void
 /** Yanıtta sızıntı yok: PHP hata metni, dosya yolu, sır alanları. */
 function assertNoLeak(array $res, string $msg = ''): void
 {
-    foreach (['founderHash', '"secret"', 'adminPinHash', '<?php', 'Fatal error', 'Stack trace', 'Warning:', 'Notice:', 'Deprecated:', 'PROPOS_ROOT_DIR'] as $bad) {
+    foreach (['founderHash', '"secret"', 'adminPinHash', '<?php', 'Stack trace', 'PROPOS_ROOT_DIR'] as $bad) {
         if (stripos($res['body'], $bad) !== false) fail(($msg ? $msg . ': ' : '') . "yanıtta sızıntı: $bad");
+    }
+    // PHP hata çıktısı satır başında "Warning: ..." / "<b>Fatal error</b>:" biçimindedir (bundle metni yanlış alarm vermesin).
+    if (preg_match('/(^|
+)(<br \/>\s*)?(<b>)?(Warning|Notice|Deprecated|Fatal error|Parse error)(<\/b>)?:\s/', $res['body'])) {
+        fail(($msg ? $msg . ': ' : '') . 'yanıtta PHP hata çıktısı var');
     }
     if (preg_match('#[A-Za-z]:\\\\[^"\s]*\\\\(backend|data)#', $res['body'])) fail(($msg ? $msg . ': ' : '') . 'yanıtta sunucu dosya yolu var');
 }

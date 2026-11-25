@@ -67,6 +67,17 @@ Nüanslar / riskler
 - Kutlama anları (anlamlı olanlar): gün içindeki ilk satış, kişisel rekor, hedefe ulaşma, Z raporu kapanışı, stok sayımı bitti, hatasız 50 sipariş serisi. Her satışta değil (yorar).
 - Sesli geri bildirim isteğe bağlı, varsayılan kapalı.
 
+## Laravel'e geçiş (25 Kasım) — şimdilik hayır
+- Maliyet yüksek: ~2000 satır PHP + 100 PHP testi Laravel'e taşınır; HTTP sözleşmesini ve güvenlik testlerini korumak ayrı bir iş.
+- Hız kazancı küçük: darboğaz PHP çatısı değil; tam durum JSON'u okuma/yazma, dosya IO ve yoklama sıklığı. Bunlar Supabase (delta + realtime) ile kalkıyor. Laravel'in bu darboğazlara etkisi sıfır; yalnızca ORM/kuyruk/kimlik yardımcıları gelir.
+- Supabase'e geçince PHP'de yalnızca kimlik/lisans/panel kalır (küçük yüzey) → Laravel'e değmeyebilir. Önce Supabase, sonra gerekirse karar.
+- Not: php-fpm + OPcache ile (VDS) mevcut kod zaten `php -S` geliştirme sunucusundan çok hızlıdır; hız ölçümü o ortamda yapılmalı.
+
+## Giydirme yaklaşımı (25 Kasım, 3.2.0)
+- Prototip sıfırdan yazılmış tek sayfa; uygulama ise 9600 satır Tailwind. Sıfırdan taşımak özellik kaybı riski taşıyordu. Bunun yerine katmanlı giydirme: (1) tokenlar + `skin.css` mevcut sınıfları yeni tokenlara eşler, (2) yeni bileşenler (masa kartı, geri al, kutlama, üst çubuk) aynı veriyle yazılır, (3) kalan ekranlar kademeli taşınır (TODO P6).
+- `.table`/`.ring` sınıfları Tailwind ile çakıştığı için `pp-table`/`pp-ring` oldu.
+- Kutlama kararı saf fonksiyon (`pickProMoment`→`pickMoment`) ve test edildi; görsel sahneler `motion.js`'te.
+
 ## Açık sorular (kullanıcıya)
 1. Yazıcı: marka/model, 58 mm mi 80 mm mi, bağlantı (USB/ağ/Bluetooth), mutfak ve bar ayrı yazıcı mı?
 2. Altyapı: Supabase denemesi yapılsın mı, yoksa PHP VDS'te kalıp PDO (SQLite/MySQL) mı?

@@ -18,9 +18,23 @@ const grep = (re, filter = () => true) => files.filter(filter).flatMap((f) => re
 
 describe("kaynak taraması", () => {
   it("innerHTML / eval / new Function yok; document.write yalnızca kaçışlı yazdırma şablonunda", () => {
-    expect(grep(/dangerouslySetInnerHTML|\.innerHTML\s*=|\beval\(|new Function\(/)).toEqual([]);
+    expect(grep(/dangerouslySetInnerHTML|\.innerHTML\s*=|\beval\(|new Function\(/, (f) => rel(f) !== "design/motion.js")).toEqual([]);
     const writers = grep(/document\.write\(/).map(([f]) => f);
     expect([...new Set(writers)]).toEqual(writers.length ? ["components/views/ZReportCard.jsx"] : []);
+  });
+
+  it("design/motion.js: innerHTML'e giren kullanıcı/işletme metni esc() ile kaçışlı", () => {
+    const src = read(path.join(SRC, "design/motion.js"));
+    expect(src).toMatch(/function esc\(/);
+    // Dinamik alanlar (kicker, title, sub, stat etiketi) HTML dizgesine yalnızca esc(...) içinde girer.
+    const lines = src.split("\n").filter((l) => /(s\.kicker|s\.title|s\.sub|st\.label)/.test(l) && /<\/?(span|div|h2|p)/.test(l));
+    expect(lines.length).toBeGreaterThan(0);
+    lines.forEach((l) => {
+      const dyn = [...l.matchAll(/(s\.kicker|s\.title|s\.sub|st\.label)/g)];
+      dyn.filter((m) => !/^\s*\?/.test(l.slice(m.index + m[0].length))).forEach((m) => expect(l.slice(0, m.index)).toMatch(/esc\(/));
+    });
+    // Geri al metni innerHTML'e değil textContent'e yazılır.
+    expect(src).toMatch(/undo-text'\)\.textContent = text/);
   });
 
   it("Z raporu yazdırma şablonunda her değer esc() ile kaçışlı", () => {
@@ -57,6 +71,6 @@ describe("kaynak taraması", () => {
   });
 
   it("arayüz kuralı: font-black / font-extrabold kullanılmaz", () => {
-    expect(grep(/font-black|font-extrabold/)).toEqual([]);
+    expect(grep(/font-black|font-extrabold/, (f) => rel(f) !== "design/skin.css")).toEqual([]);
   });
 });

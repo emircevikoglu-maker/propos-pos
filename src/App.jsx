@@ -30,7 +30,7 @@ function PosShell() {
 
   return (
     <div
-      style={{ backgroundColor: brandSettings.customBg || "#080706" }}
+      style={{ backgroundColor: brandSettings.customBg || "var(--bg)" }}
       className="min-h-[100dvh] lg:h-screen w-full text-stone-100 flex flex-col lg:flex-row font-sans selection:bg-amber-500 selection:text-stone-950 relative overflow-x-hidden lg:overflow-hidden"
     >
       <style>{`
@@ -97,19 +97,6 @@ function PosShell() {
         ::-webkit-scrollbar-thumb { background: rgba(87, 83, 78, 0.45); border-radius: 9999px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--brand-primary); }
       `}</style>
-
-      {/* Ambient Glow Arka Plan */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
-        <div
-          className="absolute -top-40 -left-40 w-80 sm:w-96 h-80 sm:h-96 rounded-full blur-[130px]"
-          style={{ backgroundColor: `rgba(${primaryRgb}, 0.11)` }}
-        />
-        <div
-          className="absolute top-1/3 right-0 w-80 sm:w-96 h-80 sm:h-96 rounded-full blur-[140px]"
-          style={{ backgroundColor: `rgba(${secondaryRgb}, 0.08)` }}
-        />
-        <div className="absolute -bottom-32 left-1/3 w-72 h-72 rounded-full bg-emerald-500/5 blur-[120px]" />
-      </div>
 
       {/* Bildirim Toast */}
       {toast && (

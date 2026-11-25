@@ -15,6 +15,10 @@ import {
   verifyManagerPin, changeManagerPin, clearManagerSession, unpairDevice,
   queuePush, flushQueuedPush, hasPendingPush
 } from "../services/apiService";
+import { PPMotion } from "../design/motion";
+import {
+  loadCelebrationSettings, saveCelebrationSettings, applyCelebrationSettings, celebrateSale, celebrateZReport, goalProgress, isBusyNow
+} from "../design/celebrations";
 import { sanitizeOptionGroups, buildOrderLine, mergeIntoItems, optionSummary } from "../utils/productOptions";
 import { exportExcelByCategory as runExcelExport } from "../utils/excelExport";
 import {
@@ -94,10 +98,20 @@ export function PosProvider({ children }) {
   const [expenses, setExpenses] = useState(() => INITIAL_DB_SNAPSHOT?.expenses || generateInitialExpenses());
   const [esnafList, setEsnafList] = useState(() => INITIAL_DB_SNAPSHOT?.esnafList || INITIAL_ESNAF);
 
+  // Kutlamalar / hareket: cihaza özel (senkronlanmaz)
+  const [celebration, setCelebrationState] = useState(() => loadCelebrationSettings(ACTIVE_TENANT_ID));
+  const salesRef = useRef([]);
+  const updateCelebration = (patch) => {
+    setCelebrationState((prev) => { const next = { ...prev, ...patch }; saveCelebrationSettings(ACTIVE_TENANT_ID, next); return next; });
+  };
+
   const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
   const showToast = (message, type = "success") => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+    // Üst üste gelen bildirimlerde önceki zamanlayıcı yenisini erken kapatmasın.
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
   };
 
   // UI View & Modal States
@@ -590,6 +604,16 @@ export function PosProvider({ children }) {
     return handleVerifyPin(pin);
   };
 
+  useEffect(() => {
+    applyCelebrationSettings(ACTIVE_TENANT_ID, celebration, () => isBusyNow(salesRef.current));
+  }, [celebration]);
+  useEffect(() => { salesRef.current = sales; }, [sales]);
+
+  /** Onay penceresi yerine 5 sn "Geri al": snapshot geri yüklenir, yoksa kalıcı olur (onCommit). */
+  const offerUndo = (text, restore, onCommit) => {
+    PPMotion.undo(text, restore, { onCommit });
+  };
+
   const handleChangePin = async (current, next) => {
     const r = await changeManagerPin(ACTIVE_TENANT_ID, current, next);
     showToast(r.ok ? "Yönetici PIN'i güncellendi." : `PIN değiştirilemedi: ${r.error}`);
@@ -713,6 +737,12 @@ export function PosProvider({ children }) {
 
   const updateOrderItemQty = (itemId, delta) => {
     if (!activeTable) return;
+    const removing = activeTable.items.find((i) => i.id === itemId && i.qty + delta <= 0);
+    if (removing) {
+      const prevTable = activeTable;
+      const tid = activeTable.id;
+      offerUndo(`${removing.name} adisyondan çıkarıldı`, () => setTables((prev) => prev.map((t) => (t.id === tid ? prevTable : t))));
+    }
     setTables((prev) => prev.map((t) => {
       if (t.id !== activeTable.id) return t;
       const items = t.items.map((i) => (i.id === itemId ? { ...i, qty: i.qty + delta } : i)).filter((i) => i.qty > 0);
@@ -748,11 +778,20 @@ export function PosProvider({ children }) {
     const remainingTotal = Math.max(0, subtotal - (activeTable.discount || 0) - (activeTable.paidAmount || 0));
     // Kısmi ödemeler kendi satış kaydında sayıldı; burada yalnızca kalan brüt yazılır (Z raporu brütü şişmesin).
     const remainingGross = Math.max(0, subtotal - (activeTable.paidAmount || 0));
-    setSales((prev) => [{ id: `sl-${Date.now()}`, timestamp: new Date().toISOString(), tableName: activeTable.name, staffId: activeTable.staffId || staffList[0]?.id, paymentMethod, subtotal: remainingGross, discount: Math.min(activeTable.discount || 0, remainingGross), total: remainingTotal, items: activeTable.items }, ...prev]);
+    const newSale = { id: `sl-${Date.now()}`, timestamp: new Date().toISOString(), tableName: activeTable.name, staffId: activeTable.staffId || staffList[0]?.id, paymentMethod, subtotal: remainingGross, discount: Math.min(activeTable.discount || 0, remainingGross), total: remainingTotal, items: activeTable.items };
+    const snap = { tables, sales, ingredients };
+    const closedName = activeTable.name;
+    const staffName = staffList.find((st) => st.id === activeTable.staffId)?.name || "Personel";
+    setSales((prev) => [newSale, ...prev]);
     deductRecipeIngredients(activeTable.items);
     setTables((prev) => prev.map((t) => (t.id === activeTable.id ? { ...t, status: "empty", openedAt: null, discount: 0, paidAmount: 0, items: [] } : t)));
-    showToast(`${activeTable.name} hesabı (${formatTL(remainingTotal)}) ${paymentMethod} ile ${staffList.find((s) => s.id === activeTable.staffId)?.name || "Personel"} tarafından kapatıldı ve stoktan düşüldü!`);
     setActiveTableId(null);
+    // 5 sn içinde geri alınabilir; kutlama yalnızca kalıcılaşınca (geri alınan satış kutlanmaz).
+    offerUndo(
+      `${closedName} kapatıldı · ${formatTL(remainingTotal)} · ${paymentMethod} · ${staffName}`,
+      () => { setTables(snap.tables); setSales(snap.sales); setIngredients(snap.ingredients); },
+      () => celebrateSale({ sales: [newSale, ...snap.sales], sale: newSale, goal: celebration.goal })
+    );
   };
 
   const handlePartialPayment = (paymentMethod) => {
@@ -1107,6 +1146,7 @@ export function PosProvider({ children }) {
     ACTIVE_TENANT_ID, activeCurrencyObj, clientDeviceId: clientDeviceIdRef.current,
     activeTab, setActiveTab, handleTabNavigation, globalPeriod, setGlobalPeriod, customStartDate, setCustomStartDate, customEndDate, setCustomEndDate,
     cloudStatus, lastSyncedAt, syncModalOpen, setSyncModalOpen, installModalOpen, setInstallModalOpen,
+    celebration, updateCelebration, goalProgressToday: goalProgress(sales, celebration.goal), celebrateZReport,
     isAdminUnlocked, pinBusy, handleChangePin, handleSetupFirstPin, handleUnpairDevice,
     optionPickerProduct, setOptionPickerProduct, confirmOptionPicker, newPrdOptions, setNewPrdOptions, setIsAdminUnlocked, pinModalOpen, setPinModalOpen, pinInput, setPinInput, pinError, setPinError, pendingProtectedTab, setPendingProtectedTab, newPinValue, setNewPinValue, handleVerifyPin, handleLockAdmin,
     dealerTenants, dealerStudioTab, setDealerStudioTab, newCustName, setNewCustName, newCustOwner, setNewCustOwner, newCustCode, setNewCustCode, newCustPin, setNewCustPin, newCustPlan, setNewCustPlan, newCustTheme, setNewCustTheme, newCustCurrency, setNewCustCurrency, newCustTemplate, setNewCustTemplate,

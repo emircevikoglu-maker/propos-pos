@@ -20,6 +20,9 @@ import {
   Gift
 } from "../Icons";
 
+// 60 dk üstü saat+dk, 1 günü aşan (unutulmuş/demo adisyon) "1 g+" olarak kısaltılır.
+const fmtElapsed = (m) => (m < 60 ? `${m} dk` : m < 1440 ? `${Math.floor(m / 60)} sa ${m % 60} dk` : "1 g+");
+
 export function PosView() {
   const {
     activeTable,
@@ -58,7 +61,7 @@ export function PosView() {
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 lg:gap-6 items-start">
       {/* Mobil Masa Alt Bar */}
       {activeTable && (
-        <div className="xl:hidden col-span-1 glass-panel p-2.5 rounded-2xl border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sticky top-[104px] z-20 shadow-2xl">
+        <div className="xl:hidden col-span-1 glass-panel p-2.5 rounded-2xl border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sticky top-[56px] z-20 shadow-2xl">
           <div className="flex items-center justify-between sm:justify-start gap-2">
             <button
               onClick={() => setActiveTableId(null)}
@@ -287,81 +290,45 @@ export function PosView() {
               return (
                 <button
                   key={table.id}
+                  type="button"
                   onClick={() => {
                     setActiveTableId(table.id);
                     setMobilePosPanel("menu");
                   }}
-                  className={`pos-card-hover group relative text-left p-3.5 sm:p-4 rounded-2xl border flex flex-col justify-between min-h-[128px] sm:min-h-[140px] overflow-hidden ${
-                    isSelected
-                      ? "ring-2 ring-amber-400 bg-gradient-to-b from-stone-900 to-stone-950 border-amber-400 shadow-2xl shadow-amber-500/20"
-                      : isOccupied
-                      ? "bg-gradient-to-br from-amber-950/45 via-[#171412] to-[#12100e] border-amber-500/45 hover:border-amber-400"
-                      : isFastEsnaf
-                      ? "bg-gradient-to-br from-orange-950/35 via-[#171412] to-stone-950 border-orange-500/40 hover:border-orange-400"
-                      : "glass-panel border-stone-800/90 hover:border-stone-700"
-                  }`}
+                  className={`pp-table pressable text-left ${isOccupied ? "is-busy" : "is-empty"} ${isSelected ? "is-selected" : ""} ${isFastEsnaf ? "is-esnaf" : ""} ${isOccupied && getElapsedMinutes(table.openedAt) >= 60 ? "is-long" : ""}`}
+                  aria-label={`${table.name}, ${isOccupied ? `dolu, ${formatTL(tableRemaining)}` : "müsait"}`}
                 >
-                  <div
-                    className={`absolute top-0 left-0 right-0 h-1 ${
-                      isOccupied
-                        ? "bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500"
-                        : isFastEsnaf
-                        ? "bg-orange-500"
-                        : "bg-emerald-500/30 group-hover:bg-emerald-400/60"
-                    }`}
-                  />
-                  <div className="flex items-start justify-between gap-1.5 w-full pt-1">
+                  <div className="pp-table-top">
                     <div className="min-w-0">
-                      <span className="text-[10px] font-medium uppercase tracking-widest text-stone-400 block truncate">
-                        {table.zone}
-                      </span>
-                      <h3 className="text-sm sm:text-base font-semibold text-white group-hover:text-amber-300 transition-colors mt-0.5 truncate">
-                        {table.name}
-                      </h3>
+                      <span className="pp-table-seats block truncate">{table.zone}</span>
+                      <h3 className="pp-table-name truncate">{table.name}</h3>
                     </div>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-medium uppercase tracking-wider shrink-0 ${
-                        isOccupied
-                          ? "bg-amber-500/20 text-amber-300 border border-amber-400/40 shadow-sm"
-                          : isFastEsnaf
-                          ? "bg-orange-500/20 text-orange-300 border border-orange-500/30"
-                          : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                      }`}
-                    >
-                      {isOccupied ? "Dolu" : isFastEsnaf ? "Pratik" : "Müsait"}
-                    </span>
+                    {isOccupied ? (
+                      <span
+                        className="pp-ring"
+                        style={{ "--p": Math.min(100, Math.round((getElapsedMinutes(table.openedAt) / 90) * 100)) }}
+                        title={`${getElapsedMinutes(table.openedAt)} dk açık (90 dk = tam tur)`}
+                      />
+                    ) : (
+                      <span className="tag">{isFastEsnaf ? "Pratik" : "Müsait"}</span>
+                    )}
                   </div>
-
                   {isOccupied ? (
-                    <div className="mt-2.5 pt-2 border-t border-stone-800/80 w-full space-y-1.5">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-base sm:text-xl font-semibold text-amber-400 tracking-tight truncate">
-                          {formatTL(tableRemaining)}
-                        </span>
-                        <span className="text-[10px] text-stone-300 bg-stone-950/70 px-1.5 py-0.5 rounded-lg border border-stone-800 flex items-center gap-1 shrink-0">
-                          <Clock className="w-2.5 h-2.5 text-amber-400" />
-                          {getElapsedMinutes(table.openedAt)}dk
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-stone-400 gap-1">
-                        <span className="font-semibold text-stone-300 truncate">
-                          {table.items.reduce((s, i) => s + i.qty, 0)} Ürün
-                        </span>
+                    <>
+                      <span className="pp-table-amount">{formatTL(tableRemaining)}</span>
+                      <div className="pp-table-meta">
+                        <span className="t-time"><Clock className="w-3.5 h-3.5 inline" /> {fmtElapsed(getElapsedMinutes(table.openedAt))}</span>
+                        <span>{table.items.reduce((s, i) => s + i.qty, 0)} ürün</span>
                         {tableStaff && (
-                          <span className="text-stone-200 font-medium flex items-center gap-1 bg-stone-950/60 px-1.5 py-0.5 rounded-full truncate">
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: tableStaff.color }} />
+                          <span className="inline-flex items-center gap-1 truncate">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: tableStaff.color }} />
                             <span className="truncate">{tableStaff.name}</span>
                           </span>
                         )}
                       </div>
-                    </div>
+                    </>
                   ) : (
-                    <div className="mt-3 pt-2 border-t border-stone-800/40 flex items-center justify-between text-[11px] sm:text-xs text-stone-500 group-hover:text-stone-300 transition-colors">
-                      <span className="font-medium truncate">{isFastEsnaf ? "Esnafa Yaz" : "Adisyon Aç"}</span>
-                      <div className="w-6 h-6 rounded-lg bg-stone-900 border border-stone-800 flex items-center justify-center group-hover:border-amber-500/50 group-hover:text-amber-400 transition-all shrink-0">
-                        <Plus className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
+                    <span className="pp-table-empty-hint"><Plus className="w-4 h-4" /> {isFastEsnaf ? "Esnafa yaz" : "Adisyon aç"}</span>
                   )}
                 </button>
               );

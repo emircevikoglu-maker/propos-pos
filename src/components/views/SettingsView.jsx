@@ -100,6 +100,8 @@ export function SettingsView() {
     setNewPinValue,
     handleChangePin,
     isAdminUnlocked,
+    celebration,
+    updateCelebration,
     newPrdOptions,
     setNewPrdOptions,
     exportExcelByCategory,
@@ -117,7 +119,8 @@ export function SettingsView() {
     { id: "menu", label: "☕ Menü, Kategoriler & Reçeteler" },
     { id: "staff", label: "👥 Çalışanlar & Görevler" },
     { id: "esnaf", label: "🏪 Esnaf Cari Kartları" },
-    { id: "security", label: "🔐 Yönetici Şifresi & Yedekleme" }
+    { id: "security", label: "🔐 Yönetici Şifresi & Yedekleme" },
+    { id: "feel", label: "✨ Kutlamalar & Hareket" }
   ];
 
   return (
@@ -1038,6 +1041,10 @@ export function SettingsView() {
         </div>
       )}
 
+      {settingsSubTab === "feel" && celebration && (
+        <FeelSettings celebration={celebration} update={updateCelebration} />
+      )}
+
       {settingsSubTab === "security" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="p-5 rounded-2xl bg-[#161412] border border-stone-800 space-y-4">
@@ -1156,5 +1163,46 @@ function PinChangeForm({ unlocked, nextValue, setNextValue, onChange }) {
         {busy ? "Kaydediliyor…" : "PIN'i güncelle"}
       </button>
     </form>
+  );
+}
+
+/** Kutlamalar ve hareket: yalnızca bu cihazı etkiler (senkronlanmaz). */
+function FeelSettings({ celebration, update }) {
+  const [goalText, setGoalText] = React.useState(celebration.goal ? String(celebration.goal) : "");
+  const row = "flex items-center justify-between gap-4 p-3 rounded-xl";
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="p-5 rounded-2xl bg-[#161412] border border-stone-800 space-y-3">
+        <h3 className="text-base font-semibold text-white">Kutlamalar</h3>
+        <p className="text-xs text-stone-400">Anlamlı anlarda (günün ilk satışı, hedef, rekor, Z raporu) kısa tebrik gösterilir. Yoğun saatte kendiliğinden sadeleşir; POS akışını asla bloklamaz. Bu ayarlar yalnızca bu cihaz içindir.</p>
+        <label className={row} style={{ background: "var(--surface-2)" }}>
+          <span className="text-sm">Kutlamalar açık</span>
+          <input type="checkbox" checked={celebration.enabled} onChange={(e) => update({ enabled: e.target.checked })} />
+        </label>
+        <label className={row} style={{ background: "var(--surface-2)" }}>
+          <span className="text-sm">Yoğun saatte sadeleştir</span>
+          <input type="checkbox" checked={celebration.autoSimplify} onChange={(e) => update({ autoSimplify: e.target.checked })} />
+        </label>
+        <label className={row} style={{ background: "var(--surface-2)" }}>
+          <span className="text-sm">Ses (kısa notalar)</span>
+          <input type="checkbox" checked={celebration.sound} onChange={(e) => update({ sound: e.target.checked })} />
+        </label>
+        <div className={row} style={{ background: "var(--surface-2)" }}>
+          <span className="text-sm">Hareket</span>
+          <div className="pp-seg" role="group" aria-label="Hareket">
+            <button type="button" className={celebration.motion === "auto" ? "is-on" : ""} onClick={() => update({ motion: "auto" })}>Sistem</button>
+            <button type="button" className={celebration.motion === "reduce" ? "is-on" : ""} onClick={() => update({ motion: "reduce" })}>Azalt</button>
+          </div>
+        </div>
+      </div>
+      <div className="p-5 rounded-2xl bg-[#161412] border border-stone-800 space-y-3">
+        <h3 className="text-base font-semibold text-white">Günlük ciro hedefi</h3>
+        <p className="text-xs text-stone-400">Üst çubukta ilerleme gösterilir, hedefe ulaşınca bir kez kutlanır. 0 ya da boş = hedef kapalı.</p>
+        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); const n = Number(goalText.replace(",", ".")); update({ goal: Number.isFinite(n) && n > 0 ? Math.round(n) : 0 }); }}>
+          <input inputMode="decimal" value={goalText} onChange={(e) => setGoalText(e.target.value)} placeholder="Örn. 15000" className="flex-1 bg-stone-900 border border-stone-800 rounded-xl px-3 py-2.5 text-white text-sm" aria-label="Günlük hedef" />
+          <button type="submit" className="btn btn-primary" style={{ minHeight: 44 }}>Kaydet</button>
+        </form>
+      </div>
+    </div>
   );
 }

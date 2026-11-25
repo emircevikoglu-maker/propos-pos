@@ -3,9 +3,24 @@
 Biçim: [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/). Sürüm numarası `package.json` ile birlikte artar.
 Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 
-## [Yayımlanmadı]
+## [3.2.0] — 2026-11-25
 ### Eklendi
-- Eklendi: design-prototype — `design-prototype/` bağımsız tasarım prototipi (derlemesiz HTML/CSS/JS): POS akışı (masalar → adisyon → çeşit → ödeme), patron görünümü (ciro/kâr/yoğunluk/menü mühendisliği/Z), Duolingo tarzı kutlama anları ve demo sayfası, tasarım tokenları. Uygulama koduna (`src/`, `backend/`) dokunmaz; sürüm artmadı.
+- Yeni tasarım sistemi uygulamaya giydirildi (`src/design/`: tokenlar, bileşen CSS'i, `skin.css`, tek ikon seti, hareket/konfeti modülü). Mevcut Tailwind ekranları `skin.css` ile yeni tokenlara eşlenir; işletme tema rengi (`--brand-primary`) çalışmaya devam eder.
+- Masa kartı: büyük tutar + zaman halkası (90 dk = tam tur, 60 dk+ uyarı rengi), 60 dk üstü "1 sa 20 dk" biçimi.
+- Onay penceresi yerine 5 sn "Geri al": masa kapatma (satış, stok ve masa geri yüklenir) ve adisyondan ürün çıkarma.
+- Kutlamalar: günün ilk satışı, günlük hedef, rekor (≥7 gün geçmişle), en büyük adisyon, 25'in katları seri, Z raporu kapanış ekranı. Geri alınan satış kutlanmaz; yoğun saatte (10 dk'da 8+ ödeme) sadeleşir; azaltılmış hareket desteği; ses varsayılan kapalı.
+- Yönetim → "Kutlamalar & Hareket": açık/kapalı, yoğun saat sadeleştirme, ses, hareket, günlük ciro hedefi (cihaza özel). Üst çubukta hedef ilerlemesi.
+- Üst çubuk sadeleşti: işletme kodu, cihaz bağlama, güncelleme kontrolü, bayi paneli, ana işletmeye dönüş "Sistem" menüsüne taşındı (hiçbiri kaldırılmadı); dönem filtresi yalnızca rapor ekranlarında.
+- 15 kutlama testi; kaynak taramasına `motion.js` kaçış kuralı.
+### Değişti
+- Arka plandaki bulanık ışık katmanları ve `backdrop-filter` kaldırıldı (zayıf tabletlerde pahalıydı).
+- Birincil renk düz (gradyan yok), min. yazı 11 px, dokunmatikte düğmeler ≥ 40 px.
+### Düzeltildi
+- Üst üste gelen bildirimler eskisinin zamanlayıcısıyla erken kapanıyordu.
+- `detectLanIp()` her yanıtta DNS sorgusu yapıyordu (istek başına önbellek).
+- Güvenlik testi, derlenmiş paket metnindeki "Warning:" yazısını PHP hatası sanıyordu.
+### Altyapı
+- `git init`, `.gitignore` (`.env`, `data/`, `dist/`, `_data_backup/`, `.chat-backup.md`), `.env.example`, `.gitattributes`.
 
 ## [3.1.1] — 2026-11-24
 ### Düzeltildi

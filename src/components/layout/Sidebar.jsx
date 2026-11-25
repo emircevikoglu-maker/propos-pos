@@ -52,13 +52,13 @@ export function Sidebar() {
     .reduce((sum, s) => sum + s.total, 0);
 
   return (
-    <aside className="hidden lg:flex lg:w-68 xl:w-72 lg:h-screen bg-[#110f0d]/95 backdrop-blur-2xl border-r border-stone-800/80 flex-col justify-between shrink-0 z-30 shadow-2xl overflow-y-auto">
+    <aside className="pp-aside hidden lg:flex lg:w-68 xl:w-72 lg:h-screen border-r border-stone-800/80 flex-col justify-between shrink-0 z-30 shadow-2xl overflow-y-auto">
       <div>
         <div className="p-5 flex items-center gap-3.5 border-b border-stone-800/80 relative overflow-hidden">
           <div
             className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-xl text-stone-950 font-semibold text-xl ring-2 ring-white/20 shrink-0 overflow-hidden"
             style={{
-              background: `linear-gradient(135deg, ${brandSettings.customPrimary}, ${brandSettings.customSecondary})`
+              background: brandSettings.customPrimary || "var(--primary)"
             }}
           >
             {brandSettings.logoType === "image" && brandSettings.logoImageUrl ? (
@@ -86,57 +86,19 @@ export function Sidebar() {
           </div>
         </div>
 
-        <nav className="p-3 flex flex-col gap-1.5">
+        <nav className="p-3 flex flex-col gap-1" aria-label="Ana gezinme">
           {navItems.map((item) => {
             const IconComp = item.icon;
             const isActive = activeTab === item.id;
             return (
-              <button
-                key={item.id}
-                onClick={() => handleTabNavigation(item.id)}
-                className={`group relative flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl text-xs xl:text-sm font-medium transition-all duration-200 whitespace-nowrap overflow-hidden ${
-                  isActive
-                    ? "bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-stone-950 shadow-lg shadow-amber-500/25"
-                    : "text-stone-400 hover:text-white hover:bg-stone-800/50 border border-transparent hover:border-stone-800"
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div
-                    className={`p-1.5 rounded-xl shrink-0 transition-transform duration-200 group-hover:scale-105 ${
-                      isActive ? "bg-stone-950/15 text-stone-950" : "bg-stone-900 text-amber-400 border border-stone-800"
-                    }`}
-                  >
-                    <IconComp className="w-4 h-4" />
-                  </div>
-                  <span className="tracking-tight truncate">{item.label}</span>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {item.isProtected && !isAdminUnlocked && (
-                    <Lock className={`w-3.5 h-3.5 ${isActive ? "text-stone-950" : "text-stone-500 group-hover:text-amber-400"}`} />
-                  )}
-                  {item.badge && (
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                        isActive
-                          ? "bg-stone-950/20 text-stone-950"
-                          : "bg-amber-500/15 text-amber-400 border border-amber-500/20"
-                      }`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                  {item.alertCount > 0 && (
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${
-                        isActive
-                          ? "bg-stone-950 text-amber-400"
-                          : "bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse"
-                      }`}
-                    >
-                      <TriangleAlert className="w-3 h-3" /> {item.alertCount}
-                    </span>
-                  )}
-                </div>
+              <button key={item.id} type="button" onClick={() => handleTabNavigation(item.id)} className={`pp-nav-item ${isActive ? "is-active" : ""}`} aria-current={isActive ? "page" : undefined}>
+                <IconComp className="w-[18px] h-[18px] shrink-0" />
+                <span className="truncate">{item.label}</span>
+                {item.isProtected && !isAdminUnlocked && <Lock className="w-3.5 h-3.5 ml-auto opacity-60" />}
+                {item.badge && <span className="pp-nav-badge">{item.badge}</span>}
+                {item.alertCount > 0 && (
+                  <span className="pp-nav-alert flex items-center gap-1"><TriangleAlert className="w-3 h-3" /> {item.alertCount}</span>
+                )}
               </button>
             );
           })}

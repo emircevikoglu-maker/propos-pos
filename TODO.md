@@ -77,9 +77,10 @@ Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 ## P6 — Arayüz yeniden tasarım + kutlama animasyonları
 - [x] Ayrı prototip (projeye karışmaz): panelin sıfırdan tasarımı + Duolingo tarzı kutlama anları; performans kuralları NOTES'ta — L → `design-prototype/` (POS akışı + patron görünümü `index.html`, kutlama demo `kutlamalar.html`, kararlar/token/bileşen listesi ve modül olarak ekleme planı `design-prototype/README.md`)
 - [ ] Prototip incelemesi: kullanıcı onayı + zayıf Android tablette FPS ölçümü (`kutlamalar.html` → Cihaz gücü: Oto/Zayıf) — S
-- [ ] Onaylanırsa: tasarım tokenları, `<Heading>/<Label>/<Money>` bileşenleri, tek ikon seti
-- [ ] POS ekranı → arka ofis sırası; yüzey ayrımı (garson/kasa/mutfak/patron)
-- [ ] Kutlamalar opsiyonel modül: ayar + `prefers-reduced-motion` + yoğun saatte sadeleşme (plan: README "Uygulamaya opsiyonel modül olarak ekleme" — `src/celebrate/` lazy parça, saf `policy.js` + vitest, tenant ayarı/bayrağı, seri sunucuda)
+- [x] Uygulamaya giydirme (3.2.0): tokenlar, skin.css, tek ikon seti, masa kartı, geri al, kutlamalar, sadeleşen üst çubuk
+- [~] Kalan: POS adisyon paneli ve ödeme penceresinin prototipteki düzene taşınması, patron görünümü (KPI, yoğunluk, menü matrisi), `<Button>/<Sheet>` React bileşenleri, Tailwind sınıflarının kademeli kaldırılması; yüzey ayrımı (garson/kasa/mutfak/patron)
+- [x] Kutlamalar opsiyonel modül: ayar + `prefers-reduced-motion` + yoğun saatte sadeleşme
+- [ ] Zayıf Android tablette FPS ölçümü (kutlamalar.html FPS ölçer) — kullanıcı (plan: README "Uygulamaya opsiyonel modül olarak ekleme" — `src/celebrate/` lazy parça, saf `policy.js` + vitest, tenant ayarı/bayrağı, seri sunucuda)
 
 ## P7 — Özellikler (Kardo kıyasından, öncelik sırasıyla)
 - [ ] İkram ve atık kaydı (stok doğruluğu) — S
@@ -107,12 +108,15 @@ Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 - [ ] Yedeği geri yüklemeyi bir kez gerçekten dene — S
 - [ ] Panoda: son senkron, hata oranı, tenant DB boyutu (kısmen var) — S
 
+## P11 — Laravel'e geçiş [?] — şimdilik HAYIR (gerekçe NOTES.md)
+- [ ] Supabase sonrası yeniden değerlendir: PHP'de kalan yüzey küçülürse (auth + lisans + panel) Laravel ya da hafif Slim/doğrudan Edge Function kıyası
+
 ## P9 — Kod sağlığı
 - [ ] `PosContext` (≈1100 satır) alan alan böl: katalog, masalar, satışlar, ayarlar — L
 - [ ] Kimlikler `Date.now()` yerine UUID (çok cihazda çakışma) — S
-- [ ] `detectLanIp()` sonucunu önbellekle (Windows'ta her tam yanıtta DNS) — S
+- [x] `detectLanIp()` sonucunu önbellekle (Windows'ta her tam yanıtta DNS) — S
 - [ ] `saveTenant` için dosya kilidi (eşzamanlı iki POST) — S
-- [ ] Toast zamanlayıcısı üst üste binince erken kapanıyor — S
+- [x] Toast zamanlayıcısı üst üste binince erken kapanıyor — S
 
 ## P10 — Ticari
 - [ ] Paketler: temele maliyetsiz özellikler (sınırsız personel, offline, QR menü, kampanya, çeşitler, barkod, raporlar, yoğunluk uyarısı); ücretliye sürekli maliyetliler

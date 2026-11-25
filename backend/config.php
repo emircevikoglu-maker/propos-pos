@@ -135,6 +135,12 @@ function audit(string $action, string $detail = ''): void
 
 function detectLanIp(): string
 {
+    static $cached = null; // gethostbynamel Windows'ta yavaş; her yoklamada çağrılmasın
+    return $cached ??= detectLanIpUncached();
+}
+
+function detectLanIpUncached(): string
+{
     if (!empty($_SERVER['SERVER_ADDR']) && !in_array($_SERVER['SERVER_ADDR'], ['127.0.0.1', '::1', '0.0.0.0'], true)) {
         return (string)$_SERVER['SERVER_ADDR'];
     }

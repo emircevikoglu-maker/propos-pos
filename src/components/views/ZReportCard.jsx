@@ -1,6 +1,7 @@
 import React from "react";
 import { usePos } from "../../context/PosContext";
 import { formatTL } from "../../utils/formatters";
+import { celebrateZReport } from "../../design/celebrations";
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const dayKey = (iso) => {
@@ -57,6 +58,7 @@ table{width:100%;border-collapse:collapse}td{padding:3px 0}.r{text-align:right}.
     w.document.open();
     w.document.write(html);
     w.document.close();
+    celebrateZReport({ count: report.count, net: report.net, formatMoney: formatTL });
   };
 
   const Line = ({ label, value, strong }) => (

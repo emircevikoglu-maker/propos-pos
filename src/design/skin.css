@@ -1,0 +1,69 @@
+/* ProPos "skin": mevcut Tailwind sınıflarını yeni tasarım tokenlarına eşler (özellik kaybı olmadan görünüm değişimi).
+   Marka rengi (işletme teması) App.jsx içindeki --brand-primary üzerinden gelmeye devam eder. */
+body { font-family: var(--font); background: var(--bg); letter-spacing: 0; -webkit-font-smoothing: antialiased; }
+
+/* Yüzeyler: yarı saydam/derin gölgeli cam yerine düz, sıcak taş katmanlar (zayıf tabletlerde backdrop-filter pahalı) */
+.glass-panel, .backdrop-blur-xl, .backdrop-blur-2xl, .backdrop-blur-md, .backdrop-blur-sm { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.glass-panel { background: var(--surface-1) !important; }
+.bg-\[\#161412\], .bg-\[\#181512\], .bg-\[\#110f0d\]\/95, .bg-\[\#110f0d\] { background-color: var(--surface-1) !important; }
+.bg-stone-900, .bg-stone-900\/90, .bg-stone-900\/60 { background-color: var(--surface-2) !important; }
+.bg-stone-800 { background-color: var(--surface-3) !important; }
+.bg-stone-950, .bg-stone-950\/70, .bg-stone-950\/60 { background-color: var(--bg) !important; }
+.border-stone-800, .border-stone-800\/90, .border-stone-800\/80, .border-stone-800\/70 { border-color: var(--line-soft) !important; }
+.border-stone-700, .border-stone-700\/80 { border-color: var(--line) !important; }
+.text-stone-400, .text-stone-500 { color: var(--text-3) !important; }
+.text-stone-300 { color: var(--text-2) !important; }
+
+/* Gradyanlar → düz birincil (tek birincil renk kuralı) */
+.bg-gradient-to-r.from-amber-400, .bg-gradient-to-r.from-amber-500, .bg-gradient-to-r.from-orange-500,
+.bg-gradient-to-br.from-amber-400, .bg-gradient-to-b.from-amber-400 { background-image: none !important; background-color: var(--primary) !important; }
+.bg-gradient-to-br.from-amber-950\/45, .bg-gradient-to-br.from-orange-950\/35 { background-image: none !important; background-color: var(--surface-2) !important; }
+
+/* Tipografi: ağırlık sistemi + alt sınır 11 px */
+.font-black, .font-extrabold { font-weight: var(--fw-head) !important; }
+.text-\[9px\], .text-\[10px\] { font-size: 11px !important; }
+.tracking-widest { letter-spacing: .04em !important; }
+.font-bold { font-weight: var(--fw-total) !important; }
+
+/* Dokunma hedefi: dokunmatik ekranda tüm düğmeler ≥ 40 px (simge düğmeleri dahil) */
+@media (pointer: coarse) {
+  button:not(.pp-tight), [role="button"]:not(.pp-tight), select { min-height: 40px; }
+}
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+::-webkit-scrollbar-thumb { background: var(--surface-4); }
+
+/* Kabuk */
+.pp-shell-main { background: var(--bg); }
+.pp-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: var(--r-md); color: var(--text-2); font-weight: var(--fw-label); font-size: var(--fs-sm); width: 100%; text-align: left; border: 1px solid transparent; transition: background-color var(--d-fast), color var(--d-fast); }
+.pp-nav-item:hover { background: var(--surface-2); color: var(--text-1); }
+.pp-nav-item.is-active { background: var(--primary); color: var(--primary-ink); }
+.pp-nav-item .pp-nav-badge { margin-left: auto; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); }
+.pp-nav-item.is-active .pp-nav-badge { background: rgba(0,0,0,.18); color: var(--primary-ink); }
+.pp-nav-item .pp-nav-alert { margin-left: auto; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--danger-soft); color: var(--danger); }
+
+.pp-topbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 16px; background: var(--surface-1); border-bottom: 1px solid var(--line-soft); }
+.pp-topbar h2 { font-size: var(--fs-lg); }
+.pp-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: var(--fw-label); border: 1px solid var(--line); color: var(--text-2); background: var(--surface-2); }
+.pp-pill.is-ok { color: var(--success); background: var(--success-soft); border-color: transparent; }
+.pp-pill.is-warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; }
+.pp-pill.is-primary { color: var(--primary); background: var(--primary-soft); border-color: var(--primary-line); }
+.pp-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; }
+.pp-menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 260px; z-index: var(--z-sheet); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 8px; box-shadow: var(--elev-3); }
+.pp-menu-item { display: flex; width: 100%; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: var(--r-sm); font-size: var(--fs-sm); color: var(--text-1); text-align: left; }
+.pp-menu-item:hover { background: var(--surface-3); }
+.pp-menu-sep { height: 1px; background: var(--line-soft); margin: 6px 4px; }
+.pp-goal { display: inline-flex; align-items: center; gap: 8px; }
+.pp-goal-bar { width: 72px; height: 6px; border-radius: 4px; background: var(--surface-4); overflow: hidden; }
+.pp-goal-fill { height: 100%; width: 100%; background: var(--primary); transform-origin: left; }
+.pp-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line-soft); }
+.pp-seg button { min-height: 32px; padding: 0 12px; border-radius: var(--r-sm); font-size: var(--fs-xs); font-weight: var(--fw-label); color: var(--text-3); white-space: nowrap; }
+.pp-seg button.is-on { background: var(--primary); color: var(--primary-ink); }
+
+/* Masa kartı */
+.pp-table-money { font-size: var(--fs-xl); font-weight: var(--fw-head); font-variant-numeric: tabular-nums; }
+.pp-table.is-selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-line), var(--elev-2); }
+.pp-table.is-esnaf { border-color: var(--warning-soft); }
+.pp-table .pp-ring { position: relative; display: grid; place-items: center; }
+.pp-table .pp-ring::after { content: ""; position: absolute; }
+.pp-aside { background: var(--surface-1); }
+.pp-table-meta span { white-space: nowrap; } .pp-table-meta { flex-wrap: wrap; }
