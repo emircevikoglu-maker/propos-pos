@@ -82,3 +82,49 @@ export function Empty({ icon = "note", children }) {
 export function Tag({ tone, children }) {
   return <span className={`tag${tone ? ` tag-${tone}` : ""}`}>{children}</span>;
 }
+
+/** Prototipin ayar satırı: başlık + açıklama solda, anahtar sağda. */
+export function SwitchRow({ title, desc, checked, onChange }) {
+  return (
+    <div className="set-row">
+      <span className="set-text"><span>{title}</span>{desc && <span className="set-desc">{desc}</span>}</span>
+      <button type="button" className="switch-hit" role="switch" aria-checked={!!checked} aria-label={title} onClick={() => onChange(!checked)}>
+        <span className="switch" aria-checked={!!checked} />
+      </button>
+    </div>
+  );
+}
+
+/** Tek seçimli çip grubu (kategori, ödeme yöntemi, renk…). */
+export function Chips({ value, onChange, items }) {
+  return (
+    <div className="ops-row">
+      {items.map((it) => {
+        const [id, text] = Array.isArray(it) ? it : [it, it];
+        return <button key={id} type="button" className="chip" aria-pressed={value === id} onClick={() => onChange(id)}>{text}</button>;
+      })}
+    </div>
+  );
+}
+
+/** Liste satırı: solda ad/alt bilgi, sağda düzenle + sil. Yönetim listeleri için tek kalıp. */
+export function ItemRow({ lead, title, sub, tags, onEdit, onDelete, name }) {
+  return (
+    <div className="item-row">
+      {lead}
+      <div className="cari-main">
+        <div className="cari-name"><span>{title}</span>{tags}</div>
+        {sub && <span className="label">{sub}</span>}
+      </div>
+      <span className="row-actions">
+        {onEdit && <button type="button" className="icon-btn" aria-label={`${name || title} düzenle`} onClick={onEdit}><Ic n="note" /></button>}
+        {onDelete && <button type="button" className="icon-btn" aria-label={`${name || title} sil`} onClick={onDelete}><Ic n="trash" /></button>}
+      </span>
+    </div>
+  );
+}
+
+/** Sheet içi alan: etiket + girdi. */
+export function Field({ label, children }) {
+  return <label className="field"><span className="ops-title">{label}</span>{children}</label>;
+}

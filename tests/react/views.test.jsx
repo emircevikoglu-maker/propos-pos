@@ -12,6 +12,7 @@ import { StaffView } from "../../src/ui/StaffView";
 import { EsnafView } from "../../src/ui/EsnafView";
 import { FinanceView } from "../../src/ui/FinanceView";
 import { AnalyticsView } from "../../src/ui/AnalyticsView";
+import { SettingsView } from "../../src/ui/SettingsView";
 
 const wrap = (el, path = "/x") => render(<MemoryRouter initialEntries={[path]}>{el}</MemoryRouter>);
 const period = { globalPeriod: "daily", setGlobalPeriod: vi.fn(), customStartDate: "", setCustomStartDate: vi.fn(), customEndDate: "", setCustomEndDate: vi.fn() };
@@ -171,5 +172,56 @@ describe("AnalyticsView", () => {
     ctx = { ...base(), analyticsSubTab: "products", reportProductCategory: "Soğuk" };
     wrap(<AnalyticsView />);
     expect(screen.getByText(/Filtreye uyan ürün satışı yok/)).toBeTruthy();
+  });
+});
+
+describe("SettingsView (Yönetim)", () => {
+  const brand = { businessName: "Kafe", subtitle: "", badgeText: "", logoType: "text", logoText: "K", logoEmoji: "☕", logoImageUrl: "", currency: "TRY", customPrimary: "#f59e0b" };
+  const base = (tab) => ({
+    ...period, settingsSubTab: tab, setSettingsSubTab: vi.fn(), brandSettings: brand, setBrandSettings: vi.fn(), handleLogoFileUpload: vi.fn(), showToast: vi.fn(),
+    celebration: { enabled: true, autoSimplify: true, sound: false, motion: "auto", goal: 0 }, updateCelebration: vi.fn(),
+    staffList: [{ id: "s1", name: "Zeynep", role: "Barista", color: "#10b981", avatar: "Z" }], handleDeleteStaff: vi.fn(),
+    setEditingStaffId: vi.fn(), setNewStaffName: vi.fn(), setNewStaffRole: vi.fn(), setNewStaffColor: vi.fn(),
+    isAdminUnlocked: true, newPinValue: "", setNewPinValue: vi.fn(), handleChangePin: vi.fn(), exportExcelByCategory: vi.fn(), exportFullBackupFile: vi.fn(),
+    handleImportBackupFile: vi.fn(), setResetConfirmOpen: vi.fn(), ACTIVE_TENANT_ID: "X", isFounderUnlocked: false, setIsFounderUnlocked: vi.fn(), setInstallModalOpen: vi.fn()
+  });
+
+  it("bölüm segmenti bağlama yazar; kimlik: para birimi değişimi toast gösterir", () => {
+    ctx = base("branding");
+    wrap(<SettingsView />);
+    fireEvent.click(screen.getByRole("button", { name: "Menü" }));
+    expect(ctx.setSettingsSubTab).toHaveBeenCalledWith("menu");
+    fireEvent.click(screen.getByRole("button", { name: /USD/ }));
+    expect(ctx.setBrandSettings).toHaveBeenCalled();
+    expect(ctx.showToast).toHaveBeenCalled();
+  });
+
+  it("hareket: anahtarlar kutlama ayarını günceller; hedef kaydedilir", () => {
+    ctx = base("feel");
+    wrap(<SettingsView />);
+    fireEvent.click(screen.getByRole("switch", { name: "Kutlamalar" }));
+    expect(ctx.updateCelebration).toHaveBeenCalledWith({ enabled: false });
+    fireEvent.change(screen.getByLabelText("Günlük ciro hedefi"), { target: { value: "15000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Kaydet" }));
+    expect(ctx.updateCelebration).toHaveBeenCalledWith({ goal: 15000 });
+  });
+
+  it("çalışanlar: düzenle alanları doldurur ve pencere açar; sil bağlıdır", () => {
+    ctx = base("staff");
+    wrap(<SettingsView />);
+    fireEvent.click(screen.getByRole("button", { name: "Zeynep düzenle" }));
+    expect(ctx.setEditingStaffId).toHaveBeenCalledWith("s1");
+    expect(ctx.setNewStaffName).toHaveBeenCalledWith("Zeynep");
+    fireEvent.click(screen.getByRole("button", { name: "Zeynep sil" }));
+    expect(ctx.handleDeleteStaff).toHaveBeenCalledWith("s1");
+  });
+
+  it("güvenlik: PIN'ler eşleşmezse sunucuya gitmez", () => {
+    ctx = { ...base("security"), newPinValue: "1234" };
+    wrap(<SettingsView />);
+    fireEvent.change(screen.getByLabelText("Yeni PIN tekrar"), { target: { value: "9999" } });
+    fireEvent.click(screen.getByRole("button", { name: "PIN'i güncelle" }));
+    expect(screen.getByRole("status").textContent).toMatch(/eşleşmiyor/);
+    expect(ctx.handleChangePin).not.toHaveBeenCalled();
   });
 });

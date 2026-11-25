@@ -34,6 +34,9 @@ Durum: `react-router-dom` YOK; sekme ve açık masa `useState`; geri tuşu uygul
 - [ ] Prototipin `#masa=S2` kısayolları test için korunur.
 
 ## P12 — yeni iş kalemleri (3.6.0 sonrası)
+- [ ] Dar ekranda `.dt` tabloları kart listesine çevir (Finans, Analiz, Stok reçete); satır başına tek kart — S
+- [ ] `ProductOptionsEditor`'ı prototip diliyle yeniden çiz (ürün penceresinde hâlâ eski görünüm) — M
+- [ ] Stok/tahsilat/fiş incele/sıfırlama onayı/bayi paneli modallarını `Sheet` ile yeniden yaz — M
 - [ ] Giriş/eşleştirme/lisans ekranlarını prototip diline taşı — S
 - [ ] Arama ikonu (şu an "eye" yer tutucu), "Gönder" düğmesi (P1 ile), mobil alt çubuk ürün sayısı hizası — S
 - [ ] Yoğun saat çipi demo verisinde sürekli görünüyor (tohum satışlar son 10 dk'da): demo verisini zamana yay — S
@@ -47,7 +50,7 @@ Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını
 - [x] (3.6.0) P12-3 Masalar → Adisyon → Çeşit seçici → Ödeme (nakit/kart, para üstü) → 5 sn geri al; uçan ürün, sayaç sıçraması, rozet. Gerçek `motion.js` (prototipten); ikinci bir yeniden yazım değil.
 - [~] P12-4 Kutlamalar: mevcut `celebrateSale/Z` kancaları yeni ödeme akışında çalışıyor; kademe 0-3 görsel doğrulaması, "kutlamalar" sayfası, hatasız sipariş serisi göstergesi TODO — `PPCelebrate` kademe 0-3 gerçek kancalara bağlı; Z raporu basılı tut; yoğun saat/azaltılmış hareket kuralları; kutlamalar sayfası.
 - [ ] P12-5 Patron görünümü (KPI, yoğunluk, menü mühendisliği, günün hikâyesi, hedef serisi).
-- [~] P12-6 Kalan ekranlar prototip diliyle. (3.7.0) TAMAM: Stok/Reçete/Atık-Sayım, Personel, Finans + Z raporu/Kasa/Kuver, Esnaf. (3.7.1) Analiz da TAMAM (prototipin patron kartları — yoğunluk tahmini, menü matrisi, günün hikâyesi — P12-5'te ayrı eklenecek). KALDI: Yönetim (Ayarlar), giriş/eşleştirme/lisans ekranları.
+- [~] P12-6 Kalan ekranlar prototip diliyle. (3.7.0) TAMAM: Stok/Reçete/Atık-Sayım, Personel, Finans + Z raporu/Kasa/Kuver, Esnaf. (3.7.1) Analiz da TAMAM (prototipin patron kartları — yoğunluk tahmini, menü matrisi, günün hikâyesi — P12-5'te ayrı eklenecek). (3.8.0) Yönetim da TAMAM. KALDI: giriş/eşleştirme/lisans ekranları ve modallar (stok, tahsilat, fiş incele, sıfırlama onayı, bayi paneli) + `ProductOptionsEditor` + `OptionPicker` (yalnızca testte). Bunlar bitince P12-7 (Tailwind/skin.css kaldır).
 - [ ] P12-7 Tailwind + `skin.css` + eski ekran sınıfları tamamen kaldırılır; derleme boyutu ve `font-black` yasağı testleri.
 - Kabul ölçütleri (sıkışıklık YASAK): ≥ 44 px hedef, birincil eylem 56 px; panel başına en çok 1 birincil + 2 ikincil eylem, gerisi "Daha fazla" sheet'inde; ekranın yarısından fazlası boş olmasın ama yoğun da olmasın: boşluk ölçeği 8/12/16/24; metin kırpma ("Demleme...") yok (2 satıra sarma); 1024×768, 1280×800, 1920×1080, 390×844'te ekran görüntüsü kontrolü (tarayıcı panelinde elle + `design-prototype` ile yan yana); animasyon süresi ≤ 600 ms, yalnızca transform/opacity.
 - [ ] P12-8 UX denetimi (ayrı liste): görülen sorunlar — adisyon paneli aşırı yüklü; "Hızlı tek tık ekle" şeridi ve katalog üst üste; ürün adları kırpılıyor; garson seçici ve ödeme yöntemleri aynı kaydırmada; yönetici kilitli menülere tıklayınca geri bildirim yok (çevrimdışıyken özellikle); sekme geçişinde bağlam kaybı. Yeni bulunanlar buraya eklenir.

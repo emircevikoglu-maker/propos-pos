@@ -3,6 +3,21 @@
 Biçim: [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/). Sürüm numarası `package.json` ile birlikte artar.
 Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 
+## [3.8.0] — 2026-11-25
+Yönetim (Ayarlar) prototip diline taşındı; böylece ana sekmelerin hepsi yeni tasarım sisteminde. Eski sekme sarmalayıcısı (`Legacy`) kalktı.
+### Eklendi
+- `src/ui/SettingsView.jsx` + `src/ui/settings/{Identity,Venue,People,Security}.jsx`: yedi bölüm segmentle (Kimlik · Masalar · Menü · Çalışanlar · Esnaf · Güvenlik ve yedek · Hareket). Ekleme/düzenleme formları sayfa içinde değil pencerede (`?s=masa|urun|calisan|cari`), geri tuşu kapatır; her "yeni" düğmesi önceki düzenleme durumunu sıfırlar.
+- Ortak parçalar `page.jsx`: `SwitchRow` (prototipin ayar satırı + anahtar), `Chips`, `ItemRow`, `Field`. `ui-extra.css`: `.item-row`, `.swatch(es)`, `.col-stack`, mobilde KPI kartları 2'li (kahraman tam genişlik).
+- Testler: Yönetim için +4 (`views.test.jsx`).
+### Değişti
+- Tema: yeni tasarımda tek vurgu rengi var. "Kendi renk paletin" (ikincil/arka plan/panel) kaldırıldı; hazır renkler + özel renk seçici vurgu rengini değiştirir. Eski ayar alanları (`customSecondary/Bg/Panel`) veride korunur, yalnızca kullanılmaz.
+- "Pratik Tek-Tık Favoriler" → "Favoriler kategorisinde göster" (3.6.0'daki Favoriler kategorisiyle aynı şey).
+### Kaldırıldı
+- Eski Tailwind `SettingsView`; `Shell` içindeki `Legacy` sarmalayıcı ve dönem çubuğu kopyası.
+### Bilinen eksikler
+- Hâlâ eski görünümde: giriş/eşleştirme/lisans ekranları, stok/tahsilat/fiş/sıfırlama/bayi pencereleri, `OptionPicker` (yalnızca testlerde), ürün penceresindeki `ProductOptionsEditor`. Bunlar bitmeden `skin.css`/Tailwind kaldırılamaz (P12-7).
+- Dar ekranda tablolar yatay kayar; kart listesine çevrilecek.
+
 ## [3.7.1] — 2026-11-25
 ### Eklendi
 - Analiz (`src/ui/AnalyticsView.jsx`) prototip diliyle: Özet (KPI, ciro/gider çubuk grafiği prototipin `.heat` bileşeniyle, ödeme dağılımı, en çok satan 8 ürün) / Ürünler / Adisyonlar / Giderler bölümleri; filtreler üstte tek satır, tablolar `.dt`. Fişi incele ve kaydı sil mevcut akışlara bağlı.

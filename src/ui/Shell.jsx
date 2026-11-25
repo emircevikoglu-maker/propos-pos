@@ -14,7 +14,7 @@ import { StockView } from "./StockView";
 import { AnalyticsView } from "./AnalyticsView";
 import { StaffView } from "./StaffView";
 import { FinanceView } from "./FinanceView";
-import { SettingsView } from "../components/views/SettingsView";
+import { SettingsView } from "./SettingsView";
 
 const NAV = [
   { id: "pos", label: "Masalar", icon: "grid" },
@@ -25,8 +25,6 @@ const NAV = [
   { id: "finance", label: "Finans", icon: "cash" },
   { id: "settings", label: "Yönetim", icon: "sliders" }
 ];
-const PERIOD_TABS = ["analytics", "staff", "finance", "esnaf"];
-const PERIODS = [["daily", "Bugün"], ["yesterday", "Dün"], ["weekly", "7 Gün"], ["monthly", "30 Gün"], ["all", "Tümü"], ["custom", "Tarih"]];
 const hhmm = (d) => d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
 
 function Rail() {
@@ -152,28 +150,6 @@ function Topbar() {
   );
 }
 
-function Legacy({ tab, children }) {
-  const { globalPeriod, setGlobalPeriod, customStartDate, setCustomStartDate, customEndDate, setCustomEndDate } = usePos();
-  return (
-    <div className="legacy-view">
-      {PERIOD_TABS.includes(tab) && (
-        <div className="toolbar">
-          <div className="seg" role="group" aria-label="Dönem">
-            {PERIODS.map(([id, label]) => <button key={id} type="button" aria-pressed={globalPeriod === id} onClick={() => setGlobalPeriod(id)}>{label}</button>)}
-          </div>
-          {globalPeriod === "custom" && (
-            <>
-              <input type="date" className="field-input" style={{ width: "auto" }} value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} aria-label="Başlangıç" />
-              <input type="date" className="field-input" style={{ width: "auto" }} value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} aria-label="Bitiş" />
-            </>
-          )}
-        </div>
-      )}
-      <div className="animate-view">{children}</div>
-    </div>
-  );
-}
-
 export function Shell() {
   const { activeTab, isAdminUnlocked, handleTabNavigation, brandSettings, toast } = usePos();
   const navigate = useNavigate();
@@ -212,7 +188,7 @@ export function Shell() {
             <Route path="/analiz" element={<section className="view">{guard(isAdminUnlocked, <AnalyticsView />)}</section>} />
             <Route path="/personel" element={<section className="view">{guard(isAdminUnlocked, <StaffView />)}</section>} />
             <Route path="/finans" element={<section className="view">{guard(isAdminUnlocked, <FinanceView />)}</section>} />
-            <Route path="/yonetim" element={<section className="view"><Legacy tab="settings">{guard(isAdminUnlocked, <SettingsView />)}</Legacy></section>} />
+            <Route path="/yonetim" element={<section className="view">{guard(isAdminUnlocked, <SettingsView />)}</section>} />
             <Route path="*" element={<Navigate to={TAB_PATHS.pos} replace />} />
           </Routes>
         </main>
