@@ -1,0 +1,29 @@
+{
+  "name": "propos-enterprise-pos",
+  "version": "3.1.1",
+  "description": "ProPos — React & PHP Kurumsal POS ve ERP Sistemi",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.js",
+    "serve": "php -S 0.0.0.0:8586 backend/router.php",
+    "test": "python tests/run.py",
+    "test:react": "vitest run",
+    "test:php": "python tests/run.py --only php",
+    "control": "php -S 127.0.0.1:8590 backend/control.php",
+    "start": "python tools/dev.py start",
+    "reset": "python tools/dev.py reset",
+    "keys": "python tools/dev.py keys"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "10.4.0",
+    "@testing-library/react": "16.1.0",
+    "esbuild": "0.21.5",
+    "jsdom": "25.0.1",
+    "tailwindcss": "3.4.17",
+    "vitest": "2.1.9"
+  }
+}

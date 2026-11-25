@@ -1,0 +1,81 @@
+/* ProPos tasarım tokenları — prototip.
+   Tek birincil renk (amber) + başarı / uyarı / tehlike + sıcak nötr (taş).
+   Mevcut uygulamaya taşınırken bu dosya Tailwind `theme.extend` içine eşlenir (README). */
+:root {
+  color-scheme: dark;
+
+  /* Nötr yüzeyler (sıcak taş, koyu) */
+  --bg: #100e0c;
+  --surface-1: #181513;
+  --surface-2: #211e1b;
+  --surface-3: #2b2724;
+  --surface-4: #37322e;
+  --line: #3a3531;
+  --line-soft: #2a2623;
+
+  /* Metin */
+  --text-1: #f6f3ef;
+  --text-2: #d2cbc3;
+  --text-3: #a39a90;   /* surface-1 üzerinde ≈ 6,3:1 */
+
+  /* Birincil (tek) */
+  --primary: #f5a524;
+  --primary-strong: #ffb845;
+  --primary-ink: #1d1203;          /* birincil üstündeki yazı */
+  --primary-soft: rgba(245, 165, 36, .13);
+  --primary-line: rgba(245, 165, 36, .45);
+
+  /* Durum renkleri */
+  --success: #3ccf7b;
+  --success-soft: rgba(60, 207, 123, .14);
+  --warning: #ff8c4f;
+  --warning-soft: rgba(255, 140, 79, .14);
+  --danger: #ff6161;
+  --danger-soft: rgba(255, 97, 97, .14);
+
+  /* Tipografi */
+  --font: "Inter", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
+  --fs-xs: 12px;   /* alt sınır */
+  --fs-sm: 13px;
+  --fs-md: 15px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
+  --fs-2xl: 30px;
+  --fs-3xl: 44px;
+  --fw-body: 400;
+  --fw-label: 500;
+  --fw-head: 600;
+  --fw-total: 700;  /* YALNIZCA toplam tutar */
+
+  /* Boşluk (4'lük ızgara) */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px;
+
+  /* Köşe */
+  --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-xl: 28px; --r-pill: 999px;
+
+  /* Dokunma */
+  --tap: 44px;      /* alt sınır */
+  --tap-lg: 56px;   /* birincil eylem */
+
+  /* Hareket — yalnızca transform / opacity */
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
+  --d-fast: 120ms;
+  --d-base: 200ms;
+  --d-slow: 320ms;
+  --d-max: 600ms;   /* hiçbir arayüz geçişi bunu aşmaz */
+
+  /* Derinlik */
+  --elev-1: inset 0 1px 0 rgba(255, 255, 255, .035), 0 1px 2px rgba(0, 0, 0, .3);
+  --elev-2: inset 0 1px 0 rgba(255, 255, 255, .05), 0 12px 32px rgba(0, 0, 0, .45);
+  --elev-3: inset 0 1px 0 rgba(255, 255, 255, .06), 0 24px 64px rgba(0, 0, 0, .6);
+
+  /* Katmanlar */
+  --z-sheet: 40; --z-toast: 60; --z-celebrate: 70; --z-confetti: 80;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --d-fast: 0ms; --d-base: 0ms; --d-slow: 0ms; }
+}
+html[data-motion="reduce"] { --d-fast: 0ms; --d-base: 0ms; --d-slow: 0ms; }

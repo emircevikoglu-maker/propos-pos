@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#100e0c">
+  <title>Kutlama anları · ProPos</title>
+  <link rel="stylesheet" href="assets/tokens.css">
+  <link rel="stylesheet" href="assets/ui.css">
+  <style>
+    body { overflow: auto; }
+    .demo { max-width: 1240px; margin: 0 auto; padding: 24px 24px 120px; display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .demo-head { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
+    .demo-head h1 { font-size: var(--fs-2xl); }
+    .moments { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+    .moment { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--r-lg); background: var(--surface-2); border: 1px solid var(--line-soft); }
+    .moment-top { display: flex; gap: 12px; align-items: center; }
+    .moment-ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--primary-soft); color: var(--primary); flex: none; }
+    .moment-ic.is-success { background: var(--success-soft); color: var(--success); }
+    .moment-name { font-weight: var(--fw-head); }
+    .moment-when { font-size: var(--fs-sm); color: var(--text-3); flex: 1; }
+    .log { display: grid; gap: 6px; max-height: 300px; overflow: auto; font-size: var(--fs-sm); }
+    .log-row { display: grid; grid-template-columns: 64px 96px 1fr; gap: 8px; align-items: baseline; padding: 8px 10px; border-radius: var(--r-sm); background: var(--surface-2); }
+    .tiers { display: grid; gap: 10px; }
+    .tier { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; }
+    .tier-n { width: 34px; height: 34px; border-radius: 10px; background: var(--surface-3); display: grid; place-items: center; font-weight: var(--fw-head); }
+    .tier p { font-size: var(--fs-sm); color: var(--text-3); }
+    .play { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+    .play-cell { padding: 16px; border-radius: var(--r-lg); background: var(--surface-2); display: flex; flex-direction: column; gap: 12px; min-height: 150px; }
+    .play-cell .label { margin-bottom: 2px; }
+    .mini-cart { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .meter { display: flex; gap: 16px; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--text-2); }
+    .meter b { font-weight: var(--fw-head); color: var(--text-1); font-variant-numeric: tabular-nums; }
+    .span-7d { grid-column: span 7; } .span-5d { grid-column: span 5; }
+    @media (max-width: 1000px) { .span-7d, .span-5d { grid-column: 1 / -1; } }
+  </style>
+</head>
+<body>
+  <div class="demo" id="demo"></div>
+  <script src="assets/icons.js"></script>
+  <script src="assets/data.js"></script>
+  <script src="assets/motion.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    const D = PP_DATA, M = PPMotion, C = PPCelebrate, CF = PPConfetti;
+    const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+    const NF0 = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 });
+    const money0 = n => NF0.format(Math.round(n));
+    const BIZ = D.brandSettings.businessName;
+    document.title = 'Kutlama anları · ' + BIZ + ' · ProPos';
+    const st = { enabled: true, busy: false, sound: false, motion: 'system', budget: 'auto' };
+    const TIER = { '-1': 'gösterilmedi', 0: 'mikro', 1: 'tost', 2: 'afiş + konfeti', 3: 'kutlama ekranı', plain: 'sade bilgi' };
+
+    const moments = [
+      { k: 'firstSale', when: 'Günün ilk ödemesi. Günde bir kez.', data: { sub: 'Masa 3 · ₺215 — iyi bir başlangıç' } },
+      { k: 'streak', when: 'Her 25 hatasız siparişte (iptal/düzeltme yok). Kişisel.', data: { n: 50 } },
+      { k: 'goal', when: 'Ciro günlük hedefi geçtiğinde. Günde bir kez.', data: { sub: money0(D.brandSettings.dailyGoal) + ' hedef · saat 14:32 · 97 sipariş' } },
+      { k: 'record', when: 'Günlük ciro rekoru kırılınca.', data: { sub: 'Önceki rekor ₺15.800 · şu an ₺15.940' } },
+      { k: 'bigTicket', when: 'Günün en büyük adisyonu kapanınca.', data: { sub: 'Teras 6 · ₺940' } },
+      { k: 'stockCount', when: 'Stok sayımı farksız bitince.', data: { sub: '86 kalem sayıldı · fark yok' } },
+      { k: 'zReport', when: 'Gün sonu. Kutlamalar kapalıyken bile sade bilgi olarak çıkar.', data: { sub: '27 Kasım Cuma · 112 sipariş, iptal yok', stats: [{ label: 'Ciro', value: 13240, fmt: money0 }, { label: 'Brüt kâr', value: 9120, fmt: money0 }, { label: 'Hedef', value: 110, fmt: n => '%' + Math.round(n) }] } }
+    ];
+    const NAMES = { firstSale: 'İlk satış', streak: 'Seri', goal: 'Hedefe ulaşıldı', record: 'Rekor', bigTicket: 'En büyük adisyon', stockCount: 'Stok sayımı', zReport: 'Z raporu kapandı' };
+    const sw = (k, title, desc) => '<div class="set-row"><span class="set-text"><span>' + title + '</span><span class="set-desc">' + desc + '</span></span>' +
+      '<button type="button" class="switch-hit" data-k="' + k + '" role="switch" aria-checked="' + st[k] + '" aria-label="' + title + '"><span class="switch" aria-checked="' + st[k] + '"></span></button></div>';
+
+    $('#demo').innerHTML =
+      '<div class="demo-head"><div><div class="label">' + BIZ + ' · ProPos tasarım prototipi</div><h1>Kutlama anları</h1></div>' +
+      '<a class="btn btn-secondary" href="index.html">' + icon('left', 'ic-sm') + 'POS ekranına dön</a></div>' +
+
+      '<section class="card span-7d"><div class="card-head"><span class="card-title">Anlar</span><span class="label">Her satışta değil — yalnızca anlamlı anlarda</span></div><div class="moments">' +
+      moments.map(m => {
+        const def = C.MOMENTS[m.k];
+        return '<div class="moment"><div class="moment-top"><span class="moment-ic' + (def.tone === 'success' ? ' is-success' : '') + '">' + icon(def.icon) + '</span><div><div class="moment-name">' + NAMES[m.k] + '</div>' +
+          '<span class="tag">Kademe ' + def.tier + ' · ' + TIER[def.tier] + '</span></div></div><div class="moment-when">' + m.when + '</div>' +
+          '<button type="button" class="btn btn-secondary" data-play="' + m.k + '">' + icon('sparkles', 'ic-sm') + 'Oynat</button></div>';
+      }).join('') + '</div></section>' +
+
+      '<section class="card span-5d"><div class="card-head"><span class="card-title">Koşullar</span><button type="button" class="btn btn-ghost" id="resetAll">' + icon('undo', 'ic-sm') + 'Bayrakları sıfırla</button></div>' +
+      sw('enabled', 'Kutlamalar', 'Kapalıyken yalnızca Z raporu sade bilgi olarak') +
+      sw('busy', 'Yoğun saat', 'Afiş → tost, konfeti yok (gerçekte: 10 dk\'da 8+ ödeme)') +
+      sw('sound', 'Ses', 'Varsayılan kapalı') +
+      '<div class="set-row"><span class="set-text"><span>Hareket</span><span class="set-desc">Azalt = konfeti yok, yalnız solma</span></span><span class="seg" id="motion">' +
+      [['system', 'Sistem'], ['reduce', 'Azalt'], ['full', 'Tam']].map(([k, l]) => '<button type="button" data-motion="' + k + '" aria-pressed="' + (k === 'system') + '">' + l + '</button>').join('') + '</span></div>' +
+      '<div class="set-row"><span class="set-text"><span>Cihaz gücü</span><span class="set-desc">Konfeti parçacık bütçesi; yavaş karede kendiliğinden düşer</span></span><span class="seg" id="budget">' +
+      [['auto', 'Oto (' + CF.deviceBudget() + ')'], ['45', 'Zayıf'], ['150', 'Güçlü']].map(([k, l]) => '<button type="button" data-budget="' + k + '" aria-pressed="' + (k === 'auto') + '">' + l + '</button>').join('') + '</span></div>' +
+      '<div class="meter" style="margin-top:14px"><span>FPS (son kutlama) <b id="fps">—</b></span><span>En kötü kare <b id="worst">—</b></span><span>Parçacık <b id="parts">—</b></span><span>Bütçe <b id="bud">' + CF.budget() + '</b></span></div></section>' +
+
+      '<section class="card span-7d"><div class="card-head"><span class="card-title">Mikro etkileşimler</span><span class="label">Hepsi transform/opacity, ≤600 ms</span></div><div class="play">' +
+      '<div class="play-cell"><span class="label">Ürün → adisyon uçuşu + sayaç sıçraması</span><div class="mini-cart"><button type="button" class="product pressable" id="pTile" style="flex:1"><span class="product-name">Caffè Latte</span><span class="product-foot"><span class="product-price">₺120</span></span></button>' +
+      '<span class="count-badge num has-items" id="cart">0</span></div></div>' +
+      '<div class="play-cell"><span class="label">Onay yerine 5 sn geri al</span><button type="button" class="btn btn-danger" id="del">' + icon('trash', 'ic-sm') + '2× Türk kahvesi sil</button><span class="muted" id="delState" style="font-size:var(--fs-sm)">Satır duruyor</span></div>' +
+      '<div class="play-cell"><span class="label">Basılı tut = onay (geri alınamayan eylem)</span><button type="button" class="btn btn-primary btn-lg hold" id="hold"><span class="hold-fill"></span><span class="hold-label">Basılı tutun: Günü kapat</span></button><span class="muted" style="font-size:var(--fs-sm)">600 ms; bırakınca iptal. Klavyede Enter.</span></div>' +
+      '<div class="play-cell"><span class="label">Sayı akışı + hedef çubuğu</span><span class="kpi-v" id="kpi">' + money0(11380) + '</span><span class="bar"><span class="bar-fill" id="kbar"></span></span><button type="button" class="btn btn-secondary" id="addRev">+₺430 ödeme</button></div>' +
+      '<div class="play-cell"><span class="label">Yanlış PIN</span><div class="pin-dots" id="pdots" style="margin:0">' + '<span class="pin-dot is-on"></span>'.repeat(4) + '</div><button type="button" class="btn btn-secondary" id="wrong">Hatalı PIN dene</button></div>' +
+      '<div class="play-cell"><span class="label">Seçim çipi + anahtar</span><div class="opt-choices"><button type="button" class="chip" aria-pressed="false" data-chip>Yulaf sütü <span class="chip-price">+₺15</span></button><button type="button" class="chip" aria-pressed="true" data-chip>Orta</button></div>' +
+      '<button type="button" class="switch-hit" style="justify-content:start" data-toy role="switch" aria-checked="true" aria-label="Örnek anahtar"><span class="switch" aria-checked="true"></span></button></div>' +
+      '</div></section>' +
+
+      '<section class="card span-5d"><div class="card-head"><span class="card-title">Kademeler</span></div><div class="tiers">' +
+      '<div class="tier"><span class="tier-n">0</span><div><div>Mikro</div><p>Her dokunuş: basılma ölçeği, sayaç sıçraması, uçuş. Kapatılamaz ama azaltılmış harekette durur.</p></div></div>' +
+      '<div class="tier"><span class="tier-n">1</span><div><div>Tost</div><p>Üstte küçük hap, 2,6 sn, dokununca kapanır. Seri, en büyük adisyon. Yoğun saatte büyük anlar buraya iner.</p></div></div>' +
+      '<div class="tier"><span class="tier-n">2</span><div><div>Afiş + konfeti</div><p>İlk satış, hedef, rekor. 3,4 sn, ekranı kapatmaz, altındaki her şey tıklanır. 90 sn içinde ikincisi gelirse tosta iner.</p></div></div>' +
+      '<div class="tier"><span class="tier-n">3</span><div><div>Kutlama ekranı</div><p>Yalnızca gün sonu (Z). Her dokunuş kapatır; Esc/Enter da.</p></div></div>' +
+      '</div><div class="card-head" style="margin:18px 0 10px"><span class="card-title">Karar günlüğü</span></div><div class="log" id="log"><span class="muted log-empty">Bir anı oynatın.</span></div></section>';
+
+    function apply() {
+      M.setReduced(st.motion === 'system' ? null : st.motion === 'reduce');
+      C.configure({ enabled: st.enabled, sound: st.sound, autoSimplify: true, isBusy: () => st.busy, onLog: log });
+      CF.setBudget(st.budget === 'auto' ? null : +st.budget);
+      $('#bud').textContent = CF.budget();
+    }
+    function log(kind, r) {
+      const box = $('#log'); if (box.querySelector('.log-empty')) box.innerHTML = '';
+      const row = document.createElement('div'); row.className = 'log-row';
+      const now = new Date();
+      row.innerHTML = '<span class="muted num">' + now.toTimeString().slice(0, 8) + '</span><span>' + NAMES[kind] + '</span><span><span class="tag' + (r.tier === -1 ? '' : r.tier >= 2 ? ' tag-primary' : ' tag-success') + '">' + TIER[r.tier] + '</span> ' +
+        '<span class="muted">' + (r.reasons.join(' · ') || 'kural: varsayılan kademe') + '</span></span>';
+      box.prepend(row); M.rise(row, 0, 6);
+    }
+    // FPS ölçer: yalnızca kutlama sırasında çalışır
+    function measure() {
+      let frames = 0, worst = 0, last = performance.now(), t0 = last, peak = 0;
+      const step = now => {
+        const dt = now - last; last = now; frames++; worst = Math.max(worst, dt); peak = Math.max(peak, CF.active());
+        if (now - t0 < 1600) requestAnimationFrame(step);
+        else { $('#fps').textContent = Math.round(frames / ((now - t0) / 1000)); $('#worst').textContent = Math.round(worst) + ' ms'; $('#parts').textContent = peak; $('#bud').textContent = CF.budget(); }
+      };
+      requestAnimationFrame(step);
+    }
+    $('#demo').addEventListener('click', e => {
+      const p = e.target.closest('[data-play]');
+      if (p) { const m = moments.find(x => x.k === p.dataset.play); C.resetDay(); C.moment(m.k, m.data); measure(); return; }
+      const s = e.target.closest('[data-k]');
+      if (s) { st[s.dataset.k] = !st[s.dataset.k]; s.setAttribute('aria-checked', st[s.dataset.k]); $('.switch', s).setAttribute('aria-checked', st[s.dataset.k]); apply(); return; }
+      const mo = e.target.closest('[data-motion]');
+      if (mo) { st.motion = mo.dataset.motion; $$('[data-motion]').forEach(x => x.setAttribute('aria-pressed', x === mo)); apply(); return; }
+      const b = e.target.closest('[data-budget]');
+      if (b) { st.budget = b.dataset.budget; $$('[data-budget]').forEach(x => x.setAttribute('aria-pressed', x === b)); apply(); return; }
+      const ch = e.target.closest('[data-chip]');
+      if (ch) { ch.setAttribute('aria-pressed', ch.getAttribute('aria-pressed') !== 'true'); M.bump(ch, 1.06); return; }
+      const toy = e.target.closest('[data-toy]');
+      if (toy) { const v = toy.getAttribute('aria-checked') !== 'true'; toy.setAttribute('aria-checked', v); $('.switch', toy).setAttribute('aria-checked', v); }
+    });
+    $('#resetAll').addEventListener('click', () => { C.resetDay(); C.resetCooldown(); $('#log').innerHTML = '<span class="muted log-empty">Bayraklar ve 90 sn soğuma sıfırlandı.</span>'; });
+    let cart = 0;
+    $('#pTile').addEventListener('click', e => { M.flash(e.currentTarget); cart++; const c = $('#cart'); c.textContent = cart; M.fly(e.currentTarget, c).then(() => M.bump(c)); if (M.reduced()) M.bump(c); });
+    $('#del').addEventListener('click', () => {
+      $('#delState').textContent = 'Silindi (5 sn içinde geri alınabilir)'; $('#del').disabled = true;
+      M.undo('2× Türk kahvesi silindi', () => { $('#delState').textContent = 'Geri alındı — satır yerinde'; $('#del').disabled = false; },
+        { icon: 'trash', onCommit: () => { $('#delState').textContent = 'Kalıcı silindi'; $('#del').disabled = false; } });
+    });
+    M.holdToConfirm($('#hold'), $('#hold .hold-fill'), 600, () => { C.resetDay(); C.moment('zReport', moments[6].data); measure(); });
+    let rev = 11380; const GOAL = D.brandSettings.dailyGoal;
+    M.progress($('#kbar'), rev / GOAL);
+    $('#addRev').addEventListener('click', () => {
+      const prev = rev; rev += 430;
+      M.countUp($('#kpi'), prev, rev, money0, 600); M.progress($('#kbar'), rev / GOAL, Math.min(1, prev / GOAL));
+      if (prev < GOAL && rev >= GOAL) { C.resetDay(); C.moment('goal', moments[2].data); measure(); }
+    });
+    $('#wrong').addEventListener('click', () => M.shake($('#pdots')));
+    apply();
+    // derin bağlantı: kutlamalar.html#oynat=zReport
+    const h = location.hash.match(/oynat=(\w+)/), m0 = h && moments.find(x => x.k === h[1]);
+    if (m0) setTimeout(() => C.moment(m0.k, m0.data), 300);
+  })();
+  </script>
+</body>
+</html>

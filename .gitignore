@@ -1,0 +1,15 @@
+node_modules/
+data/
+github-yayin/
+*.log
+_yedek/
+# Sırlar ve yerel dosyalar — ASLA commit'lenmez
+.env
+.env.*
+!.env.example
+_data_backup/
+.chat-backup.md
+dist/
+dist-admin/
+.claude/
+*.sqlite
