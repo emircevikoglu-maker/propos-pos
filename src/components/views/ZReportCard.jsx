@@ -3,6 +3,7 @@ import { usePos } from "../../context/PosContext";
 import { formatTL } from "../../utils/formatters";
 import { celebrateZReport } from "../../design/celebrations";
 import { coverStats, cashDifference } from "../../utils/posHelpers";
+import { Card } from "../../ui/page";
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const dayKey = (iso) => {
@@ -69,65 +70,60 @@ table{width:100%;border-collapse:collapse}td{padding:3px 0}.r{text-align:right}.
   const saveCounted = (v) => { setCounted(v); try { if (v === "") localStorage.removeItem(countKey); else localStorage.setItem(countKey, v); } catch (e) {} };
   const cash = cashDifference(report.drawer, counted === "" ? null : Number(counted));
 
-  const Line = ({ label, value, strong }) => (
-    <div className="flex items-center justify-between text-xs">
-      <span className="text-stone-400">{label}</span>
-      <span className={strong ? "font-semibold text-amber-400" : "text-stone-200"}>{formatTL(value)}</span>
-    </div>
+  const Row = ({ label, value, strong }) => (
+    <div className={`sum-row${strong ? " is-strong" : ""}`}><span>{label}</span><span className="num">{formatTL(value)}</span></div>
   );
-  const List = ({ title, pairs }) => (
-    <div className="space-y-1.5">
-      <div className="text-[10px] uppercase tracking-wider text-stone-500">{title}</div>
-      {pairs.length === 0 ? <div className="text-xs text-stone-600">Kayıt yok</div> : pairs.map(([k, v]) => <Line key={k} label={k} value={v} />)}
+  const Group = ({ title, pairs }) => (
+    <div className="z-col">
+      <span className="ops-title">{title}</span>
+      {pairs.length === 0 ? <span className="label">Kayıt yok</span> : pairs.map(([k, v]) => <Row key={k} label={k} value={v} />)}
     </div>
   );
 
   return (
-    <div className="lg:col-span-12 p-5 rounded-2xl bg-[#161412] border border-stone-800 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-base font-semibold text-white">🧾 Gün Sonu (Z) Raporu</h3>
-        <div className="flex items-center gap-2">
-          <input type="date" value={day} max={today} onChange={(e) => e.target.value && setDay(e.target.value)}
-            className="rounded-xl border border-stone-800 bg-stone-950 px-3 py-1.5 text-xs text-white" />
-          <button type="button" onClick={printReport} className="rounded-xl bg-amber-500 px-3.5 py-1.5 text-xs font-semibold text-stone-950 hover:bg-amber-400">
-            Yazdır
-          </button>
+    <Card
+      span={12}
+      title="Gün sonu (Z raporu)"
+      aside={
+        <span className="page-actions">
+          <input type="date" className="field-input" style={{ width: "auto" }} value={day} max={today} onChange={(e) => e.target.value && setDay(e.target.value)} aria-label="Rapor günü" />
+          <button type="button" className="btn btn-primary" onClick={printReport}>Yazdır</button>
+        </span>
+      }
+    >
+      <div className="z-grid">
+        <div className="z-col">
+          <span className="ops-title">Satış · {report.count} işlem</span>
+          <Row label="Brüt" value={report.gross} />
+          <Row label="İndirim" value={-report.discount} />
+          <Row label="Net ciro" value={report.net} strong />
         </div>
-      </div>
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
-        <div className="space-y-1.5">
-          <div className="text-[10px] uppercase tracking-wider text-stone-500">Satış · {report.count} işlem</div>
-          <Line label="Brüt" value={report.gross} />
-          <Line label="İndirim" value={-report.discount} />
-          <Line label="Net ciro" value={report.net} strong />
-        </div>
-        <List title="Ödeme türü" pairs={report.byMethod} />
-        <List title="Personel" pairs={report.byStaff} />
-        <div className="space-y-1.5">
-          <div className="text-[10px] uppercase tracking-wider text-stone-500">Kasa (nakit)</div>
-          <Line label="Nakit satış" value={report.cashIn} />
-          <Line label="Nakit gider" value={-report.cashOut} />
-          <Line label="Çekmecede olmalı" value={report.drawer} strong />
-          <label className="flex items-center justify-between gap-2 text-xs pt-1">
-            <span className="text-stone-400">Sayılan nakit</span>
-            <input type="number" min="0" step="any" inputMode="decimal" value={counted} onChange={(e) => saveCounted(e.target.value)} aria-label="Sayılan nakit"
-              className="w-28 rounded-lg border border-stone-800 bg-stone-950 px-2 py-1 text-right text-white tabular-nums" placeholder="0" />
+        <Group title="Ödeme türü" pairs={report.byMethod} />
+        <Group title="Personel" pairs={report.byStaff} />
+        <div className="z-col">
+          <span className="ops-title">Kasa (nakit)</span>
+          <Row label="Nakit satış" value={report.cashIn} />
+          <Row label="Nakit gider" value={-report.cashOut} />
+          <Row label="Çekmecede olmalı" value={report.drawer} strong />
+          <label className="z-count">
+            <span className="label">Sayılan nakit</span>
+            <input type="number" min="0" step="any" inputMode="decimal" className="field-input" value={counted} onChange={(e) => saveCounted(e.target.value)} aria-label="Sayılan nakit" placeholder="0" />
           </label>
           {cash.status !== "invalid" && (
-            <div role="status" className={`flex items-center justify-between text-xs ${cash.status === "ok" ? "text-emerald-400" : cash.status === "short" ? "text-rose-400" : "text-amber-400"}`}>
+            <div role="status" className={`tag ${cash.status === "ok" ? "tag-success" : cash.status === "short" ? "tag-danger" : "tag-warning"}`} style={{ justifyContent: "space-between" }}>
               <span>{cash.status === "ok" ? "Kasa tutuyor" : cash.status === "short" ? "Kasa eksik" : "Kasa fazla"}</span>
-              <span className="tabular-nums">{cash.diff > 0 ? "+" : ""}{formatTL(cash.diff)}</span>
+              <span className="num">{cash.diff > 0 ? "+" : ""}{formatTL(cash.diff)}</span>
             </div>
           )}
           {covers.guests > 0 && (
-            <div className="pt-2 border-t border-stone-800 space-y-1.5">
-              <div className="text-[10px] uppercase tracking-wider text-stone-500">Kuver</div>
-              <div className="flex items-center justify-between text-xs"><span className="text-stone-400">Toplam kişi</span><span className="text-stone-200 tabular-nums">{covers.guests}</span></div>
-              <div className="flex items-center justify-between text-xs"><span className="text-stone-400">Kişi başı ciro</span><span className="text-stone-200 tabular-nums">{formatTL(covers.perGuest)}</span></div>
-            </div>
+            <>
+              <span className="ops-title" style={{ marginTop: 8 }}>Kuver</span>
+              <div className="sum-row"><span>Toplam kişi</span><span className="num">{covers.guests}</span></div>
+              <div className="sum-row"><span>Kişi başı ciro</span><span className="num">{formatTL(covers.perGuest)}</span></div>
+            </>
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

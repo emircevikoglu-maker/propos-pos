@@ -9,11 +9,11 @@ import { Ic } from "./Ic";
 import { TAB_PATHS } from "./routes";
 import { TablesView } from "./TablesView";
 import { OrderView } from "./OrderView";
-import { EsnafView } from "../components/views/EsnafView";
-import { InventoryView } from "../components/views/InventoryView";
+import { EsnafView } from "./EsnafView";
+import { StockView } from "./StockView";
 import { AnalyticsView } from "../components/views/AnalyticsView";
-import { StaffView } from "../components/views/StaffView";
-import { FinanceView } from "../components/views/FinanceView";
+import { StaffView } from "./StaffView";
+import { FinanceView } from "./FinanceView";
 import { SettingsView } from "../components/views/SettingsView";
 
 const NAV = [
@@ -207,11 +207,11 @@ export function Shell() {
           <Routes>
             <Route path="/masalar" element={<section className="view" aria-label="Masalar"><TablesView /></section>} />
             <Route path="/masalar/:tableId" element={<section className="view" aria-label="Adisyon" style={{ overflow: "hidden" }}><OrderView /></section>} />
-            <Route path="/stok" element={<section className="view"><Legacy tab="inventory"><InventoryView /></Legacy></section>} />
-            <Route path="/esnaf" element={<section className="view"><Legacy tab="esnaf"><EsnafView /></Legacy></section>} />
+            <Route path="/stok" element={<section className="view"><StockView /></section>} />
+            <Route path="/esnaf" element={<section className="view"><EsnafView /></section>} />
             <Route path="/analiz" element={<section className="view"><Legacy tab="analytics">{guard(isAdminUnlocked, <AnalyticsView />)}</Legacy></section>} />
-            <Route path="/personel" element={<section className="view"><Legacy tab="staff">{guard(isAdminUnlocked, <StaffView />)}</Legacy></section>} />
-            <Route path="/finans" element={<section className="view"><Legacy tab="finance">{guard(isAdminUnlocked, <FinanceView />)}</Legacy></section>} />
+            <Route path="/personel" element={<section className="view">{guard(isAdminUnlocked, <StaffView />)}</section>} />
+            <Route path="/finans" element={<section className="view">{guard(isAdminUnlocked, <FinanceView />)}</section>} />
             <Route path="/yonetim" element={<section className="view"><Legacy tab="settings">{guard(isAdminUnlocked, <SettingsView />)}</Legacy></section>} />
             <Route path="*" element={<Navigate to={TAB_PATHS.pos} replace />} />
           </Routes>

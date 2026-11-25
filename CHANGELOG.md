@@ -3,6 +3,22 @@
 Biçim: [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/). Sürüm numarası `package.json` ile birlikte artar.
 Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 
+## [3.7.0] — 2026-11-25
+P12-6 ilk dilim: Stok, Personel, Finans (+ Z raporu), Esnaf prototip diline taşındı. Analiz ve Yönetim hâlâ eski görünümde.
+### Eklendi
+- Ortak sayfa kalıbı `src/ui/page.jsx`: prototipin patron sayfasındaki `.boss` 12 sütun ızgarası + `.card` + `.kpi` + `.seg` + `.tag` + `.bar`. Prototipte olmayan ekranlar yalnızca bu parçalardan kurulur (yeni görsel dil yok); `PeriodBar` rapor sayfalarının dönem seçicisi.
+- Stok (`StockView`): Malzemeler / Reçeteler / Atık ve sayım bölümleri (segment); kritik malzeme başa alınır ve uyarı kartı çıkar; reçete tablosu maliyet ve brüt kârı gösterir.
+- Personel (`StaffView`): 4 kanal KPI'sı (nakit, kart, yemek kartı, cariye yazılan), çalışan tablosu, yığılmış kanal çubukları. İkram/iptal ve Excel üstte.
+- Finans (`FinanceView`): net kâr kahraman KPI'sı (negatifse tehlike rengi), gider tablosu, "Yeni gider/Düzenle" penceresi (`?s=gider`, geri tuşu kapatır), gün sonu (Z) raporu aynı sayfada.
+- Esnaf (`EsnafView`): cari listesi tek sütun, satıra dokununca ekstre penceresi (`?s=ekstre`), yeni cari penceresi (`?s=yeni`); tahsilat ve hızlı sipariş mevcut akışlara bağlı.
+- Testler: `tests/react/views.test.jsx` (+9): bu dört ekranın bağlam kancaları ve görünür davranışı.
+### Değişti
+- Z raporu kartı (`ZReportCard`) yeni `Card`/`sum-row` işaretlemesiyle yeniden çizildi; hesaplar ve yazdırma şablonu aynı.
+### Kaldırıldı
+- Eski Tailwind `InventoryView`, `StaffView`, `FinanceView`, `EsnafView`.
+### Bilinen eksikler
+- Analiz ve Yönetim (Ayarlar) ve giriş/eşleştirme/lisans ekranları eski görünümde; patron görünümü (P12-5) ve Analiz aynı ekran olacak.
+
 ## [3.6.0] — 2026-11-25
 Arayüz yeniden yazımı (P12) başladı: "giydirme" terk edildi, ekranlar `design-prototype/` düzeniyle yeniden yazılıyor. Yönlendirme (P13) tamam.
 ### Eklendi

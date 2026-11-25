@@ -43,3 +43,55 @@
   .busy-chip { display: none; }
   .mobile-ticket-bar span { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 }
+
+/* Sayfa kalıbı (src/ui/page.jsx): prototipin .boss ızgarasını Stok/Esnaf/Finans… ekranlarına taşır. */
+.page-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.boss > .toolbar { grid-column: 1 / -1; margin-bottom: 0; }
+.dt-wrap { overflow-x: auto; margin: 0 -4px; }
+.dt { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.dt th { text-align: left; color: var(--text-3); font-weight: var(--fw-label); font-size: var(--fs-xs); padding: 8px 12px; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+.dt td { padding: 12px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+.dt tr:last-child td { border-bottom: 0; }
+.dt .r { text-align: right; font-variant-numeric: tabular-nums; }
+.dt .muted { color: var(--text-3); }
+.empty { display: grid; justify-items: center; gap: 8px; padding: 28px 12px; color: var(--text-3); text-align: center; }
+.empty p { max-width: 420px; font-size: var(--fs-sm); }
+.stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.stock-item { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line-soft); }
+.stock-item.is-low { border-color: rgba(255, 140, 79, .45); }
+.stock-item.is-out { border-color: var(--danger); }
+.stock-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.stock-name { font-weight: var(--fw-head); }
+.stock-qty { font-size: var(--fs-xl); font-weight: var(--fw-head); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.stock-qty small { font-size: var(--fs-sm); color: var(--text-3); font-weight: var(--fw-label); margin-left: 4px; }
+.stock-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: auto; flex-wrap: wrap; }
+
+.person { display: inline-flex; align-items: center; gap: 12px; }
+.person > span:last-child { display: flex; flex-direction: column; }
+.person-name { font-weight: var(--fw-label); }
+.row-actions { display: inline-flex; gap: 2px; }
+.stack-list { display: grid; gap: 14px; }
+.stack-row { display: grid; grid-template-columns: minmax(90px, 160px) 1fr auto; gap: 14px; align-items: center; }
+.stack-name { font-weight: var(--fw-label); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stack { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--surface-4); }
+.stack i { display: block; height: 100%; }
+.form-grid { display: grid; gap: 18px; padding: 4px 0 8px; }
+.field { display: grid; gap: 8px; }
+.z-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; }
+.z-col { display: grid; gap: 8px; align-content: start; }
+.z-count { display: grid; gap: 6px; margin-top: 6px; }
+.sum-row.is-strong { color: var(--text-1); font-weight: var(--fw-head); }
+@media (max-width: 1180px) { .z-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .z-grid { grid-template-columns: 1fr; } .stack-row { grid-template-columns: 1fr auto; } .stack { grid-column: 1 / -1; order: 3; } }
+
+.cari-list { display: grid; gap: 10px; }
+.cari-row { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; padding: 14px 16px; min-height: 76px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line-soft); cursor: pointer; transition: border-color var(--d-fast); }
+.cari-row:hover, .cari-row:focus-visible { border-color: var(--primary-line); outline: 0; }
+.cari-main { display: grid; gap: 4px; min-width: 0; }
+.cari-name { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-weight: var(--fw-head); }
+.cari-side { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.cari-bal { display: grid; text-align: right; min-width: 96px; }
+.cari-bal b { font-size: var(--fs-lg); font-variant-numeric: tabular-nums; }
+.tx-row { display: grid; gap: 4px; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface-2); }
+.tx-head { display: flex; justify-content: space-between; gap: 8px; font-weight: var(--fw-label); }
+@media (max-width: 700px) { .cari-row { grid-template-columns: 1fr; } .cari-side { justify-content: space-between; } }

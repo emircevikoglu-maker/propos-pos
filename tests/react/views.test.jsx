@@ -1,0 +1,134 @@
+import React from "react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+
+// Yeni rapor/yönetim ekranları (P12-6): bağlamı sahte vererek ekranın bağlandığı kancaları ve görünür davranışı doğrular.
+let ctx = {};
+vi.mock("../../src/context/PosContext", () => ({ usePos: () => ctx }));
+
+import { StockView } from "../../src/ui/StockView";
+import { StaffView } from "../../src/ui/StaffView";
+import { EsnafView } from "../../src/ui/EsnafView";
+import { FinanceView } from "../../src/ui/FinanceView";
+
+const wrap = (el, path = "/x") => render(<MemoryRouter initialEntries={[path]}>{el}</MemoryRouter>);
+const period = { globalPeriod: "daily", setGlobalPeriod: vi.fn(), customStartDate: "", setCustomStartDate: vi.fn(), customEndDate: "", setCustomEndDate: vi.fn() };
+
+beforeEach(() => { ctx = { ...period }; });
+
+describe("StockView", () => {
+  beforeEach(() => {
+    const milk = { id: "i1", name: "Süt", stock: 100, minLimit: 400, unit: "ml", unitCost: 0.05 };
+    const beans = { id: "i2", name: "Kahve", stock: 5000, minLimit: 1000, unit: "gr", unitCost: 0.8 };
+    ctx = {
+      ...period, ingredients: [beans, milk], criticalIngredients: [milk], stockLog: [], isAdminUnlocked: true,
+      products: [{ id: "p1", name: "Latte", price: 100, recipe: [{ ingredientId: "i1", amount: 200 }, { ingredientId: "i2", amount: 18 }] }],
+      setStockModalIng: vi.fn(), setStockAdjustType: vi.fn(), setStockAdjustAmount: vi.fn(), setStockExpenseCost: vi.fn()
+    };
+  });
+
+  it("kritik malzeme uyarısı gösterir ve kritik olanı başa alır", () => {
+    wrap(<StockView />);
+    expect(screen.getByText("Tedarik gerekiyor")).toBeTruthy();
+    const names = [...document.querySelectorAll(".stock-name")].map((n) => n.textContent);
+    expect(names).toEqual(["Süt", "Kahve"]);
+  });
+
+  it("Stok gir düğmesi mevcut stok penceresini hazırlar", () => {
+    wrap(<StockView />);
+    fireEvent.click(screen.getAllByRole("button", { name: /Stok gir/ })[0]);
+    expect(ctx.setStockModalIng).toHaveBeenCalledWith(expect.objectContaining({ id: "i1" }));
+    expect(ctx.setStockAdjustType).toHaveBeenCalledWith("add");
+  });
+
+  it("reçete sekmesi maliyet ve brüt kârı hesaplar; atık sekmesi boş durumu gösterir", () => {
+    wrap(<StockView />);
+    fireEvent.click(screen.getByRole("button", { name: /Reçeteler/ }));
+    const row = screen.getByText("Latte").closest("tr");
+    expect(within(row).getByText(/Süt −200 ml/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Atık ve sayım/ }));
+    expect(screen.getByText(/Henüz kayıt yok/)).toBeTruthy();
+  });
+});
+
+describe("StaffView", () => {
+  it("kanal toplamlarını ve çalışan payını gösterir", () => {
+    ctx = {
+      ...period, exportExcelByCategory: vi.fn(),
+      kpiMetrics: { grossRevenue: 1000, byMethod: { Nakit: 600, "Kredi Kartı": 400, "İkram / İptal": 50 } },
+      staffPerformance: [{ id: "s1", name: "Emirhan", role: "Barista", avatar: "E", color: "#f59e0b", cash: 600, card: 400, mealCard: 0, cariWritten: 0, total: 1000, orderCount: 4, itemCount: 9 }]
+    };
+    wrap(<StaffView />);
+    expect(screen.getAllByText("Emirhan").length).toBeGreaterThan(0);
+    expect(screen.getByText(/kasanın %100/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Excel/ }));
+    expect(ctx.exportExcelByCategory).toHaveBeenCalledWith("staff");
+  });
+});
+
+describe("EsnafView", () => {
+  const esnaf = [
+    { id: "e1", name: "Berber Salih", shopType: "Kuaför", phone: "0532", discountRate: 15, balance: 485, transactions: [] },
+    { id: "e2", name: "Eczane", shopType: "Sağlık", phone: "0533", discountRate: 0, balance: 0, transactions: [] }
+  ];
+  beforeEach(() => {
+    ctx = {
+      ...period, esnafList: esnaf, totalEsnafReceivable: 485, kpiMetrics: { cariWrittenTotal: 0 }, staffList: [],
+      startFastEsnafOrder: vi.fn(), exportExcelByCategory: vi.fn(), esnafSearch: "", setEsnafSearch: vi.fn(),
+      selectedEsnafDetail: null, setSelectedEsnafDetail: vi.fn(), setEsnafCollectModal: vi.fn(), setEsnafCollectAmount: vi.fn(),
+      copyEsnafWhatsAppSummary: vi.fn(), handleQuickCreateEsnaf: vi.fn((e) => e.preventDefault()),
+      quickNewEsnafName: "", setQuickNewEsnafName: vi.fn(), quickNewEsnafPhone: "", setQuickNewEsnafPhone: vi.fn(), quickNewEsnafDiscount: "", setQuickNewEsnafDiscount: vi.fn()
+    };
+  });
+
+  it("yalnızca borçlu esnafa Tahsilat al düğmesi çıkar ve tutarı hazırlar", () => {
+    wrap(<EsnafView />);
+    expect(screen.getAllByRole("button", { name: "Tahsilat al" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Tahsilat al" }));
+    expect(ctx.setEsnafCollectModal).toHaveBeenCalledWith(expect.objectContaining({ id: "e1" }));
+    expect(ctx.setEsnafCollectAmount).toHaveBeenCalledWith("485");
+  });
+
+  it("Sipariş yaz ilgili esnafın kimliğiyle hızlı sipariş açar; satıra tıklamak ekstreyi seçer", () => {
+    wrap(<EsnafView />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Sipariş yaz" })[0]);
+    expect(ctx.startFastEsnafOrder).toHaveBeenCalledWith("e1");
+    fireEvent.click(screen.getByText("Berber Salih"));
+    expect(ctx.setSelectedEsnafDetail).toHaveBeenCalledWith(expect.objectContaining({ id: "e1" }));
+  });
+
+  it("arama kutusu bağlama yazar", () => {
+    wrap(<EsnafView />);
+    fireEvent.change(screen.getByLabelText("Esnaf ara"), { target: { value: "ecz" } });
+    expect(ctx.setEsnafSearch).toHaveBeenCalledWith("ecz");
+  });
+});
+
+describe("FinanceView", () => {
+  beforeEach(() => {
+    ctx = {
+      ...period, kpiMetrics: { grossRevenue: 500, totalExpenses: 700, netProfit: -200 }, sales: [], expenses: [], staffList: [], brandSettings: {},
+      filteredExpenses: [{ id: "x1", title: "Kira", category: "Kira & Aidat", paymentMethod: "Nakit", amount: 700, timestamp: new Date().toISOString() }],
+      setExpenses: vi.fn(), setEditingExpId: vi.fn(), setNewExpTitle: vi.fn(), setNewExpCategory: vi.fn(), setNewExpAmount: vi.fn(), setNewExpMethod: vi.fn(), setNewExpNote: vi.fn(),
+      handleAddExpense: vi.fn((e) => e.preventDefault()), editingExpId: null, newExpTitle: "", newExpCategory: "Kira & Aidat", newExpAmount: "", newExpMethod: "Nakit", newExpNote: ""
+    };
+  });
+
+  it("negatif net kâr gösterilir; gider listesi ve Z raporu aynı sayfada", () => {
+    wrap(<FinanceView />);
+    expect(screen.getByText("Kira")).toBeTruthy();
+    expect(screen.getByText("Gün sonu (Z raporu)")).toBeTruthy();
+    expect(document.querySelector(".kpi-hero .kpi-v").getAttribute("style")).toMatch(/danger/);
+  });
+
+  it("düzenle düğmesi form alanlarını doldurur; sil gideri listeden çıkarır", () => {
+    wrap(<FinanceView />);
+    fireEvent.click(screen.getByRole("button", { name: "Kira düzenle" }));
+    expect(ctx.setEditingExpId).toHaveBeenCalledWith("x1");
+    expect(ctx.setNewExpAmount).toHaveBeenCalledWith("700");
+    fireEvent.click(screen.getByRole("button", { name: "Kira sil" }));
+    const updater = ctx.setExpenses.mock.calls[0][0];
+    expect(updater([{ id: "x1" }, { id: "x2" }])).toEqual([{ id: "x2" }]);
+  });
+});
