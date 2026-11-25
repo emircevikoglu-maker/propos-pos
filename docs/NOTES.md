@@ -105,3 +105,10 @@ Nüanslar / riskler
 2. Altyapı: Supabase denemesi yapılsın mı, yoksa PHP VDS'te kalıp PDO (SQLite/MySQL) mı?
 3. "Personele özel hizmet" ne demek: personel başına görünüm mü, prim/hedef takibi mi, müşteri tarafı mı?
 4. Hedef ölçek: onlarca mı yüzlerce işletme mi (altyapı ve fiyat kararını etkiler)?
+
+## 3.5.x geri bildirim analizi (25 Kasım, kullanıcı incelemesi sonrası)
+1. Tasarım: "giydirme" yaklaşımı yanlıştı. Prototip yeniden yazım değil bir düzen ve hareket dili; ben yalnızca renk/yazı tokenlarını taşıyıp eski ekranları o renklerle boyadım. Sonuç: tarayıcıda doğrulandı — adisyon paneli tek sütunda garson seçici + kalemler + indirim + 5 ödeme yöntemi; katalog kırpılmış adlarla; boş yer yok ama anlaşılırlık da yok. Karar: P12 (prototip BİREBİR, ekran ekran yeniden yazım). Kullanıcı gerekçesi: boş yer olmayan ekranda yeni kullanıcı öğrenme vakti harcamaz, verim ve uzun vadeli satış düşer.
+2. Yönlendirme: `react-router-dom` hiç eklenmemiş; `activeTab`/açık masa `useState`. Geri tuşu sayfadan çıkarıyor. P13.
+3. Çevrimdışı: "IndexedDB anlamsızlaştı" eleştirisi iki doğrulanmış nedene dayanıyor: yönetici PIN'i yalnızca sunucuda doğrulanıyor (çevrimdışıyken Analiz/Çalışan/Ciro/Yönetim kilitli, tıklayınca bile geri bildirim yok); düz http LAN'da service worker çalışmıyor, pencere kapanınca sunucu kapalıyken uygulama yeniden açılmıyor. Tam "pencere kapanana kadar devre dışı" yeniden üretilemedi; kullanıcıdan adım istendi. P14.
+4. Lisans/çevrimdışı gerilimi gerçek: istemci geri sayımı JS ile aşılır (kullanıcı haklı). Kabul edilen model: sunucunun imzaladığı süreli kira + gerçek zorlama sunucuda; dürüst sınır belgelenir (P14).
+5. Süreç dersi: "bitti" işaretlerim kullanıcının gördüğü sonuçla örtüşmedi çünkü kabul ölçütüm test sayısıydı, ekran görüntüsü değil. Bundan sonra görsel işler için kabul ölçütü: prototip ile yan yana ekran görüntüsü + dört çözünürlük.

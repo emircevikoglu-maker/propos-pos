@@ -4,8 +4,47 @@ Biçim: her plan bir hedef + adımlar. `[ ]` yapılacak, `[x]` bitti, `[~]` kıs
 Boyut: S (< 1 saat), M (yarım gün), L (1-2 gün), XL (daha fazla). Ayrıntı ve gerekçe: `docs/NOTES.md`. Fikir havuzu: `docs/IDEAS.md` (İ-n). Bitenler: `CHANGELOG.md`.
 Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 
+## ÖNCELİK DEĞİŞİKLİĞİ (25 Kasım, kullanıcı geri bildirimi) — P12, P13, P14 diğer her şeyin önünde
+Kullanıcı 3.5.x'i inceledi: (1) giydirilen tasarım prototip değil, ekran sıkışık ve animasyonlar yok; (2) gezinme (geri tuşu) yok; (3) API kapanınca sistem kullanılamaz oluyor, aynı anda lisans çevrimdışıyken zorlanamıyor. Kod ve tarayıcıyla doğrulandı (docs/NOTES.md "3.5.x geri bildirim analizi"). HTTPS rehberi ve kampanya motoru bu üçünün arkasına alındı.
+
 ## Sıra (öneri)
+0. **P14 (çevrimdışı/lisans güvenilirliği) → P13 (yönlendirme) → P12 (prototip tasarıma tam geçiş)**, ardından aşağıdaki sıra:
 1. P0 test sürüşü → 2. P1-a yazdırma → 3. P2-a istemci offline + PWA → 4. P4 altyapı kararı (Supabase denemesi) → 5. P5 roller → 6. P6 tasarım → 7. P7 özellikler
+
+---
+
+## P14 — Çevrimdışı güvenilirliği + lisans zorlama (kritik) — L
+Doğrulananlar: (a) açık pencerede sunucu kapanınca satış sürüyor ama yönetici PIN'i yalnızca sunucuda doğrulandığı için Analiz/Çalışan/Ciro/Yönetim kilitli kalıyor ve tıklayınca geri bildirim yok; (b) düz `http://LAN-IP`'de service worker yok: pencere kapanırsa sunucu kapalıyken uygulama bir daha AÇILMIYOR (IndexedDB boşa); (c) 403/401 olayları (lisans ekranı, eşleştirme) yalnızca sayfa yenilenince kalkan kalıcı katman olarak duruyor. Kullanıcının tarif ettiği "pencere kapanana kadar devre dışı" bu üçünün bileşimi; tam yeniden üretim adımı kullanıcıdan istendi (hangi sunucu kapandı, ne göründü).
+- [ ] Bağlantı/oturum durumunu TEK durum makinesine topla: `online | offline | degraded | auth | license` + her durumdan otomatik çıkış (yenileme gerektirmez). Kalıcı yapışkan katman kalmaz.
+- [ ] "Sunucu cevabı" doğrulaması: JSON olmayan 200 (captive portal/proxy HTML), zaman aşımı, 5xx → çevrimdışı say; 401/403 yalnızca imzalı/yapısal `code` ile yetki hatası.
+- [ ] Açılış API'den bağımsız: eşleşmiş cihaz her koşulda IndexedDB'den açılır (sunucu kapalı, oturum yok, ağ yok). Test: 8 senaryo matrisi (başlangıçta kapalı / oturum ortasında kapanış / geri gelme / anahtar geçersiz / lisans bitti / 429 / 5xx / HTML yanıt).
+- [ ] Yönetici PIN'i çevrimdışı: sunucu cihaza tuzlu yavaş (PBKDF2) doğrulayıcı verir, IndexedDB'de durur; çevrimdışıyken yerelde doğrulanır, deneme sayacı + kilit yerelde. Tehdit modeli: garsonu engeller, kararlı saldırgana karşı koruma iddiası YOK (belgeye yazılır).
+- [ ] Lisans "kira" (lease) modeli — istemci geri sayımı DEĞİL, sunucunun imzaladığı süreli belge: her başarılı eşitlemede sunucu `{tenant, exp, grace, issuedAt}` belgesini Ed25519 ile imzalar; istemci açık anahtarla WebCrypto'da doğrular, IndexedDB'de tutar. Çevrimdışı çalışma kira bitimine kadar; bitince salt-okunur kilit ekranı (açık masaları görme/dışa aktarma, yeni satış yok). Saat geri alma tespiti (son görülen sunucu zamanı). Plana bağlı süre (varsayılan 72 sa).
+- [ ] Dürüst sınır (belgeye yazılacak): istemci JS'i ele geçirilebilir; kira imzasız uydurulamaz ama kodu yamayan kararlı biri kilidi atlayabilir. Gerçek zorlama SUNUCUDA: lisans bitince eşitleme/Realtime/güncelleme/yedek durur, çok cihazlı kullanım ve veri çıkışı kesilir; müşteri paketi bayiye bağlıdır. Saldırı yüzeyi = bir cihazın kira süresi.
+- [ ] Süresi biten lisansı çevrimdışıyken de bitirme: kira kısa tutulur (isteğe bağlı 24 sa); yenileme her eşitlemede sessiz; kullanıcıya "X saat içinde bağlanın" uyarısı (gerçek süre sunucu imzasından).
+- [ ] Yerel sunucu topolojisi ayrımı: (A) işletme PC'sinde PHP (LAN) — internet kopsa bile uygulama sürer; (B) bulut VDS — internet kopunca yalnızca istemci çevrimdışı. Belgede ve kurulumda hangisi olduğu açık yazılır; (A) için sunucuyu Windows hizmeti/görev olarak otomatik başlatma + sağlık kontrolü.
+- [ ] Uygulama kabuğunu http LAN'da da açabilmek: HTTPS rehberi (P2-d) + alternatif "yerel kurulum paketi" (Caddy + yerel sertifika).
+
+## P13 — Yönlendirme (geri tuşu) — M
+Durum: `react-router-dom` YOK; sekme ve açık masa `useState`; geri tuşu uygulamadan çıkarıyor. Doğrulandı.
+- [ ] `react-router-dom` v6 (BrowserRouter; PHP `router.php`'de SPA yedek rota: `/api` ve dosya dışı yollar `index.html`, SW zaten `/` önbelleğinden döner). Rotalar: `/masalar`, `/masalar/:masaId` (adisyon), `/masalar/:masaId/odeme`, `/stok`, `/esnaf`, `/analiz`, `/calisan`, `/finans`, `/ayarlar`, `/yonetim`, `/patron`.
+- [ ] Geri tuşu: sheet/pencere/ödeme açıkken geri = kapat (geçmişe girdi eklenir); masadan geri = masalar; kök rotada geri uygulamadan çıkarmaz (replace + "çıkmak için tekrar bas" tostu yok, basitçe masalar).
+- [ ] Korumalı rotalar: PIN yoksa PIN ekranına yönlendir, doğrulayınca asıl rotaya dön; yenilemede açık adisyon yeniden açılır.
+- [ ] Derin bağlantı + yenileme + çok sekme testleri; `activeTab` state'i kaldırılır.
+- [ ] Prototipin `#masa=S2` kısayolları test için korunur.
+
+## P12 — Prototip tasarıma TAM geçiş (giydirme yaklaşımı başarısız, terk edildi) — XL
+Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını yeni renklere eşleme) geçersiz; ekranlar `design-prototype/` ile BİREBİR aynı düzen, boşluk ve hareketle yeniden yazılacak. Hata analizi: tokenlar taşındı ama düzen (3 sütun: kategori rayı / ürün ızgarası / adisyon), boşluk ölçeği, 56 px birincil eylemler, kademeli gösterim ve `PPMotion/PPCelebrate` akışları taşınmadı; eski ekranların kontrol yoğunluğu aynen kaldı (garson seçici, cari yaz, kredi, alman usulü, indirim, masa taşı tek panelde).
+- [ ] P12-0 Tasarım borcu envanteri: prototipteki her ekran/durum ↔ uygulamadaki karşılığı tablosu (özellik kaybı sıfır kontrol listesi). Prototipte olmayan ekranlar (Esnaf, Stok/Reçete, Çalışan, Finans, Analiz, Yönetim) AYNI sistemle tasarlanır; yeni ekran başına önce kısa taslak onayı.
+- [ ] P12-1 Tasarım sistemi gerçek CSS olarak: `tokens.css` + `ui.css` olduğu gibi (Tailwind eşleme yok); React bileşenleri: Button, Card, Sheet, Chip, Field, Tabs, Toast, Rail, Topbar.
+- [ ] P12-2 Kabuk: sol ray (ikon + etiket), üst çubuk (işletme, hedef çubuğu, seri, senkron noktası), dar ekranda alt gezinme.
+- [ ] P12-3 Masalar → Adisyon → Çeşit seçici → Ödeme (nakit/kart, para üstü) → 5 sn geri al; uçan ürün, sayaç sıçraması, rozet. Gerçek `motion.js` (prototipten); ikinci bir yeniden yazım değil.
+- [ ] P12-4 Kutlamalar: `PPCelebrate` kademe 0-3 gerçek kancalara bağlı; Z raporu basılı tut; yoğun saat/azaltılmış hareket kuralları; kutlamalar sayfası.
+- [ ] P12-5 Patron görünümü (KPI, yoğunluk, menü mühendisliği, günün hikâyesi, hedef serisi).
+- [ ] P12-6 Kalan ekranlar (Esnaf, Stok/Reçete, Çalışan, Finans, Analiz, Ayarlar, Yönetim, Kuver/Atık/Sayım/Kasa) prototip diliyle.
+- [ ] P12-7 Tailwind + `skin.css` + eski ekran sınıfları tamamen kaldırılır; derleme boyutu ve `font-black` yasağı testleri.
+- Kabul ölçütleri (sıkışıklık YASAK): ≥ 44 px hedef, birincil eylem 56 px; panel başına en çok 1 birincil + 2 ikincil eylem, gerisi "Daha fazla" sheet'inde; ekranın yarısından fazlası boş olmasın ama yoğun da olmasın: boşluk ölçeği 8/12/16/24; metin kırpma ("Demleme...") yok (2 satıra sarma); 1024×768, 1280×800, 1920×1080, 390×844'te ekran görüntüsü kontrolü (tarayıcı panelinde elle + `design-prototype` ile yan yana); animasyon süresi ≤ 600 ms, yalnızca transform/opacity.
+- [ ] P12-8 UX denetimi (ayrı liste): görülen sorunlar — adisyon paneli aşırı yüklü; "Hızlı tek tık ekle" şeridi ve katalog üst üste; ürün adları kırpılıyor; garson seçici ve ödeme yöntemleri aynı kaydırmada; yönetici kilitli menülere tıklayınca geri bildirim yok (çevrimdışıyken özellikle); sekme geçişinde bağlam kaybı. Yeni bulunanlar buraya eklenir.
 
 ---
 
