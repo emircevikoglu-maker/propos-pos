@@ -349,7 +349,9 @@ t('Müşteri paketi: yalnızca o işletmenin verisi; kontrol paneli kodu yok', f
     assertNotContains('ControlController', $all, 'kontrol paneli kodu pakete girmemeli');
     assertNotContains('control.php', implode("\n", array_keys($files)));
     assertFalse(isset($files['data/config.json']), 'sunucu sırrı pakete girmemeli');
-    foreach (['backend/bootstrap.php', 'backend/router.php', 'backend/Services/Throttle.php', 'backend/Services/PinService.php', 'backend/static.php'] as $need) {
+    assertFalse(isset($files['.env']) || isset($files['backend/.env']), 'sırlar pakete girmemeli');
+    assertNotContains('SUPABASE_SECRET_KEY=', $all, '.env içeriği pakete girmemeli');
+    foreach (['backend/env.php', 'backend/Services/Storage/FileStorage.php', 'backend/bootstrap.php', 'backend/router.php', 'backend/Services/Throttle.php', 'backend/Services/PinService.php', 'backend/static.php'] as $need) {
         assertTrue(isset($files[$need]), "pakette eksik: $need (kurulum açılmaz)");
     }
     assertContains('__PROPOS_LOCKED_TENANT__', $files['dist/index.html'] ?? '');

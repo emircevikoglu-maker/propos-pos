@@ -22,7 +22,7 @@ foreach (array_slice($argv, 1) as $arg) {
         $opts[$m[1]] = $m[2] ?? '1';
     }
 }
-$suites = ['unit', 'api', 'control', 'security', 'abuse'];
+$suites = ['unit', 'api', 'control', 'security', 'abuse', 'supabase'];
 $want = ($opts['suite'] ?? 'all') === 'all' ? ['unit', 'api', 'control', 'security'] : explode(',', (string)$opts['suite']);
 foreach ($want as $w) {
     if (!in_array($w, $suites, true)) {
@@ -34,7 +34,7 @@ foreach ($want as $w) {
 require_once __DIR__ . '/lib.php';
 T::$opt = $opts;
 
-if (in_array('unit', $want, true)) {
+if (in_array('unit', $want, true) || in_array('supabase', $want, true)) {
     if (!getenv('PROPOS_DATA_DIR')) {
         putenv('PROPOS_DATA_DIR=' . tmpDir('propos_unit'));
     }
@@ -42,12 +42,19 @@ if (in_array('unit', $want, true)) {
         putenv('PROPOS_DIST_DIR=' . tmpDir('propos_unit_dist'));
     }
     putenv('PROPOS_LOGIN_DELAY_MS=0');
+    if (in_array('unit', $want, true)) {
+        putenv('PROPOS_NO_DOTENV=1');
+        putenv('PROPOS_STORAGE=file');
+    }
     require_once dirname(__DIR__, 2) . '/backend/bootstrap.php';
 }
 
 foreach ($want as $w) {
     suite($w);
     require __DIR__ . "/suites/$w.php";
+    if (is_file(__DIR__ . "/suites/$w.extra.php")) {
+        require __DIR__ . "/suites/$w.extra.php";
+    }
 }
 
 $filter = $opts['filter'] ?? null;

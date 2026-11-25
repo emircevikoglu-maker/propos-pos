@@ -3,6 +3,12 @@ declare(strict_types=1);
 
 namespace ProPos;
 
+require_once __DIR__ . '/env.php';
+// Testler PROPOS_NO_DOTENV=1 verir: gerçek .env (Supabase) test koşularına sızmasın.
+if (!getenv('PROPOS_NO_DOTENV')) {
+    loadDotEnv(dirname(__DIR__) . DIRECTORY_SEPARATOR . '.env');
+}
+
 // Hata ayrıntısı istemciye asla gitmez (yol/sır sızıntısı). Geliştirmede PROPOS_DEBUG=1.
 if (!getenv('PROPOS_DEBUG')) {
     ini_set('display_errors', '0');

@@ -56,6 +56,12 @@ class AuthService
         return $cfg;
     }
 
+    /** Sunucu sırrından etiketli türetilmiş değer (kanal adı gibi tahmin edilemez tanımlayıcılar için). */
+    public function derive(string $label): string
+    {
+        return hash_hmac('sha256', $label, $this->config['secret']);
+    }
+
     public static function generateKey(string $prefix, int $groups): string
     {
         $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

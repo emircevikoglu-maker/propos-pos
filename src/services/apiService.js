@@ -261,6 +261,18 @@ export function flushQueuedPush() {
     .catch(() => null);
 }
 
+/** Realtime sinyal kanalı bilgisi (Supabase kapalıysa {enabled:false}). */
+export async function fetchRealtimeConfig(tenantId) {
+  try {
+    const res = await authedFetch(tenantId, `/api/realtime?${q(tenantId)}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const out = await res.json().catch(() => null);
+    return out && out.ok && out.enabled ? out : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // ---- Yönetici PIN'i (sunucuda doğrulanır) ----------------------------------
 
 export async function fetchPinStatus(tenantId) {

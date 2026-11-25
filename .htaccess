@@ -1,7 +1,8 @@
 # Apache / LiteSpeed: her istek router'a gider, veri ve kaynak klasorleri kapali.
 RewriteEngine On
 RewriteRule ^backend/router\.php$ - [L]
-RewriteRule ^(backend|data|scripts|src|tools|node_modules|github-yayin|tenants|tests|dist-admin|_yedek)(/|$) - [F,L]
+RewriteRule ^(backend|data|scripts|src|tools|node_modules|github-yayin|tenants|tests|dist-admin|supabase|docs|_yedek)(/|$) - [F,L]
 RewriteRule ^(package(-lock)?\.json|tailwind\.config\.js|.*\.ps1|.*\.log)$ - [F,L]
 RewriteRule ^ backend/router.php [L]
 Options -Indexes
+RewriteRule ^\.(env|git|claude)(/|$|\.) - [F,L]

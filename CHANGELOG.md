@@ -3,6 +3,19 @@
 Biçim: [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/). Sürüm numarası `package.json` ile birlikte artar.
 Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 
+## [3.3.0] — 2026-11-25
+### Eklendi
+- Depolama katmanı: `Storage` arayüzü, `FileStorage` (varsayılan) ve `SupabaseStorage` (PostgREST/curl; secret anahtar yalnızca sunucuda). `PROPOS_STORAGE=file|supabase`; yanlış yapılandırma sessizce dosyaya düşmez, açık hata verir. `.env` yükleyici (`backend/env.php`; gerçek ortam değişkeni `.env`'yi ezer).
+- Şema: `supabase/migrations/001_propos_init.sql` (RLS açık, politika yok; anon rol hiçbir şeye erişemez; `propos_keepalive()` yalnızca service_role).
+- Realtime sinyali: kayıt sonrası sunucu `{rev, by}` yayınlar (veri taşımaz); kanal adı tahmin edilemez (HMAC); istemci bağımlılıksız Phoenix istemcisiyle dinler, bağlıyken yoklama 3 sn → 60 sn (gizli sekmede 120 sn), kopunca üstel geri çekilmeyle yeniden dener. `GET /api/realtime`.
+- Keepalive: `GET /api/keepalive` (içeriksiz `{ok:true}`, yalnızca bu uçta CORS `*`, sıkı hız sınırı) ve `backend/cron/keepalive.php` (CLI); `.github/workflows/keepalive.yml`; `docs/CRON` içeriği `docs/SUPABASE.md` içinde.
+- `tools/migrate_to_supabase.php` (dosya → Supabase kopyalama, `--dry-run`, `--force`).
+- Testler: keepalive (CORS, hız sınırı), realtime ucu, Supabase sözleşme/RLS suite'i (`--only supabase`, gerçek projede ZZTEST kayıtları açıp siler), Realtime istemcisi (10 test), paket içeriği (sır yok). Toplam 242 test.
+### Değişti
+- Testler gerçek `.env`'den yalıtıldı (`PROPOS_NO_DOTENV=1`, `PROPOS_STORAGE=file`).
+- Müşteri paketine yeni sunucu dosyaları eklendi (Storage, env, Realtime); `.env` hiçbir koşulda girmez.
+- `.htaccess`: `.env`, `.git`, `supabase/`, `docs/` dışarıya kapalı.
+
 ## [3.2.0] — 2026-11-25
 ### Eklendi
 - Yeni tasarım sistemi uygulamaya giydirildi (`src/design/`: tokenlar, bileşen CSS'i, `skin.css`, tek ikon seti, hareket/konfeti modülü). Mevcut Tailwind ekranları `skin.css` ile yeni tokenlara eşlenir; işletme tema rengi (`--brand-primary`) çalışmaya devam eder.

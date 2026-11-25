@@ -6,6 +6,10 @@ namespace ProPos\Services;
 use function ProPos\audit;
 use function ProPos\normalizeTenantId;
 
+use ProPos\Services\Storage\FileStorage;
+use ProPos\Services\Storage\Storage;
+use ProPos\Services\Storage\StorageFactory;
+
 class TenantService
 {
     private const SECRET_FIELDS = ['syncKey', 'adminPin'];
@@ -14,12 +18,22 @@ class TenantService
     public const STATUSES = ['active', 'suspended'];
     public const PLANS = ['trial', 'monthly', 'yearly', 'lifetime'];
 
+    private Storage $storage;
+
+    public function __construct(?Storage $storage = null)
+    {
+        $this->storage = $storage ?? StorageFactory::make();
+    }
+
+    public function storage(): Storage
+    {
+        return $this->storage;
+    }
+
+    /** Yalnızca dosya deposunda anlamlı (testler ve yedekler için). */
     public function getTenantFilePath(string $tenantId): string
     {
-        $norm = normalizeTenantId($tenantId);
-        return $norm === 'DEFAULT'
-            ? PROPOS_DEFAULT_DB_FILE
-            : PROPOS_TENANTS_DIR . DIRECTORY_SEPARATOR . $norm . '.json';
+        return $this->storage instanceof FileStorage ? $this->storage->path($tenantId) : '';
     }
 
     public function tenantExists(string $tenantId): bool
@@ -36,15 +50,7 @@ class TenantService
     public function loadTenant(string $tenantId): array
     {
         $norm = normalizeTenantId($tenantId);
-        $filePath = $this->getTenantFilePath($norm);
-
-        $rawJson = '{}';
-        if (is_file($filePath)) {
-            $content = @file_get_contents($filePath);
-            if ($content !== false && trim($content) !== '') {
-                $rawJson = $content;
-            }
-        }
+        $rawJson = $this->storage->readTenant($norm) ?? '{}';
         $decoded = json_decode($rawJson, true);
         if (!is_array($decoded)) {
             $decoded = [];
@@ -68,17 +74,14 @@ class TenantService
         return $data;
     }
 
-    /** Ham veriyi atomik yazar (PIN gibi sunucu tarafı alanlar için). */
+    /** Ham veriyi depoya yazar (PIN gibi sunucu tarafı alanlar için). */
     public function writeTenantData(string $tenantId, array $data): bool
     {
-        $filePath = $this->getTenantFilePath($tenantId);
         $encoded = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $tmpFile = $filePath . '.tmp.' . getmypid() . '.' . bin2hex(random_bytes(3));
-        if ($encoded === false || @file_put_contents($tmpFile, $encoded, LOCK_EX) === false || !@rename($tmpFile, $filePath)) {
-            @unlink($tmpFile);
+        if ($encoded === false) {
             return false;
         }
-        return true;
+        return $this->storage->writeTenant(normalizeTenantId($tenantId), $encoded, (int)($data['rev'] ?? 0), substr((string)($data['updatedBy'] ?? ''), 0, 60));
     }
 
     /**
@@ -102,7 +105,8 @@ class TenantService
         }
 
         // PIN sunucuda tutulur: istemciden gelen PIN/hash yok sayılır, mevcut hash korunur.
-        $current = $this->loadTenant($norm)['data'];
+        $currentLoaded = $this->loadTenant($norm);
+        $current = $currentLoaded['data'];
         $incomingPlainPin = isset($decoded['adminPin']) && is_string($decoded['adminPin']) ? $decoded['adminPin'] : null;
         foreach (self::DATA_SECRET_FIELDS as $f) {
             unset($decoded[$f]);
@@ -125,26 +129,25 @@ class TenantService
         $decoded['updatedBy'] = substr($deviceId, 0, 60);
         $decoded['tenantId'] = $norm;
 
-        $filePath = $this->getTenantFilePath($norm);
-        $this->dailyBackup($norm, $filePath);
+        $this->dailyBackup($norm, $currentLoaded['json']);
 
         if (!$this->writeTenantData($norm, $decoded)) {
-            return $fail('Veri diske yazılamadı.');
+            return $fail('Veri depoya yazılamadı.');
         }
         return ['ok' => true, 'tenantId' => $norm, 'rev' => $rev, 'updatedBy' => $decoded['updatedBy']];
     }
 
-    /** Günde bir kez yedek alır, 14 günden eskileri siler. */
-    private function dailyBackup(string $tenantId, string $filePath): void
+    /** Günde bir kez yerel yedek alır (hangi depo olursa olsun sunucu diskine), 14 günden eskileri siler. */
+    private function dailyBackup(string $tenantId, string $currentJson): void
     {
-        if (!is_file($filePath)) {
+        if ($currentJson === '{}' || $currentJson === '') {
             return;
         }
         $target = PROPOS_BACKUP_DIR . DIRECTORY_SEPARATOR . $tenantId . '_' . date('Y-m-d') . '.json';
         if (is_file($target)) {
             return;
         }
-        @copy($filePath, $target);
+        @file_put_contents($target, $currentJson, LOCK_EX);
         foreach (glob(PROPOS_BACKUP_DIR . DIRECTORY_SEPARATOR . '*.json') ?: [] as $old) {
             if (filemtime($old) < time() - 14 * 86400) {
                 @unlink($old);
@@ -157,21 +160,18 @@ class TenantService
     /** @return array<int, array<string,mixed>> Anahtarlar DAHİL (yalnızca kurucuya gösterilir). */
     /** İstek içi önbellek: bir yoklamada kayıt dosyası 3-4 kez okunuyordu. Yazınca sıfırlanır. */
     private static ?array $registryCache = null;
-    private static int $registryMtime = -1;
+    private static string $registryVersion = '';
 
     public function loadRegistry(): array
     {
-        clearstatcache(true, PROPOS_REGISTRY_FILE);
-        $mtime = is_file(PROPOS_REGISTRY_FILE) ? (int)filemtime(PROPOS_REGISTRY_FILE) : 0;
-        if (self::$registryCache !== null && self::$registryMtime === $mtime) {
+        $version = $this->storage->name() . ':' . $this->storage->registryVersion();
+        if (self::$registryCache !== null && self::$registryVersion === $version) {
             return self::$registryCache;
         }
         $list = [];
-        if (is_file(PROPOS_REGISTRY_FILE)) {
-            $parsed = json_decode((string)@file_get_contents(PROPOS_REGISTRY_FILE), true);
-            if (is_array($parsed)) {
-                $list = array_values(array_filter($parsed, 'is_array'));
-            }
+        $parsed = json_decode((string)$this->storage->readRegistry(), true);
+        if (is_array($parsed)) {
+            $list = array_values(array_filter($parsed, 'is_array'));
         }
         $dirty = false;
         $hasDefault = false;
@@ -200,7 +200,7 @@ class TenantService
             $this->writeRegistry($list);
         }
         self::$registryCache = $list;
-        self::$registryMtime = is_file(PROPOS_REGISTRY_FILE) ? (int)filemtime(PROPOS_REGISTRY_FILE) : 0;
+        self::$registryVersion = $this->storage->name() . ':' . $this->storage->registryVersion();
         return $list;
     }
 
@@ -379,42 +379,24 @@ class TenantService
         if (count($next) === count($list) || !$this->writeRegistry($next)) {
             return false;
         }
-        $file = $this->getTenantFilePath($id);
-        if (is_file($file)) {
-            @rename($file, PROPOS_BACKUP_DIR . DIRECTORY_SEPARATOR . 'deleted_' . $id . '_' . date('Ymd_His') . '.json');
+        $raw = $this->storage->deleteTenant($id);
+        if ($raw !== null) {
+            @file_put_contents(PROPOS_BACKUP_DIR . DIRECTORY_SEPARATOR . 'deleted_' . $id . '_' . date('Ymd_His') . '.json', $raw, LOCK_EX);
         }
         audit('tenant.delete', $id);
         return true;
     }
 
-    /** Panel için: son senkron (rev), cihaz ve veri boyutu. Dosya bütünüyle çözülmez. */
+    /** Panel için: son senkron (rev), cihaz ve veri boyutu. */
     public function stats(): array
     {
-        $out = [];
-        foreach ($this->loadRegistry() as $e) {
-            $file = $this->getTenantFilePath($e['tenantId']);
-            $size = is_file($file) ? (int)filesize($file) : 0;
-            $rev = 0;
-            $by = '';
-            if ($size > 0) {
-                $head = (string)@file_get_contents($file, false, null, 0, 65536);
-                $tail = $size > 65536 ? (string)@file_get_contents($file, false, null, $size - 4096) : '';
-                if (preg_match_all('/"rev":(\d+)/', $head . $tail, $m)) {
-                    $rev = (int)max(array_map('intval', $m[1]));
-                }
-                if (preg_match('/"updatedBy":"([A-Za-z0-9_\-.]{0,60})"/', $head . $tail, $m2)) {
-                    $by = $m2[1];
-                }
-            }
-            $out[$e['tenantId']] = ['bytes' => $size, 'rev' => $rev, 'updatedBy' => $by];
-        }
-        return $out;
+        return $this->storage->stats(array_map(static fn($e) => $e['tenantId'], $this->loadRegistry()));
     }
 
     private function writeRegistry(array $list): bool
     {
         self::$registryCache = null;
         $encoded = json_encode(array_values($list), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
-        return @file_put_contents(PROPOS_REGISTRY_FILE, $encoded, LOCK_EX) !== false;
+        return $this->storage->writeRegistry($encoded);
     }
 }

@@ -32,7 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PHP_TESTS = ROOT / "tests" / "php" / "index.php"
 DEFAULT_PHP = [os.environ.get("PROPOS_PHP", ""), r"C:\faho\projects\xampp\php\php.exe", "php"]
-STAGES = ["lint", "unit", "api", "control", "security", "abuse", "react", "build"]
+STAGES = ["lint", "unit", "api", "control", "security", "abuse", "react", "build", "supabase"]
 DEFAULT_STAGES = ["lint", "unit", "api", "control", "security", "abuse", "react"]
 
 try:
@@ -96,6 +96,9 @@ def server_env(data: Path, dist: Path, founder_key: str, extra: dict | None = No
         "PROPOS_RL_POLL": "5000:500", "PROPOS_RL_ACTION": "5000:500", "PROPOS_RL_IP": "20000:2000", "PROPOS_RL_CONTROL": "5000:500",
     })
     env.pop("PROPOS_DEBUG", None)
+    # Gerçek .env (Supabase) test koşularına sızmasın; varsayılan depo dosyadır.
+    env["PROPOS_NO_DOTENV"] = "1"
+    env["PROPOS_STORAGE"] = "file"
     env.update(extra or {})
     return env
 
@@ -223,13 +226,22 @@ def main() -> int:
 
         if "abuse" in stages:
             env = server_env(tmp / "data_abuse", prepare_dist(tmp / "abuse"), founder_key,
-                             {"PROPOS_RL_POLL": "5:0.05", "PROPOS_RL_ACTION": "40:5", "PROPOS_RL_IP": "80:0.5", "PROPOS_RL_PENALTY": "30"})
+                             {"PROPOS_RL_POLL": "5:0.05", "PROPOS_RL_ACTION": "40:5", "PROPOS_RL_IP": "80:0.5", "PROPOS_RL_PENALTY": "30", "PROPOS_RL_KEEPALIVE": "2:0.0001"})
             pos = Server(php, "router.php", env, tmp / "pos_abuse.log")
             ctl = Server(php, "control.php", env, tmp / "control_abuse.log")
             try:
                 results += run_php_suite(php, "abuse", {"pos": pos.url, "control": ctl.url, "founder-key": founder_key}, dict(os.environ), a.filter)
             finally:
                 pos.stop(); ctl.stop()
+
+        if "supabase" in stages:
+            # Gerçek Supabase projesine karşı sözleşme testleri (yalnızca --only supabase; geçici TEST kayıtları açar ve siler).
+            env = dict(os.environ)
+            env.pop("PROPOS_NO_DOTENV", None)
+            env["PROPOS_STORAGE"] = "supabase"
+            env["PROPOS_DATA_DIR"] = str(tmp / "sb_data")
+            env["PROPOS_DIST_DIR"] = str(prepare_dist(tmp / "sb"))
+            results += run_php_suite(php, "supabase", {}, env, a.filter)
 
         if "react" in stages:
             results += stage_react(a.filter, tmp)

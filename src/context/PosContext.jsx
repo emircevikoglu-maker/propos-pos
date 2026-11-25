@@ -13,8 +13,9 @@ import {
   fetchTenantSync, pushTenantSync, postDealerTenants, postPrepareGithubRelease, postApplyHtmlUpdate,
   loginWithKey, clearFounderSession, hasFounderSession,
   verifyManagerPin, changeManagerPin, clearManagerSession, unpairDevice,
-  queuePush, flushQueuedPush, hasPendingPush
+  queuePush, flushQueuedPush, hasPendingPush, fetchRealtimeConfig
 } from "../services/apiService";
+import { createRealtime } from "../services/realtime";
 import { PPMotion } from "../design/motion";
 import {
   loadCelebrationSettings, saveCelebrationSettings, applyCelebrationSettings, celebrateSale, celebrateZReport, goalProgress, isBusyNow
@@ -380,14 +381,28 @@ export function PosProvider({ children }) {
         hasHydratedFromServerRef.current = true;
       }
     };
-    // Görünür sekmede 3 sn; gizli sekmede 30 sn (arka plandaki tablet sunucuyu yormasın).
+    // Görünür sekmede 3 sn; gizli sekmede 30 sn. Realtime sinyal kanalı bağlıysa yoklama yalnızca emniyet için
+    // (60 sn / 120 sn): değişiklik sinyalle anında gelir, istek sayısı ~20 kat düşer.
     let lastPollAt = 0;
+    let rtConnected = false;
     const tick = () => {
       const hidden = typeof document !== "undefined" && document.hidden;
-      if (Date.now() - lastPollAt < (hidden ? 30000 : 2900)) return;
+      const gap = rtConnected ? (hidden ? 120000 : 60000) : (hidden ? 30000 : 2900);
+      if (Date.now() - lastPollAt < gap) return;
       lastPollAt = Date.now();
       pullFromLocalServer();
     };
+    let signalTimer = null;
+    const realtime = createRealtime({
+      onStatus: (c) => { rtConnected = c; if (c) { lastPollAt = 0; } },
+      onSignal: ({ rev, by }) => {
+        if (by === clientDeviceIdRef.current || rev <= lastCoreRevRef.current) return;
+        if (signalTimer) clearTimeout(signalTimer);
+        signalTimer = setTimeout(() => { lastPollAt = Date.now(); pullFromLocalServer(); }, 120);
+      }
+    });
+    // Supabase kapalıysa sessizce yoklamaya devam edilir.
+    fetchRealtimeConfig(ACTIVE_TENANT_ID).then((cfg) => { if (active && cfg) realtime.start(cfg); }).catch(() => {});
     tick();
     const intervalId = setInterval(tick, 1000);
     const onVisible = () => {
@@ -400,6 +415,8 @@ export function PosProvider({ children }) {
     window.addEventListener("pagehide", onPageHide);
     return () => {
       active = false;
+      realtime.stop();
+      if (signalTimer) clearTimeout(signalTimer);
       clearInterval(intervalId);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("pagehide", onPageHide);

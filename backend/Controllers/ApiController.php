@@ -6,6 +6,8 @@ namespace ProPos\Controllers;
 use ProPos\Services\AuthService;
 use ProPos\Services\PackageService;
 use ProPos\Services\PinService;
+use ProPos\Services\Realtime;
+use ProPos\Services\Storage\StorageFactory;
 use ProPos\Services\TenantService;
 use ProPos\Services\Throttle;
 use function ProPos\clientIp;
@@ -77,6 +79,9 @@ class ApiController
     public function handle(string $method, string $path): void
     {
         $method = strtoupper($method);
+        if ($path === '/api/keepalive') {
+            $this->keepalive($method);
+        }
         if ($method === 'OPTIONS') {
             http_response_code(204);
             sendApiHeaders();
@@ -104,6 +109,13 @@ class ApiController
 
             case '/api/sync':
                 $this->sync($method, $rawBody);
+                break;
+
+            case '/api/realtime':
+                $tenantId = normalizeTenantId(qs('tenantId', 'DEFAULT'));
+                $this->auth->requireTenant($tenantId);
+                $cfg = Realtime::clientConfig($tenantId, $this->auth);
+                sendJson($cfg ? ['ok' => true, 'enabled' => true] + $cfg : ['ok' => true, 'enabled' => false]);
                 break;
 
             case '/api/pin/status':
@@ -185,6 +197,40 @@ class ApiController
         exit;
     }
 
+    /**
+     * Herkese açık canlı-tutma ucu (cron, GitHub Actions, Vercel… her hosttan çağrılabilir: yalnızca bu uçta CORS `*`).
+     * Yanıt hiçbir şey belli etmez: {ok:true}. Sıkı hız sınırı: IP başına ~4/gün, tüm istekler için 12 patlama + 2 saatte 1.
+     */
+    private function keepalive(string $method): void
+    {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, HEAD, OPTIONS');
+        header('Access-Control-Max-Age: 86400');
+        if ($method === 'OPTIONS') {
+            http_response_code(204);
+            exit;
+        }
+        if (!in_array($method, ['GET', 'POST', 'HEAD'], true)) {
+            sendJson(['ok' => false], 405);
+        }
+        $penalty = envInt('PROPOS_RL_PENALTY', 30);
+        [$ipCap, $ipRefill] = Throttle::bucketConfig('PROPOS_RL_KEEPALIVE', 4, 1 / 21600);
+        [$allCap, $allRefill] = Throttle::bucketConfig('PROPOS_RL_KEEPALIVE_ALL', 12, 1 / 7200);
+        foreach ([['ka|ip|' . clientIp(), $ipCap, $ipRefill], ['ka|all', $allCap, $allRefill]] as [$key, $cap, $refill]) {
+            $r = $this->throttle->hit($key, $cap, $refill, max($penalty, 3600));
+            if (!$r['ok']) {
+                sendJson(['ok' => false], 429, ['Retry-After: ' . $r['retryAfter']]);
+            }
+        }
+        $ok = false;
+        try {
+            $ok = StorageFactory::make()->ping();
+        } catch (\Throwable $e) {
+            $ok = false;
+        }
+        sendJson(['ok' => $ok], $ok ? 200 : 503);
+    }
+
     private function pinVerify(string $method, string $rawBody): void
     {
         if ($method !== 'POST') {
@@ -262,6 +308,16 @@ class ApiController
         if ($method === 'POST') {
             $deviceId = trim(qs('deviceId', 'unknown'));
             $result = $this->tenants->saveTenant($tenantId, $rawBody, $deviceId);
+            if ($result['ok'] && Realtime::enabled()) {
+                // Yanıt istemciye gittikten sonra sinyal yayınla (kayıt gecikmesini artırmasın).
+                $auth = $this->auth;
+                register_shutdown_function(static function () use ($tenantId, $result, $auth): void {
+                    if (function_exists('fastcgi_finish_request')) {
+                        fastcgi_finish_request();
+                    }
+                    Realtime::notify($tenantId, (int)$result['rev'], (string)$result['updatedBy'], $auth);
+                });
+            }
             sendJson($result, $result['ok'] ? 200 : 400);
         }
         sendJson(['ok' => false, 'error' => 'Yöntem desteklenmiyor'], 405);
