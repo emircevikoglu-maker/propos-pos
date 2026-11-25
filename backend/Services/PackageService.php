@@ -100,6 +100,7 @@ class PackageService
             'backend/Services/Storage/Storage.php',
             'backend/Services/Storage/FileStorage.php',
             'backend/Services/Storage/SupabaseStorage.php',
+            'backend/Services/Storage/CachedStorage.php',
             'backend/Services/Storage/StorageFactory.php',
             'backend/init.php',
             'backend/router.php',

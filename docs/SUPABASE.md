@@ -58,6 +58,9 @@ GET https://<sunucunuz>/api/keepalive      →  {"ok":true}
 4. Diğer cihazlar sinyalde `GET /api/sync?since=` ile veriyi çeker. Kendi sinyalini yok sayar.
 5. Realtime bağlıyken emniyet yoklaması 60 sn (gizli sekmede 120 sn); kopunca üstel geri çekilmeyle yeniden dener, o sürede 3 sn'lik yoklamaya geri döner.
 
+## 6b. Yerel önbellek (CachedStorage)
+Supabase'e her istek ≈0,45 sn sürdüğü için PHP, tek yazıcı olarak yazma-geçişli yerel önbellek tutar (`data/cache/`): okumalar diskten (≈ms), yazmalar önce Supabase'e sonra diske. Supabase yazması başarısızsa yerel kopya değişmez. Panelden/başka yerden Supabase'te yapılan elle değişiklik en geç `PROPOS_CACHE_TTL` (900 sn) sonra görünür; hemen görmek için `data/cache/` silinir. `PROPOS_CACHE=0` önbelleği kapatır (çok sunuculu kurulumda).
+
 ## 7. Bilinen sınırlar / sonraki adımlar
 - Hâlâ tüm durum tek JSON (whole-state). Delta/defter ayrımı TODO P2-b.
 - `saveTenant` mevcut durumu okuyup rev'i denetliyor: Supabase'te her kayıtta ek bir okuma. İleride yalnızca `rev` sütunu okunacak.

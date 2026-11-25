@@ -78,6 +78,20 @@ Nüanslar / riskler
 - `.table`/`.ring` sınıfları Tailwind ile çakıştığı için `pp-table`/`pp-ring` oldu.
 - Kutlama kararı saf fonksiyon (`pickProMoment`→`pickMoment`) ve test edildi; görsel sahneler `motion.js`'te.
 
+## İnternet kesintisinde sunucu ne bilir, ne yapılır? (25 Kasım)
+- Sunucu, restoranın internetinin koptuğunu DOĞRUDAN bilemez: kopan hat restoran ile sunucu arasında. Sunucu yalnızca "bu cihazdan haber gelmiyor" der (`lastSeen`). Kesintiyi asıl tespit eden istemcidir (başarısız istekler, Realtime soketinin düşmesi; `navigator.onLine` yalnızca ipucu, Wi-Fi bağlı ama internet yok durumunu bilmez).
+- Veri girişi ENGELLENMEMELİ: satış durursa işletme zarar eder. Doğrusu çevrimdışıyken yerelde sürdürüp kuyruğa almak (outbox) ve bağlantı gelince idempotent göndermek. Engellenecek olanlar sunucu şart işler: PIN doğrulama, yeni cihaz eşleştirme, lisans yenileme.
+- Sunucunun kendi tarafındaki kesinti (VDS ↔ Supabase): depo yazması başarısız → `503 STORAGE_DOWN`; istemci kuyruğa alır, okumalar yerel önbellekten sürer (CachedStorage zaten bunu sağlar).
+- Asıl zor kısım çakışma: kesintide iki tablet aynı masaya yazarsa. Çözüm: adisyon satırları UUID'li ekleme olayı (birleşir), kapama/ödeme tek cihazda.
+- Lisans: çevrimdışı tolerans (örn. 72 sa) — sunucu doğrulayamadı diye müşteriyi kilitleme.
+
+## Yazıcı API'si (25 Kasım, en son yapılacak, çok önemli)
+- POS modeli gönderir, ajan ESC/POS'a çevirir; böylece POS yazıcı markasından bağımsız kalır ve fiş şablonu tek yerde. Ajan localhost'ta, yalnızca POS kökenine açık, eşleştirme anahtarlı. Mali belge (e-Arşiv/ÖKC) ayrı bir adaptör arayüzü (P1-c); adisyon/mutfak fişi mali belge DEĞİL.
+- Gerekli bilgi: yazıcı marka/model, 58/80 mm, USB/ağ/Bluetooth, mutfak/bar ayrı mı (Açık sorular).
+
+## Önbellek kararı (25 Kasım)
+- Ölçüm: Supabase'e her istek ≈0,45 sn (bağlantı yeniden kullanımıyla bile); senkron GET 2 uzak okuma = 1,2 sn. Çözüm: PHP tek yazıcı olduğu için yazma-geçişli yerel önbellek. Çok sunuculu kurulumda önbellek TTL'si yanlış okuma riski taşır (TTL kısaltılır ya da Realtime sinyaliyle geçersiz kılınır).
+
 ## Açık sorular (kullanıcıya)
 1. Yazıcı: marka/model, 58 mm mi 80 mm mi, bağlantı (USB/ağ/Bluetooth), mutfak ve bar ayrı yazıcı mı?
 2. Altyapı: Supabase denemesi yapılsın mı, yoksa PHP VDS'te kalıp PDO (SQLite/MySQL) mı?

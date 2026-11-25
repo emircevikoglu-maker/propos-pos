@@ -38,6 +38,8 @@ function assertSame($expected, $actual, string $msg = ''): void
 {
     if ($expected !== $actual) fail(($msg ? $msg . ': ' : '') . 'beklenen ' . show($expected) . ', gelen ' . show($actual));
 }
+function assertNull($v, string $msg = ''): void { if ($v !== null) fail(($msg ? $msg . ': ' : '') . 'null beklendi: ' . show($v)); }
+function assertNotNull($v, string $msg = ''): void { if ($v === null) fail(($msg ? $msg . ': ' : '') . 'null olmamalı'); }
 function assertNotSame($a, $b, string $msg = ''): void { if ($a === $b) fail(($msg ? $msg . ': ' : '') . 'değerler eşit olmamalı: ' . show($a)); }
 function assertContains(string $needle, string $hay, string $msg = ''): void
 {

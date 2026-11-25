@@ -9,8 +9,9 @@ Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 - Şema: `supabase/migrations/001_propos_init.sql` (RLS açık, politika yok; anon rol hiçbir şeye erişemez; `propos_keepalive()` yalnızca service_role).
 - Realtime sinyali: kayıt sonrası sunucu `{rev, by}` yayınlar (veri taşımaz); kanal adı tahmin edilemez (HMAC); istemci bağımlılıksız Phoenix istemcisiyle dinler, bağlıyken yoklama 3 sn → 60 sn (gizli sekmede 120 sn), kopunca üstel geri çekilmeyle yeniden dener. `GET /api/realtime`.
 - Keepalive: `GET /api/keepalive` (içeriksiz `{ok:true}`, yalnızca bu uçta CORS `*`, sıkı hız sınırı) ve `backend/cron/keepalive.php` (CLI); `.github/workflows/keepalive.yml`; `docs/CRON` içeriği `docs/SUPABASE.md` içinde.
+- `CachedStorage`: yazma-geçişli yerel önbellek (Supabase'e her istek ≈0,45 sn; senkron GET 1,2 sn → 36 ms, kayıt 2 sn → 1 sn). Yazma önce uzağa, başarısızsa yerel kopya değişmez; `PROPOS_CACHE=0` kapatır, `PROPOS_CACHE_TTL` (varsayılan 900 sn). Uzak depoya tek curl bağlantısı yeniden kullanılır.
 - `tools/migrate_to_supabase.php` (dosya → Supabase kopyalama, `--dry-run`, `--force`).
-- Testler: keepalive (CORS, hız sınırı), realtime ucu, Supabase sözleşme/RLS suite'i (`--only supabase`, gerçek projede ZZTEST kayıtları açıp siler), Realtime istemcisi (10 test), paket içeriği (sır yok). Toplam 242 test.
+- Testler: keepalive (CORS, hız sınırı), realtime ucu, Supabase sözleşme/RLS suite'i (`--only supabase`, gerçek projede ZZTEST kayıtları açıp siler), Realtime istemcisi (10 test), paket içeriği (sır yok). Toplam 251 test (önbellek 7 + Supabase 8 gerçek proje testi ayrı).
 ### Değişti
 - Testler gerçek `.env`'den yalıtıldı (`PROPOS_NO_DOTENV=1`, `PROPOS_STORAGE=file`).
 - Müşteri paketine yeni sunucu dosyaları eklendi (Storage, env, Realtime); `.env` hiçbir koşulda girmez.

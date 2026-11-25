@@ -9,9 +9,8 @@ use ProPos\Services\Storage\StorageFactory;
 
 function sb(): SupabaseStorage
 {
-    $s = StorageFactory::make();
-    if (!$s instanceof SupabaseStorage) skip('PROPOS_STORAGE=supabase değil');
-    return $s;
+    if (getenv('PROPOS_STORAGE') !== 'supabase') skip('PROPOS_STORAGE=supabase değil');
+    return new SupabaseStorage(); // sözleşme testleri önbelleksiz, doğrudan uzak depoya
 }
 
 function sbNeedSchema(): void
@@ -21,8 +20,6 @@ function sbNeedSchema(): void
     }
 }
 
-function assertNull($v, string $msg = ''): void { if ($v !== null) fail(($msg ? $msg . ': ' : '') . 'null beklendi: ' . show($v)); }
-function assertNotNull($v, string $msg = ''): void { if ($v === null) fail(($msg ? $msg . ': ' : '') . 'null olmamalı'); }
 
 t('bağlantı: REST erişilebilir ve ping başarılı', function () {
     sbNeedSchema();
@@ -87,7 +84,7 @@ t('büyük veri (≈1 MB) yazılır ve aynen okunur', function () {
     try {
         $doc = ['tables' => [], 'products' => [], 'rev' => 1, 'pad' => str_repeat('ç', 500000)];
         assertTrue($s->writeTenant($id, json_encode($doc, JSON_UNESCAPED_UNICODE), 1, 'dev'));
-        assertSame(500000, mb_strlen(json_decode((string)$s->readTenant($id), true)['pad'] ?? '', 'UTF-8'));
+        assertSame(1000000, strlen(json_decode((string)$s->readTenant($id), true)['pad'] ?? ''), 'ç = 2 bayt; veri aynen dönmeli');
     } finally {
         $s->deleteTenant($id);
     }

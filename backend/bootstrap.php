@@ -8,6 +8,7 @@ require_once __DIR__ . '/Services/Throttle.php';
 require_once __DIR__ . '/Services/Storage/Storage.php';
 require_once __DIR__ . '/Services/Storage/FileStorage.php';
 require_once __DIR__ . '/Services/Storage/SupabaseStorage.php';
+require_once __DIR__ . '/Services/Storage/CachedStorage.php';
 require_once __DIR__ . '/Services/Storage/StorageFactory.php';
 require_once __DIR__ . '/Services/TenantService.php';
 require_once __DIR__ . '/Services/AuthService.php';

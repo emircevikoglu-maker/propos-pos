@@ -28,7 +28,11 @@ Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 - [ ] Otomatik yazdır açık/kapalı; Chrome `--kiosk-printing` ile sessiz baskı rehberi (README)
 - [ ] Testler: şablon çıktısı escape (XSS), çeşitler fişte, ikinci basımda yalnızca yeni satırlar
 - [?] Kullanıcıdan: yazıcı modeli / genişlik / bağlantı
-### P1-b Yerel yazdırma ajanı — L
+### P1-b Yerel yazdırma ajanı + YAZICI API'Sİ — L (en son yapılacak, ÇOK ÖNEMLİ)
+- [ ] API sözleşmesi (önce bunu yaz): `GET /v1/printers`, `POST /v1/print {job:"receipt|kitchen|label|z", printer, copies, model}`, `POST /v1/drawer`, `GET /v1/health`; iş modeli JSON (satırlar, çeşitler, notlar, toplamlar, işletme başlığı) — ESC/POS'a dönüşümü ajan yapar, POS yalnızca modeli gönderir
+- [ ] Ajan 127.0.0.1'e bağlanır; yalnızca POS kökenine CORS; eşleştirme anahtarı (ilk kurulumda POS'tan girilir); iş kuyruğu + yeniden deneme + "kâğıt bitti/çevrimdışı" durumu
+- [ ] Windows ham yazdırma (spooler/USB/ağ 9100) ve Bluetooth; 58/80 mm; Türkçe kod sayfası (CP857/1254) testi; kesici ve çekmece darbesi
+- [ ] İstasyon yönlendirme (bar/mutfak/kasa) = ajanda yazıcı eşlemesi; POS'ta ayar ekranı
 - [ ] Küçük servis (Go ya da Node, tek exe): localhost HTTP → ESC/POS; yazıcı keşfi, çoklu yazıcı, çekmece açma
 - [ ] Eşleştirme: ajan yalnızca kendi POS kökeninden istek kabul eder (CORS + yerel anahtar)
 - [ ] İsteğe bağlı: dayanıklı yerel kuyruk (SQLite) — offline güvencesi (NOTES: tek kurulum, iki ihtiyaç)
@@ -50,6 +54,13 @@ Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 - [ ] Görseller JSON'dan çıkar: WebP, `/media/{tenant}/{hash}.webp`, immutable cache
 - [x] Gönderim debounce'u (geçici iyileştirme, 24 Kasım)
 
+## P2-c — İnternet kesintisi (sunucu + istemci tespiti) — L (P2-a ile birlikte)
+- [ ] İstemci: bağlantı durumu tek kaynak (Realtime soket durumu + son başarılı istek + `navigator.onLine` ipucu; yalnızca `onLine`'a güvenme); durum çubuğunda "Çevrimdışı — N işlem bekliyor"
+- [ ] Sunucu: cihaz `lastSeen` kaydı (yoklama/sinyal/kayıt); panelde "şu cihaz 3 dk'dır görünmüyor" uyarısı; depo (Supabase) erişilemezse yazma `503 STORAGE_DOWN` döner (veri kaybı yerine istemci kuyruğuna alır), okuma önbellekten sürer
+- [ ] Çevrimdışıyken ENGELLEME değil KUYRUĞA ALMA: satış/sipariş yerelde sürer; PIN doğrulama, yeni cihaz eşleştirme, lisans yenileme gibi sunucu şart işler "bağlantı gerekli" der
+- [ ] Çakışma politikası: satışlar UUID'li olay (idempotent); adisyon satırları UUID'li ekleme (iki cihaz aynı masaya satır eklerse birleşir); ödeme/kapama tek cihazda (kapama başka cihazda açık satır bırakırsa uyarı)
+- [ ] Lisans çevrimdışı tolerans süresi (örn. 72 sa) — sunucu doğrulayamazsa kilitlemez, süre bitince salt okunur
+
 ## P3 — Depolama: PDO (SQLite / MySQL) — [?] P4 kararına bağlı, M
 - [ ] `StorageInterface` (tenant verisi, registry, throttle sayaçları, denetim kaydı); `FileStorage` (bugünkü), `PdoStorage`
 - [ ] Ayar: `data/storage.php` ya da `PROPOS_DB_DSN` (`sqlite:data/propos.sqlite` | `mysql:host=…;dbname=…`)
@@ -66,7 +77,10 @@ Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 - [x] d. Keepalive: `backend/cron/keepalive.php` (basit `select 1` benzeri; yanıt gövdesi içeriksiz `{ok:true}`), her hosttan çağrılabilir, ayrı token yok ama sıkı hız sınırı (≈7/hafta + tolerans); Vercel/cron-job.org günlük çağırır
 - [~] e. Günlük yedek: sunucu diskine günlük yerel yedek var; Supabase'ten zamanlanmış döküm TODO — cron ile tenant JSON dökümü (yerel indirme)
 - [x] f. Testler (şema kurulunca çalışır): aynı PHP suite'leri `PROPOS_STORAGE=supabase` ile (test projesi/şeması) + RLS çapraz tenant testleri + keepalive hız sınırı
-- [ ] g. Manuel test: iki tarayıcı + çevrimdışı kesinti senaryosu
+- [x] g. Manuel uçtan uca (13/13): panel→işletme, PIN, kayıt, Realtime sinyali, keepalive, istatistik, temizlik (`e2e` betiği scratch'te; testlere taşınabilir)
+- [ ] h. Tarayıcıda iki gerçek cihazla Realtime denemesi (WebSocket tarayıcıda; Node ile doğrulandı) — kullanıcı + ben
+- [ ] i. Mevcut PHP suite'lerini `PROPOS_STORAGE=supabase` ile de koş (izole test projesi önerilir) — M
+- [ ] j. `saveTenant`: tam durum yerine yalnızca `rev` okuma (kayıt başına 1 uzak okuma tasarrufu) — S
 
 ## P5 — Roller ve sunucuda yetki — L
 - [ ] Personel PIN'i (hash), hızlı kullanıcı değiştirme ekranı

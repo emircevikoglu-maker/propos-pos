@@ -7,6 +7,27 @@ use function ProPos\normalizeTenantId;
 
 class FileStorage implements Storage
 {
+    private string $tenantsDir;
+    private string $defaultFile;
+    private string $registryFile;
+
+    /** $dir verilirse (önbellek) tüm dosyalar o klasörde tutulur; verilmezse PROPOS_DATA_DIR düzeni. */
+    public function __construct(?string $dir = null)
+    {
+        if ($dir === null) {
+            $this->tenantsDir = PROPOS_TENANTS_DIR;
+            $this->defaultFile = PROPOS_DEFAULT_DB_FILE;
+            $this->registryFile = PROPOS_REGISTRY_FILE;
+        } else {
+            $this->tenantsDir = $dir . DIRECTORY_SEPARATOR . 'tenants';
+            $this->defaultFile = $dir . DIRECTORY_SEPARATOR . 'default.json';
+            $this->registryFile = $dir . DIRECTORY_SEPARATOR . 'registry.json';
+            if (!is_dir($this->tenantsDir)) {
+                @mkdir($this->tenantsDir, 0750, true);
+            }
+        }
+    }
+
     public function name(): string
     {
         return 'file';
@@ -15,7 +36,21 @@ class FileStorage implements Storage
     public function path(string $tenantId): string
     {
         $norm = normalizeTenantId($tenantId);
-        return $norm === 'DEFAULT' ? PROPOS_DEFAULT_DB_FILE : PROPOS_TENANTS_DIR . DIRECTORY_SEPARATOR . $norm . '.json';
+        return $norm === 'DEFAULT' ? $this->defaultFile : $this->tenantsDir . DIRECTORY_SEPARATOR . $norm . '.json';
+    }
+
+    /** Dosyanın son değişiklik zamanı (yoksa 0): önbellek geçerliliği için. */
+    public function tenantMtime(string $tenantId): int
+    {
+        $f = $this->path($tenantId);
+        clearstatcache(true, $f);
+        return is_file($f) ? (int)filemtime($f) : 0;
+    }
+
+    public function registryMtime(): int
+    {
+        clearstatcache(true, $this->registryFile);
+        return is_file($this->registryFile) ? (int)filemtime($this->registryFile) : 0;
     }
 
     public function readTenant(string $tenantId): ?string
@@ -75,18 +110,18 @@ class FileStorage implements Storage
 
     public function readRegistry(): ?string
     {
-        return is_file(PROPOS_REGISTRY_FILE) ? (string)@file_get_contents(PROPOS_REGISTRY_FILE) : null;
+        return is_file($this->registryFile) ? (string)@file_get_contents($this->registryFile) : null;
     }
 
     public function writeRegistry(string $json): bool
     {
-        return @file_put_contents(PROPOS_REGISTRY_FILE, $json, LOCK_EX) !== false;
+        return @file_put_contents($this->registryFile, $json, LOCK_EX) !== false;
     }
 
     public function registryVersion(): string
     {
-        clearstatcache(true, PROPOS_REGISTRY_FILE);
-        return is_file(PROPOS_REGISTRY_FILE) ? (string)filemtime(PROPOS_REGISTRY_FILE) . ':' . (string)filesize(PROPOS_REGISTRY_FILE) : '0';
+        clearstatcache(true, $this->registryFile);
+        return is_file($this->registryFile) ? (string)filemtime($this->registryFile) . ':' . (string)filesize($this->registryFile) : '0';
     }
 
     public function ping(): bool
