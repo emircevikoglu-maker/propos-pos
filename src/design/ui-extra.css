@@ -273,3 +273,11 @@
 .product-price.is-deal { color: var(--success); }
 .product-price s { color: var(--text-3); font-size: var(--fs-xs); margin-left: 4px; }
 .line-deal { display: block; font-size: var(--fs-xs); color: var(--success); }
+
+/* Kısa etiketli çipler de en az dokunma hedefi genişliğinde */
+.chip { min-width: var(--tap); justify-content: center; }
+
+/* Geniş ekran (1920): rapor sayfaları ortalı ve sınırlı; masa kartları aşırı genişlemez; matris dev boyuta çıkmaz. */
+.boss { max-width: 1520px; margin-inline: auto; width: 100%; }
+.matrix { max-height: 340px; }
+@media (min-width: 1600px) { .tables { grid-template-columns: repeat(auto-fill, minmax(210px, 260px)); } }
