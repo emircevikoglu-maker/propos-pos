@@ -6,18 +6,20 @@ import { Menu, Tables } from "./settings/Venue";
 import { EsnafCards, Staff } from "./settings/People";
 import { Security } from "./settings/Security";
 import { Printing } from "./settings/Printing";
+import { Campaigns } from "./settings/Campaigns";
 
 const SECTIONS = [
   ["branding", "Kimlik"],
   ["tables", "Masalar"],
   ["menu", "Menü"],
+  ["campaigns", "Kampanyalar"],
   ["staff", "Çalışanlar"],
   ["esnaf", "Esnaf"],
   ["print", "Yazdırma"],
   ["security", "Güvenlik ve yedek"],
   ["feel", "Hareket"]
 ];
-const VIEWS = { branding: Identity, tables: Tables, menu: Menu, staff: Staff, esnaf: EsnafCards, print: Printing, security: Security, feel: Feel };
+const VIEWS = { branding: Identity, tables: Tables, menu: Menu, staff: Staff, esnaf: EsnafCards, campaigns: Campaigns, print: Printing, security: Security, feel: Feel };
 
 /** Yönetim: tüm ayarlar tek yerde, bölümler segmentle; ekleme/düzenleme formları pencerede (?s=…). */
 export function SettingsView() {

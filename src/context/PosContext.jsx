@@ -29,6 +29,7 @@ import { buildKitchenTickets, buildTableReceipt, buildSaleReceipt, pendingEntrie
 import { renderTickets, printHtml } from "../print/render";
 import { loadDevicePrint, saveDevicePrint } from "../print/device";
 import { removalEffect, lineVoid, receiptVoid, appendVoids, cleanStreak } from "../utils/voids";
+import { applyCampaign, repriceLine } from "../utils/campaigns";
 import { findByBarcode, cleanBarcode, barcodeTaken, normalizeGuests } from "../utils/posHelpers";
 import { exportExcelByCategory as runExcelExport } from "../utils/excelExport";
 
@@ -465,7 +466,7 @@ export function PosProvider({ children }) {
       setOptionPickerProduct(product);
       return;
     }
-    const line = buildOrderLine({ ...product, options: sanitizeOptionGroups(product.options) }, selection || {}, undefined, extra);
+    const line = applyCampaign(brandSettings.campaigns, product, buildOrderLine({ ...product, options: sanitizeOptionGroups(product.options) }, selection || {}, undefined, extra));
     setTables((prev) => prev.map((t) => {
       if (t.id !== activeTable.id) return t;
       return { ...t, status: "occupied", openedAt: t.openedAt || new Date().toISOString(), items: mergeIntoItems(t.items, line) };
@@ -493,8 +494,9 @@ export function PosProvider({ children }) {
     const product = item && products.find((x) => x.id === item.productId);
     if (!product) return;
     const tid = activeTable.id;
-    const { cancelled } = editLine(activeTable.items, itemId, product, content);
-    setTables((prev) => prev.map((t) => (t.id === tid ? { ...t, items: editLine(t.items, itemId, product, content).items } : t)));
+    const reprice = (line) => repriceLine(brandSettings.campaigns, product, line);
+    const { cancelled } = editLine(activeTable.items, itemId, product, content, reprice);
+    setTables((prev) => prev.map((t) => (t.id === tid ? { ...t, items: editLine(t.items, itemId, product, content, reprice).items } : t)));
     if (cancelled) {
       if (printDevice.autoKitchen) printTickets(kitchenTickets(activeTable, [{ item: cancelled, qty: cancelled.qty }], { cancel: true, reason: "İçerik değişti" }));
       showToast("İçerik değişti: yeni hali için tekrar \"Gönder\" deyin.", "warning");
@@ -720,7 +722,7 @@ export function PosProvider({ children }) {
         // Aynı ürün + aynı çeşit + aynı not birleşir; nesne yerinde değiştirilmez (state mutasyonu yok).
         const mergedItems = t.items.map((m) => ({ ...m }));
         activeTable.items.forEach((src) => {
-          const ex = mergedItems.find((m) => m.productId === src.productId && (m.note || "") === (src.note || "") && (m.optionKey || "") === (src.optionKey || "") && m.price === src.price);
+          const ex = mergedItems.find((m) => m.productId === src.productId && (m.note || "") === (src.note || "") && (m.optionKey || "") === (src.optionKey || "") && m.price === src.price && (m.campaignId || "") === (src.campaignId || ""));
           if (ex) { ex.qty += src.qty; if (src.sentQty) ex.sentQty = (ex.sentQty || 0) + src.sentQty; } else mergedItems.push({ ...src });
         });
         return { ...t, status: "occupied", openedAt: t.openedAt || activeTable.openedAt || new Date().toISOString(), discount: (t.discount || 0) + (activeTable.discount || 0), paidAmount: (t.paidAmount || 0) + (activeTable.paidAmount || 0), guests: normalizeGuests((t.guests || 0) + (activeTable.guests || 0)), items: mergedItems };

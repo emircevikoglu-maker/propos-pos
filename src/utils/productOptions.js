@@ -215,11 +215,13 @@ export function buildOrderLine(product, selection, id = newId("oi"), extra = {})
 }
 
 const sameContent = (a, b) => a.productId === b.productId && (a.note || "") === (b.note || "") && (a.optionKey || "") === (b.optionKey || "");
+/** Birleşme için içerik + birim fiyat + kampanya aynı olmalı (happy hour satırı normal fiyatlıya karışmaz). */
+const sameLine = (a, b) => sameContent(a, b) && (a.price === undefined || a.price === b.price) && (a.campaignId || "") === (b.campaignId || "");
 
-/** Aynı ürün + aynı içerik + aynı not varsa adedi artırır, yoksa yeni satır ekler. */
+/** Aynı ürün + içerik + not + fiyat varsa adedi artırır, yoksa yeni satır ekler. */
 export function mergeIntoItems(items, line) {
   const list = Array.isArray(items) ? items : [];
-  const idx = list.findIndex((i) => sameContent(i, line));
+  const idx = list.findIndex((i) => sameLine(i, line));
   if (idx === -1) return [...list, line];
   return list.map((it, i) => (i === idx ? { ...it, qty: it.qty + (line.qty || 1), ...(line.sentQty ? { sentQty: (it.sentQty || 0) + line.sentQty } : {}) } : it));
 }
@@ -238,7 +240,7 @@ export function selectionFromLine(product, item) {
  * Birim fiyat yalnızca seçenekler değiştiyse yeniden hesaplanır (satıra sabitlenen fiyat korunur).
  * @returns {{items: object[], cancelled: object|null}} cancelled: mutfağa gönderilmişken içeriği değişen eski satır (qty ile)
  */
-export function editLine(items, itemId, product, { selection, without = [], note = "", qty }) {
+export function editLine(items, itemId, product, { selection, without = [], note = "", qty }, reprice = (line) => line) {
   const list = Array.isArray(items) ? items : [];
   const idx = list.findIndex((i) => i.id === itemId);
   if (idx === -1) return { items: list, cancelled: null };
@@ -246,11 +248,8 @@ export function editLine(items, itemId, product, { selection, without = [], note
   const count = Math.min(old.qty, clampQty(qty === undefined ? old.qty : qty));
   const built = buildOrderLine(product, selection, old.id, { without, note });
   const sameOptions = optionKey(old.options) === optionKey(built.options);
-  const next = {
-    ...old, note: built.note, options: built.options, optionKey: built.optionKey,
-    price: sameOptions ? old.price : built.price,
-    without: built.without
-  };
+  const content = { ...old, note: built.note, options: built.options, optionKey: built.optionKey, without: built.without };
+  const next = sameOptions ? content : reprice({ ...content, price: built.price });
   if (!next.without) delete next.without;
   if (sameContent(old, next)) return { items: list, cancelled: null };
 
@@ -260,7 +259,7 @@ export function editLine(items, itemId, product, { selection, without = [], note
   delete edited.sentQty;
   const rest = count === old.qty ? [] : [{ ...old, qty: old.qty - count, ...(sent ? { sentQty: sent - sentMoved } : {}) }];
   const others = [...list.slice(0, idx), ...rest, ...list.slice(idx + 1)];
-  const twin = others.findIndex((i) => i.id !== old.id && sameContent(i, edited) && i.price === edited.price);
+  const twin = others.findIndex((i) => i.id !== old.id && sameLine(i, edited));
   const out = twin === -1
     ? [...others.slice(0, idx + rest.length), edited, ...others.slice(idx + rest.length)]
     : others.map((i, n) => (n === twin ? { ...i, qty: i.qty + edited.qty } : i));

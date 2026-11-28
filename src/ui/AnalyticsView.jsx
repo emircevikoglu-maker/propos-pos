@@ -6,6 +6,7 @@ import { Ic } from "./Ic";
 import { Bar, Card, Empty, Kpi, Page, Seg, Tag } from "./page";
 import { PeriodBar } from "./PeriodBar";
 import { summarizeVoids } from "../utils/voids";
+import { discountReport } from "../utils/campaigns";
 
 const EXPENSE_CATEGORIES = ["Toptancı / Malzeme", "Fatura / Sabit Gider", "Kira & Aidat", "Personel Gideri", "Bakım / Ekipman", "Vergi & Diğer"];
 const METHOD_TONE = { "Nakit": "success", "Kredi Kartı": "primary", "Yemek Kartı": "warning", "Esnaf Cariye Yazıldı": undefined, "İkram / İptal": "danger" };
@@ -281,9 +282,32 @@ function Voids() {
   );
 }
 
+function Discounts() {
+  const { filteredSales } = usePos();
+  const r = discountReport(filteredSales);
+  return (
+    <>
+      <Kpi hero label="Toplam indirim" value={formatTL(r.campaign + r.manual)} sub="Kampanya + elle verilen indirim" />
+      <Kpi label="Kampanya indirimi" value={formatTL(r.campaign)} />
+      <Kpi label="Elle indirim" value={formatTL(r.manual)} />
+      <Kpi label="İkram / iptal kapanışı" value={formatTL(r.comp)} sub={`${r.compCount} adisyon`} />
+      <Card span={12} title="Kampanyalara göre">
+        {r.byCampaign.length === 0 ? <Empty icon="zap">Bu dönemde kampanyalı satış yok.</Empty> : (
+          <div className="dt-wrap">
+            <table className="dt">
+              <thead><tr><th>Kampanya</th><th className="r">Ürün adedi</th><th className="r">Verilen indirim</th></tr></thead>
+              <tbody>{r.byCampaign.map((c) => <tr key={c.id}><td>{c.name}</td><td className="r">{c.qty}</td><td className="r">{formatTL(c.amount)}</td></tr>)}</tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </>
+  );
+}
+
 export function AnalyticsView() {
   const { analyticsSubTab, setAnalyticsSubTab, exportExcelByCategory } = usePos();
-  const tab = EXCEL_LABEL[analyticsSubTab] || analyticsSubTab === "voids" ? analyticsSubTab : "overview";
+  const tab = EXCEL_LABEL[analyticsSubTab] || analyticsSubTab === "voids" || analyticsSubTab === "discounts" ? analyticsSubTab : "overview";
   return (
     <Page
       label="Satış, ürün ve gider raporları"
@@ -292,12 +316,13 @@ export function AnalyticsView() {
     >
       <PeriodBar />
       <div className="toolbar">
-        <Seg label="Rapor bölümü" value={tab} onChange={setAnalyticsSubTab} items={[["overview", "Özet"], ["products", "Ürünler"], ["receipts", "Adisyonlar"], ["voids", "İptaller"], ["expenses", "Giderler"]]} />
+        <Seg label="Rapor bölümü" value={tab} onChange={setAnalyticsSubTab} items={[["overview", "Özet"], ["products", "Ürünler"], ["receipts", "Adisyonlar"], ["voids", "İptaller"], ["discounts", "İndirimler"], ["expenses", "Giderler"]]} />
       </div>
       {tab === "overview" && <Overview />}
       {tab === "products" && <Products />}
       {tab === "receipts" && <Receipts />}
       {tab === "voids" && <Voids />}
+      {tab === "discounts" && <Discounts />}
       {tab === "expenses" && <Expenses />}
     </Page>
   );

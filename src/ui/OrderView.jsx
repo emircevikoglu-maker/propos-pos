@@ -6,18 +6,19 @@ import { PPMotion as M } from "../design/motion";
 import { Ic } from "./Ic";
 import { useSheet } from "./Sheet";
 import { ContentSheet } from "./ContentSheet";
-import { tableSubtotal, tableRemaining, tableCount, fmtMin } from "./hooks";
+import { tableSubtotal, tableRemaining, tableCount, fmtMin, useNow } from "./hooks";
 import { PaySheet } from "./PaySheet";
 import { unsentCount } from "../print/model";
 import { VoidSheet } from "./VoidSheet";
 import { removalEffect } from "../utils/voids";
+import { bestPrice } from "../utils/campaigns";
 import { OpsSheet } from "./OpsSheet";
 
 const FAV = "__fav";
 const NOTES = ["Acele", "Az buzlu", "Paket"];
 const parseNote = (n) => String(n || "").split(" · ").map((x) => x.trim()).filter(Boolean);
 
-function ProductCard({ product, qty, onAdd, onContent }) {
+function ProductCard({ product, qty, onAdd, onContent, deal }) {
   const prev = React.useRef(qty);
   const badge = React.useRef(null);
   React.useEffect(() => {
@@ -31,7 +32,11 @@ function ProductCard({ product, qty, onAdd, onContent }) {
     <div className="product-cell">
       <button type="button" className="product pressable" onClick={(e) => onAdd(product, e.currentTarget)}>
         <span className="product-name">{product.name}</span>
-        <span className="product-foot"><span className="product-price">{formatTL(product.price)}</span></span>
+        <span className="product-foot">
+          {deal && deal.campaign
+            ? <span className="product-price is-deal" title={deal.campaign.name}>{formatTL(deal.price)} <s>{formatTL(product.price)}</s></span>
+            : <span className="product-price">{formatTL(product.price)}</span>}
+        </span>
         {qty > 0 && <span className="product-qty num" ref={badge}>{qty}</span>}
       </button>
       {onContent && (
@@ -69,6 +74,7 @@ function Line({ item, open, onToggle, onEdit, onReduce }) {
           <span className="line-name">{item.name}</span>
           {opts && <span className="line-opts">{opts}</span>}
           {removed && <span className="line-without">{removed}</span>}
+          {item.campaignName && <span className="line-deal">{item.campaignName}</span>}
           {item.sentQty > 0 && <span className="line-sent"><Ic n="send" className="ic-sm" />{item.sentQty >= item.qty ? "Gönderildi" : `${item.sentQty}/${item.qty} gönderildi`}</span>}
           {notes.length > 0 && <span className="line-note">{notes.join(" · ")}</span>}
         </span>
@@ -108,8 +114,9 @@ export function OrderView() {
   const {
     activeTable: table, activeTableId, products, categories, setActiveTableId, addProductToTable,
     posSearch, setPosSearch, handleSearchEnter, optionPickerProduct, setOptionPickerProduct, confirmOptionPicker,
-    ingredients, updateLineContent, sendOrder, updateOrderItemQty
+    ingredients, updateLineContent, sendOrder, updateOrderItemQty, brandSettings
   } = usePos();
+  const now = useNow(30000); // kampanya saati geldiğinde kartlar kendiliğinden güncellenir
   const sheet = useSheet();
   const [cat, setCat] = React.useState(null);
   const [expanded, setExpanded] = React.useState(null);
@@ -207,7 +214,7 @@ export function OrderView() {
 
       <div className="products" ref={productsRef}>
         {shown.length === 0 && <p className="label" style={{ gridColumn: "1 / -1", padding: 12 }}>Ürün bulunamadı.</p>}
-        {shown.map((p) => <ProductCard key={p.id} product={p} qty={qtyOf(p.id)} onAdd={add} onContent={hasContent(p) ? setOptionPickerProduct : null} />)}
+        {shown.map((p) => <ProductCard key={p.id} product={p} qty={qtyOf(p.id)} onAdd={add} onContent={hasContent(p) ? setOptionPickerProduct : null} deal={bestPrice(brandSettings?.campaigns, p, p.price, now)} />)}
       </div>
 
       <aside className={`ticket${ticketOpen ? " is-open" : ""}`} aria-label="Adisyon">
