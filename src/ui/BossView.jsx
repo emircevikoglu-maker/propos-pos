@@ -40,7 +40,13 @@ function Matrix({ m }) {
   const W = 360, H = 230, pad = 26;
   const X = (n) => pad + Math.sqrt(n / m.maxN) * (W - pad * 2);
   const Y = (v) => H - pad - (Math.max(0, v) / m.maxM) * (H - pad * 2);
-  const labelled = new Set([m.puzzle?.id, m.horse?.id, ...m.top.slice(0, 2).map((x) => x.id)]);
+  // Öncelik sırasıyla etiketle; öncekilerle çakışacak etiket yazılmaz (ayrıntı noktanın başlığında).
+  const placed = [];
+  const labelled = new Set();
+  [m.puzzle, m.horse, ...m.top.slice(0, 3)].filter(Boolean).forEach((c) => {
+    const x = X(c.n), y = Y(c.margin);
+    if (!labelled.has(c.id) && !placed.some((p) => Math.abs(p.y - y) < 16 && Math.abs(p.x - x) < 170)) { placed.push({ x, y }); labelled.add(c.id); }
+  });
   const corner = (x, y, text, color, end) => <text x={x} y={y} textAnchor={end ? "end" : "start"} style={{ fill: color, fontSize: 12, fontWeight: 500 }}>{text}</text>;
   return (
     <svg className="matrix" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Menü mühendisliği matrisi">
@@ -77,7 +83,7 @@ export function BossView() {
   const history = React.useMemo(() => goalHistory(sales, goal, now), [sales, goal, now]);
   const team = React.useMemo(() => teamToday(sales, staffList, now), [sales, staffList, now]);
   const date = new Date(now);
-  const weekday = date.toLocaleDateString("tr-TR", { weekday: "long" });
+  const weekday = date.toLocaleDateString("tr-TR", { weekday: "long" }).toLocaleLowerCase("tr-TR");
   const paceText = d.pace >= 1.1 ? `bugün tipik günden %${Math.round((d.pace - 1) * 100)} yoğun` : d.pace <= 0.9 ? `bugün tipik günden %${Math.round((1 - d.pace) * 100)} sakin` : "bugün tipik gidişte";
   const basisText = d.sameWeekday ? `son ${d.basisDays} ${weekday} gününün aynı saatleri` : `son ${d.basisDays} satış gününün aynı saatleri`;
   const periodText = matrix.period === "today" ? "Bugün" : "Son 30 gün";
