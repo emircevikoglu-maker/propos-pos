@@ -473,16 +473,17 @@ class TenantService
      *
      * @return array{ok:bool, error?:string}
      */
-    public function saveUser(array $input): array
+    public function saveUser(array $input, int $minPassword = 8): array
     {
+        $minPassword = max(4, $minPassword); // 4'ün altı hiçbir yoldan kabul edilmez
         $tenantId = normalizeTenantId(is_string($input['tenantId'] ?? null) ? $input['tenantId'] : '');
         $username = self::normalizeUsername($input['username'] ?? '');
         if (!preg_match('/^[a-z0-9][a-z0-9._@-]{2,39}$/', $username)) {
             return ['ok' => false, 'error' => 'Kullanıcı adı 3-40 karakter olmalı (a-z, 0-9, . _ @ -).'];
         }
         $password = is_string($input['password'] ?? null) ? $input['password'] : '';
-        if ($password !== '' && (strlen($password) < 8 || strlen($password) > 200)) {
-            return ['ok' => false, 'error' => 'Parola en az 8 karakter olmalı.'];
+        if ($password !== '' && (strlen($password) < $minPassword || strlen($password) > 200)) {
+            return ['ok' => false, 'error' => "Parola en az $minPassword karakter olmalı."];
         }
         $role = is_string($input['role'] ?? null) ? $input['role'] : 'staff';
         if (!in_array($role, self::USER_ROLES, true)) {

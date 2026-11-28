@@ -111,8 +111,16 @@ Nüanslar / riskler
 ## Kullanıcı tabanlı giriş (28 Kasım)
 - Kullanıcı: "token üretme olayı çok garip, olmaz; genel veritabanından ben kullanıcı ekleyeceğim." Cihaza bağlantı anahtarı yazdırmak (eşleştirme) kalkıyor; kurucu panelden kullanıcı adı + parola tanımlar. İçeride yine imzalı oturum belirteci var ama kullanıcı görmez/üretmez (her web uygulamasındaki oturum çerezi gibi). Çapraz köken (Vercel ↔ Linux arka uç) olduğu için çerez yerine başlık + localStorage: üçüncü taraf çerez engelleri (Safari ITP) oturumu bozmasın.
 
+## Kısa parola (28 Kasım, 3.9.1) — tehlike notu
+- Kullanıcı `pickys`/`emir` için 4 haneli parola istedi. Panel/API en az 8 ister; komut satırı aracı `--allow-short` ile 4-7'ye izin verir (4 altı hiçbir yoldan yok).
+- Risk: 4 hane = 10.000 olasılık. Giriş sınırı IP başına 10 dk'da 8 hata; tek IP'den ~2 ay sürer ama dağıtık denemede (çok IP) günler içinde düşebilir. Sunucu internete açılmadan önce bu iki parola uzatılmalı (`php backend/users.php passwd <kullanici> <yeni>`) ya da kullanıcı başına kilit (P8) eklenmeli. Tehlikeli sayılmadı çünkü yerel veri + kullanıcının açık isteği; bilgi olarak düşüldü.
+
+## Fikir dosyası konumu
+- Kullanıcı "idea/ideas.md" dedi; dosya `docs/IDEAS.md`'de (tek kaynak, ikinci kopya açılmadı).
+
 ## Açık sorular (kullanıcıya)
-1. Yazıcı: marka/model, 58 mm mi 80 mm mi, bağlantı (USB/ağ/Bluetooth), mutfak ve bar ayrı yazıcı mı?
+1. Yazıcı: marka/model, 58 mm mi 80 mm mi, bağlantı (USB/ağ/Bluetooth), mutfak ve bar ayrı yazıcı mı? (3.10 tarayıcı baskısı bunu beklemez; P1-b ajanı bekler.)
+5. Mali müşavir teyidi: adisyon (bilgi fişi) ibaresi ve zorunluluğu, e-Arşiv mi ÖKC mi (3.10 plan 5. bölüm).
 2. Altyapı: Supabase denemesi yapılsın mı, yoksa PHP VDS'te kalıp PDO (SQLite/MySQL) mı?
 3. "Personele özel hizmet" ne demek: personel başına görünüm mü, prim/hedef takibi mi, müşteri tarafı mı?
 4. Hedef ölçek: onlarca mı yüzlerce işletme mi (altyapı ve fiyat kararını etkiler)?

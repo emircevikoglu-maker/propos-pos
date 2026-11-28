@@ -2,7 +2,7 @@
 
 Kural: fikir iş sırasında araya sokulmaz, burada toplanır; onaylanan fikir `TODO.md`'ye plan olarak girer (kimlik: İ-n).
 Durum: `[ ]` öneri, `[→]` TODO'ya alındı, `[x]` yapıldı, `[✗]` vazgeçildi. Gerekçeli kararlar `docs/NOTES.md`'de.
-Son güncelleme: 25 Kasım 2026 (3.5.1).
+Son güncelleme: 28 Kasım 2026 (3.9.1). İ-3 kampanya motoru ve İ-12 yerel QR 3.10 planına alındı.
 
 ## 1. Ürünü satılabilir yapan şeyler (en yüksek değer)
 - [→] İ-1 Yazıcı ajanı (P1): satış anında ilk sorulan şey "fiş çıkıyor mu". Ajan localhost'ta, POS ESC/POS değil sade bir fiş modeli gönderir; marka bağımsızlığı bu sayede. Mali belge (e-Arşiv/ÖKC) ayrı adaptör; ilk sürümde yalnızca bilgi fişi + mutfak fişi.
@@ -37,6 +37,24 @@ Son güncelleme: 25 Kasım 2026 (3.5.1).
 - [ ] İ-22 Paket mantığı: maliyetsiz özellikler temelde (çevrimdışı, çeşitler, kampanya, barkod, raporlar); sürekli maliyetli olanlar (SMS, e-Arşiv, bulut yedek geçmişi, çoklu şube) ücretli.
 - [ ] İ-23 İlk 10-20 işletme: indirim karşılığı haftalık 15 dk geri bildirim görüşmesi + referans izni; uygulama içi geri bildirim butonu hazır, panelde sekmeli listeleme eksik (P7b).
 - [ ] İ-24 Satış sonrası: kurulum + donanım (tablet, yazıcı, çekmece) paketi ayrı fiyat; yıllık peşin indirimi.
+
+## 6. Yeni fikirler (28 Kasım, 3.9.1)
+- [→] İ-25 İptal kaydı + "gönderildikten sonra iptal" vurgusu (3.10 C): kaçağın bir numaralı göstergesi; neden çipleri tek dokunuş.
+- [→] İ-26 "Gönder (n)" düğmesi + yalnızca yeni satırları basan mutfak fişi (3.10 B): `sentQty`.
+- [ ] İ-27 Kullanıcı başına giriş kilidi + parola gücü göstergesi: IP'ye bağlı sınır dağıtık denemeye yetmez (kısa parola notu, NOTES).
+- [ ] İ-28 Personel hızlı geçişi: aynı tablette 4 haneli personel PIN'i ile "kim çalışıyor" değişir; giriş (işletme) ile personel (kişi) ayrılır. Satış/iptal kişiye yazılır (3.11).
+- [ ] İ-29 Masa birleştir / ayır: iki masayı tek adisyonda topla; adisyonu ürün ürün böl ("Böl" şu an eşit pay). Kafe/restoranda en sık istenen ikinci işlem.
+- [ ] İ-30 Ürün bazlı bölüşük ödeme: ödeme penceresinde satır seç → o satırları öde (kısmi ödeme kaydı satır kimliğiyle).
+- [ ] İ-31 Sık not şablonları işletmeye özel: "Acele / Az buzlu / Paket" sabit değil, Yönetim'den düzenlenir; ürün kategorisine göre farklı çipler.
+- [ ] İ-32 Tükendi işareti: ürün kartında tek dokunuşla "bugün yok" (stok reçetesinden bağımsız), QR menüye de yansır.
+- [ ] İ-33 Gün sonu kontrol listesi: Z öncesi "açık masa var / kasa sayılmadı / gönderilmemiş satır var" uyarıları tek ekranda.
+- [ ] İ-34 Çevrimdışı çok cihaz koruması: çevrimdışıyken ikinci cihaz masa kapatmak isterse "çevrimdışı — bu masayı yalnızca kasa kapatsın" uyarısı (NOTES "ÇOK ÖNEMLİ").
+- [ ] İ-35 Kurulum sihirbazının panel tarafı: yeni işletme + ilk sahip kullanıcısı + menü şablonu tek formda (şu an işletme ve kullanıcı ayrı adım).
+- [ ] İ-36 Ayın raporu e-postası/PDF (patron): ay sonu ciro, kâr, en iyi/zayıf ürün, iptal oranı; tarayıcıda PDF'e yazdır yeterli başlangıç.
+- [ ] İ-37 Menü fiyat toplu güncelleme: kategoriye % artış (enflasyon ortamında haftalık ihtiyaç), önizleme + geri al.
+- [ ] İ-38 Müşteri sadakat (basit): telefonla kayıt, 10 kahveye 1 ikram; ücretsiz temel paket özelliği olabilir, yemek platformlarına karşı doğrudan müşteri bağı.
+- [ ] İ-39 Erişilebilirlik ve büyük yazı modu: yaşlı esnaf/garson için tek ayarla %115 ölçek (tokenlar zaten değişkenle).
+- [ ] İ-40 Hata görünürlüğü: istemci hatalarını (window.onerror) sunucuya özet olarak gönder, panelde listele; pilotta "bende çalışıyor" tartışmasını bitirir (İ-7 ile).
 
 ## Dürüst notlar
 - En büyük risk özellik eksikliği değil, saha doğrulaması: gerçek bir işletmede iki tablet + bir yazıcıyla bir hafta çalışmadan hiçbir senkron/çevrimdışı varsayımı kanıtlanmış sayılmaz. Önce küçük bir pilot.

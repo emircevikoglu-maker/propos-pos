@@ -7,8 +7,27 @@ Restoran/kafe POS + bayi/lisans yönetimi. Türkçe arayüz. Ürün olarak satı
 - `C:\faho\projects\stimule\propos-v2` — çalışma kopyası (bu repo). Büyük değişiklikten önce kopya al (`propos-v2-yedek-<tarih>`), sonra devam et.
 - Eski tek dosya `ProPos_Hazir_Uygulama.html` (1,6 MB derlenmiş paket) okunmaz; gerekirse sadece `grep`/satır aralığı.
 
+## Çalışma yöntemi (BAĞLAYICI — kullanıcı kararı 28 Kasım; her oturumda otomatik uygulanır)
+Sıra her işte aynı:
+1. Oku: bu dosya → güncel sürüm planı (`docs/plans/<sürüm>.md`, "Başlamadan önce okunacaklar") → TODO başı → ilgili NOTES bölümü. Not dosyaları koddan gerideyse önce onları ilerlet (CHANGELOG/TODO/README/API kodu yansıtmalı).
+2. Planla: iş yeni sürümse önce plan dosyası (öncekinin halefi, sıfırdan, kopyasız; kapsam, yöntem, kabul, test, risk). Plan kısa ve eksiksiz olur; megabaytlık döküm değil.
+3. Yap: adım adım; her adım bitince plan dosyasında `[x]` + gerekiyorsa tek cümle not. Kod: az söz, okunur, bakımı kolay; yeni ekran `src/ui/page.jsx` + prototip sınıflarıyla; iş kuralı saf fonksiyonda (test edilebilir); mekanik değişiklik betikle.
+4. Doğrula: `npm test` (gerekirse `--only`, sonda `--build`). Görsel iş tarayıcıda 390 / 768 / 1280 / 1920 genişlikte görülür; RESPONSIVE ZORUNLU (dar ekranda tablo kart, pencere alt sayfa, yatay taşma yok, hedef ≥ 44 px). Gereksiz tekrar kontrol yok: test yeşil + ekran doğru ise devam.
+5. Kaydet: CHANGELOG (sürüm `package.json` ile), TODO işaretleri, uç değiştiyse `docs/API.md`, karar varsa NOTES, fikir varsa IDEAS (araya sokulmaz).
+6. Bitir: testler geçince commit + `git push origin main` (fast-forward), kullanıcıya kısa özet + "işimi bitirdim", dur.
+
+Soru sorma ölçütü:
+- Yapı ve özellik hedefi belli: KardoPOS kıyas listesinin tamamı (`.chat-backup.md` "5. KardoPOS karşılaştırması") + önceki sürümlerden yanlışlıkla silinen her şey. Tasarım ve işlev kararları Claude'da; "şunu mu yapayım?" türü kısa sorular SORULMAZ, en iyi seçenek uygulanır ve gerekçesi NOTES'a yazılır.
+- Tek istisna TEHLİKE: veri silme/üzerine yazma, güvenliği zayıflatma, geri alınamaz dış etki (yayın, ödeme, mesaj), gizli anahtar/`.env`/`data/KURUCU_ANAHTARI.txt`. Önce "tehlikeli mi?" diye sor: evetse DUR ve kullanıcıya sor; hayırsa plan dosyasına "tehlike notu" düş ve devam et.
+- Kullanıcıdan gelmesi zorunlu bilgi (yazıcı modeli, mali müşavir teyidi) bekletilir ama iş durmaz; plan "açık soru" listesine yazılır.
+
+Token ve verim:
+- Okumadan önce `grep`/satır aralığı; büyük dosya bütün okunmaz. Komut çıktısı `| tail`/`| head` ile sınırlı. Aynı bilgi ikinci kez okunmaz.
+- Paranoyak kontrol yok: bir şey test ve ekranla doğrulandıysa yeniden kanıtlanmaz. Gerçek risk (veri, güvenlik, işlev kaybı) varsa test yazılır.
+- Kayıp önleme (3.6-3.8 dersi): bir ekranı/bileşeni yeniden yazarken önce eski davranış listesi plana yazılır; yenisi listeyi karşılamadan eski silinmez.
+
 ## Kayıt dosyaları (her iş sonunda güncelle)
-- `docs/plans/<sürüm>.md`: SÜRÜM PLANI — o sürümün tek iş kaydı. Sürüme başlarken yazılır; her adım yapıldıkça işaretlenir, karar/bulgu kısa not düşülür. Kısa ve eksiksiz; megabaytlık döküm değil. Güncel: `docs/plans/3.9.0.md`.
+- `docs/plans/<sürüm>.md`: SÜRÜM PLANI — o sürümün tek iş kaydı. Sürüme başlarken yazılır; her adım yapıldıkça işaretlenir, karar/bulgu kısa not düşülür. Kısa ve eksiksiz; megabaytlık döküm değil. Güncel: `docs/plans/3.10.0.md` (önceki: 3.9.0).
 - `TODO.md`: planlar (P0…P10), `[ ] [x] [~] [?]`, boyut S/M/L/XL. Yeni iş önce buraya plan olarak yazılır.
 - `CHANGELOG.md`: her değişiklik satırı (Eklendi/Değişti/Düzeltildi/Güvenlik/Kaldırıldı); sürüm `package.json` ile birlikte.
 - `docs/IDEAS.md`: fikir havuzu (İ-n); fikir iş sırasında araya sokulmaz, buraya yazılır.
@@ -39,7 +58,7 @@ Restoran/kafe POS + bayi/lisans yönetimi. Türkçe arayüz. Ürün olarak satı
 - Ortam: `PROPOS_DATA_DIR`, `PROPOS_DIST_DIR`, `PROPOS_FOUNDER_KEY`, `PROPOS_MAX_DB_BYTES`, `PROPOS_RL_POLL|ACTION|IP|CONTROL` ("kapasite:dolum/sn"), `PROPOS_RL_PENALTY`, `PROPOS_LOGIN_DELAY_MS`, `PROPOS_DEBUG` (yoksa hata çıktısı kapalı), `PROPOS_CORS_ORIGIN` (virgüllü liste/`*`), `PROPOS_STORAGE`, `PROPOS_CACHE[_TTL]`, `PROPOS_REALTIME`, `SUPABASE_*`. Tam liste: `docs/API.md`.
 
 ## Giriş modeli (3.9.0'dan itibaren — kullanıcı kararı 28 Kasım)
-- Kullanıcı adı + parola. Kullanıcıları kurucu kontrol panelinden ekler (kayıt defterinde işletmenin altında `users[]`, parola `password_hash`). Cihaz eşleştirme / bağlantı anahtarı arayüzden kalktı; arka uçta tenant anahtarı yalnızca geçiş için duruyor (4.0'da silinir).
+- Kullanıcı adı + parola. Kullanıcıları kurucu kontrol panelinden ya da sunucuda `php backend/users.php add <kullanici> <parola> [--tenant=KOD] [--role=owner|staff] [--allow-short]` ile ekler. Yerel veride: `pickys`, `emir` (DEFAULT, sahip; 4 haneli parola kullanıcı tercihi) (kayıt defterinde işletmenin altında `users[]`, parola `password_hash`). Cihaz eşleştirme / bağlantı anahtarı arayüzden kalktı; arka uçta tenant anahtarı yalnızca geçiş için duruyor (4.0'da silinir).
 - Oturum belirteci kullanıcıya görünmez, 30 gün, `localStorage`; parola değişince/kullanıcı kapatılınca düşer. Yönetici PIN'i aynen (aşağıda 3.).
 - Dağıtım: ön yüz Vercel (`PROPOS_API_URL` ile arka uca bağlanır), arka uç Linux PHP (`docs/DEPLOY.md`).
 
@@ -96,7 +115,7 @@ Güncel plan `TODO.md`, fikirler `docs/IDEAS.md`. Sıradaki: HTTPS rehberi (PWA 
 - Görsel iş bitmeden kabul edilmez: prototiple yan yana ekran görüntüsü, 1024×768 / 1280×800 / 1920×1080 / 390×844.
 - Sıkışıklık yok: panel başına tek birincil eylem, ikincil işlemler sheet'te; metin kırpma yok; hedefler ≥ 44 px.
 - Büyük/bekletilemez değişiklik → doğrudan commit + push (main); önemli ama acil değilse onay bekle. Git yoksa değişen dosyalar paylaşılır.
-- (28 Kasım) Gereksiz soru yok: yapı ve özellikler belli (KardoPOS kıyası + silinen her şey hedef). Testler geçince push et, "işimi bitirdim" yaz, dur. Tek istisna: tehlikeli iş (veri silme, güvenlik zayıflatma, geri alınamaz dış etki) → dur, sor; tehlikesizse NOTES'a not düş, devam.
+- (28 Kasım) Soru/tehlike/bitiş kuralları: yukarıdaki "Çalışma yöntemi".
 
 ## Arayüz kuralları
 - Tailwind KALIR (karar 28 Kasım): tek tasarım kaynağı `src/design/ui.css` tokenları; Tailwind teması bu CSS değişkenlerine bağlanır. Eski renkleri zorla boyayan `skin.css` eski ekranlar bitince silinir. Yeni ekranlarda prototip sınıfları + gerekirse token'a bağlı Tailwind yardımcıları; ham Tailwind renkleri (`stone-900`, `amber-500`) YASAK.

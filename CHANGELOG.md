@@ -3,6 +3,17 @@
 Biçim: [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/). Sürüm numarası `package.json` ile birlikte artar.
 Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 
+## [3.9.1] — 2026-11-28
+### Eklendi
+- `php backend/users.php` (yalnızca komut satırı): `list`, `add <kullanici> <parola> [--tenant] [--role] [--name] [--allow-short]`, `passwd`, `disable`, `enable`, `delete`. `--allow-short` 4-7 karakterlik parolaya kurucunun bilinçli tercihiyle izin verir; panel/API en az 8 ister; 4'ün altı hiçbir yoldan geçmez.
+- Yerel veride iki kullanıcı: `pickys`, `emir` (DEFAULT işletme, sahip rolü).
+- `docs/plans/3.10.0.md`: sonraki sürümün ayrıntılı planı (3.9.0'ın halefi): eski pencerelerin `Sheet`'e taşınması, yazdırma P1-a, iptal kaydı + rapor, kampanya/happy hour motoru, yerel QR, Tailwind'in tokenlara bağlanması; 3.11-4.0 yol haritası.
+- CLAUDE.md "Çalışma yöntemi" (bağlayıcı): okuma sırası, plan dosyası, doğrulama (responsive dahil), kayıt, bitiş, soru/tehlike ölçütü, token kuralları.
+- Testler: parola alt sınırı (8 / `--allow-short` 4 / 4 altı ret), `users.php` yalnızca CLI.
+### Değişti
+- `TenantService::saveUser($input, $minPassword = 8)`.
+- TODO, NOTES, IDEAS (İ-25…İ-40), README güncellendi.
+
 ## [3.9.0] — 2026-11-28
 Temeli oturt: kullanıcı tabanlı giriş, Vercel + Linux dağıtımı, tarayıcı taramasında bulunan kırık/eksik özellikler, responsive geçişi. İş kaydı: `docs/plans/3.9.0.md`.
 ### Eklendi

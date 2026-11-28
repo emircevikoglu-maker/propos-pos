@@ -151,3 +151,17 @@ t('Müşteri paketi PWA dosyalarını içerir (çevrimdışı açılış kurulum
         assertTrue(isset($files[$need]), "pakette eksik: $need");
     }
 });
+
+t('saveUser: varsayılan en az 8; komut satırı --allow-short 4-7 kabul eder; 4 altı hiçbir yoldan geçmez', function () {
+    [$ts] = freshServices();
+    unitTenant($ts, 'USR-UNIT');
+    assertFalse($ts->saveUser(['tenantId' => 'USR-UNIT', 'username' => 'kisa.bir', 'password' => '3535'])['ok'], 'varsayılan 8');
+    assertTrue($ts->saveUser(['tenantId' => 'USR-UNIT', 'username' => 'kisa.bir', 'password' => '3535'], 4)['ok'], 'izinli 4');
+    assertFalse($ts->saveUser(['tenantId' => 'USR-UNIT', 'username' => 'kisa.iki', 'password' => '123'], 1)['ok'], 'taban 4');
+    assertTrue(password_verify('3535', $ts->findUser('kisa.bir')['user']['hash']));
+});
+
+t('users.php yalnızca komut satırında çalışır (web SAPI 404)', function () {
+    $src = (string)file_get_contents(dirname(__DIR__, 3) . '/backend/users.php');
+    assertContains("PHP_SAPI !== 'cli'", $src);
+});

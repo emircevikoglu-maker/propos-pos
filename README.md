@@ -45,6 +45,15 @@ kaba kuvvet / hız sınırı testleri sıkı limitli ayrı sunucuda koşar. Ger�
 2. Parola değişince ya da kullanıcı kapatılınca o kullanıcının açık oturumları anında düşer (kayıp/çalıntı cihaz).
 3. Yönetici ekranları ayrıca işletme PIN'i ister; PIN sunucuda hash olarak durur, 6 hatalı denemede 5 dk kilitlenir.
 
+## Kullanıcılar
+Kontrol paneli (işletme kartı → Kullanıcılar) ya da sunucuda:
+```
+php backend/users.php list
+php backend/users.php add ali.kasa GucluParola1 --tenant=KAFE-101 --role=staff --name="Ali"
+php backend/users.php passwd ali.kasa YeniParola2     # açık oturumları düşer
+php backend/users.php disable ali.kasa
+```
+
 ## Dağıtım
 Ön yüz Vercel (`vercel.json`, `PROPOS_API_URL`), arka uç Linux PHP (Apache `.htaccess` / nginx). Ayrıntı: `docs/DEPLOY.md`. Sürüm iş kaydı: `docs/plans/`.
 

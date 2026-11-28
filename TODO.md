@@ -4,7 +4,17 @@ Biçim: her plan bir hedef + adımlar. `[ ]` yapılacak, `[x]` bitti, `[~]` kıs
 Boyut: S (< 1 saat), M (yarım gün), L (1-2 gün), XL (daha fazla). Ayrıntı ve gerekçe: `docs/NOTES.md`. Fikir havuzu: `docs/IDEAS.md` (İ-n). Bitenler: `CHANGELOG.md`.
 Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 
-## GÜNCEL SÜRÜM: 3.9.0 — ayrıntılı iş kaydı `docs/plans/3.9.0.md` (giriş kullanıcı tabanlı, Vercel + Linux dağıtım, kırık/eksik özellikler, responsive)
+## GÜNCEL SÜRÜM: 3.10.0 (planlandı, başlanmadı) — `docs/plans/3.10.0.md`
+Önce okunacaklar o dosyanın 0. bölümünde. Kapsam: A eski pencereler → Sheet · B yazdırma P1-a · C iptal kaydı + rapor · D kampanya/happy hour · E yerel QR · F Tailwind'i tokenlara bağla + skin.css sil + 1920 kabulü. Yol haritası 3.11 (roller/personel) → 3.12 (patron) → 3.13 (QR menü/müşteri ekranı/KDS) → 3.14 (P14 çevrimdışı/lisans) → 3.15 (kod sağlığı) → 4.0 (syncKey kaldır, delta senkron).
+Biten: 3.9.0 (`docs/plans/3.9.0.md`: kullanıcı girişi, Vercel + Linux, kırık özellikler, responsive) · 3.9.1 (`php backend/users.php`, yerel kullanıcılar `pickys`/`emir`, çalışma yöntemi CLAUDE.md'de).
+
+## KardoPOS kıyas listesi — durum (kaynak `.chat-backup.md` 5. bölüm; hepsi hedef)
+Satış: ürün/kategori [x] · masalı satış/bölüm [x] · self servis/tezgah [x] hızlı satış · indirim/ikram/atık [x] · kampanya/happy hour [ ] 3.10-D · opsiyonel ürün (çeşit) [x] · müşteri ekranı [ ] 3.13 · masa tasarım modu/renk [ ] sonra · yazıcı/terminal [ ] 3.10-B + P1-b · sipariş görüntüleme (KDS) [ ] 3.13.
+Personel: ekleme (sınırsız) [x] · mesai/mola [ ] 3.11 · hedefler/bildirim [~] kutlama/hedef çubuğu · rol yönetimi [~] rol alanı var, izin 3.11 · görevlendirme [ ] 3.11 · denetim soruları/anket [ ] EK · mobil/tablet POS [x] PWA + responsive.
+Yönetim: adisyon yönetimi [x] · satılan ürün takibi [x] · kasa kapanış [x] Z + sayım (sunucuya yazım P7b) · tedarikçi [ ] P7 · müşteri işletme (cari) [x] · birim maliyet [x] · sabit maliyet [~] gider var, sabit/tekrarlayan ayrımı yok · personel ödemeleri [ ] 3.11.
+Stok: stoklu ürün/reçete [x] · stok girişi [x] · sayım [x] (oturum ekranı P7b) · atık [x] · depo/transfer/ürün talebi [ ] EK.
+Raporlar: satış sayısı [x] · ürün/kategori [x] · kuver [x] · masa raporu [~] · silinen ürün [ ] 3.10-C · personel satış [x] · stok tüketim [~] reçeteden · fatura gelir/gider [x] · ödeme tipi [x] · indirim [ ] 3.10-D · personel ürün alım [ ] 3.11.
+Donanım/entegrasyon: barkod [x] · para çekmecesi [ ] P1-b · offline [x] (P14 ile güçlenir) · çoklu dil [ ] i18n · tartı [ ] EK · kiosk [ ] 3.13 ile · genel merkez [ ] EK · Paraşüt [ ] EK · mobil uygulama [x] PWA · paket servis/Yemeksepeti/Getir/Migros/Trendyol/Maxijett [ ] EK (iş ortaklığı) · QR menü [ ] 3.13 · ÖKC (Beko/Ingenico/Inpos/PAX/PAVO/PayGo) [ ] P1-c · BOSS patron [ ] 3.12 · IK/Management [~] personel + arka ofis · web sitesi sipariş [ ] QR menü uzantısı.
 
 ## ÖNCELİK DEĞİŞİKLİĞİ (25 Kasım, kullanıcı geri bildirimi) — P12, P13, P14 diğer her şeyin önünde
 Kullanıcı 3.5.x'i inceledi: (1) giydirilen tasarım prototip değil, ekran sıkışık ve animasyonlar yok; (2) gezinme (geri tuşu) yok; (3) API kapanınca sistem kullanılamaz oluyor, aynı anda lisans çevrimdışıyken zorlanamıyor. Kod ve tarayıcıyla doğrulandı (docs/NOTES.md "3.5.x geri bildirim analizi"). HTTPS rehberi ve kampanya motoru bu üçünün arkasına alındı.
@@ -37,11 +47,11 @@ Durum: `react-router-dom` YOK; sekme ve açık masa `useState`; geri tuşu uygul
 
 ## P12 — yeni iş kalemleri (3.6.0 sonrası)
 - [x] (3.9.0) Dar ekranda `.dt` tabloları kart listesine çevir (tüm tablolar, `useTableLabels`)
-- [ ] `ProductOptionsEditor`'ı prototip diliyle yeniden çiz (ürün penceresinde hâlâ eski görünüm) — M
-- [ ] Stok/tahsilat/fiş incele/sıfırlama onayı/bayi paneli modallarını `Sheet` ile yeniden yaz — M
+- [→] `ProductOptionsEditor`'ı prototip diliyle yeniden çiz — M (3.10-A12)
+- [→] Stok/tahsilat/fiş incele/sıfırlama onayı/bayi paneli modallarını `Sheet` ile yeniden yaz — M (3.10-A)
 - [x] (3.9.0) Giriş/lisans ekranları prototip dilinde (eşleştirme kalktı: kullanıcı girişi)
-- [ ] Arama ikonu (şu an "eye" yer tutucu), "Gönder" düğmesi (P1 ile), mobil alt çubuk ürün sayısı hizası — S
-- [ ] Yoğun saat çipi demo verisinde sürekli görünüyor (tohum satışlar son 10 dk'da): demo verisini zamana yay — S
+- [→] Arama ikonu (3.10-F3), "Gönder" düğmesi (3.10-B3); mobil alt çubuk hizası [x] 3.9.0
+- [→] Yoğun saat çipi demo verisi (3.10-F4)
 - [ ] Shell/OrderView için bileşen testleri (MemoryRouter + sahte bağlam): ürün ekle, çeşit penceresi, ödeme, geri tuşu — M
 
 ## P12 — Prototip tasarıma TAM geçiş (giydirme yaklaşımı başarısız, terk edildi) — XL
@@ -145,7 +155,7 @@ Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını
 - [ ] Personel PIN'i (hash), hızlı kullanıcı değiştirme ekranı
 - [ ] Rol/izin matrisi (garson, kasiyer, müdür, sahip; `sale:void`, `discount:>10`, `report:view`)
 - [ ] Müdür onayı (iptal, büyük indirim) + denetim kaydı
-- [ ] Silinen ürün kaydı → "silinen ürün raporu" (kaçak tespiti)
+- [→] Silinen ürün kaydı → "silinen ürün raporu" (3.10-C)
 - [ ] Sunucu tarafı zorlama (whole-state senkron bitince mümkün; P2-b ile birlikte)
 - [?] "Personele özel hizmet" tanımı
 
@@ -160,7 +170,7 @@ Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını
 ## P7 — Özellikler (Kardo kıyasından, öncelik sırasıyla)
 - [x] İkram (mevcut "İkram / Zayi Kapat") + atık/sayım kaydı (3.4.0) — S
 - [x] Çeşit seçeneğine reçete — S
-- [ ] Kampanya / happy hour kural motoru (saat, gün, ürün/kategori, %/tutar) — M
+- [→] Kampanya / happy hour kural motoru — M (3.10-D)
 - [x] Stok sayımı + fark kaydı (3.4.0; ayrı "sayım oturumu" ekranı TODO) — M
 - [x] Kuver + Z raporunda kuver — S
 - [x] Barkod alanı + arama kutusunda okutma — S
@@ -187,10 +197,11 @@ Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını
 - [ ] Ters vekil arkasında güvenilir `X-Forwarded-For` (hız sınırı + kilit IP'ye bağlı) — S, VDS'e geçmeden ŞART
 - [ ] POS'a CSP; QR'ı yerel üret (api.qrserver.com'a LAN adresi gidiyor) — S
 - [ ] Kontrol paneline TOTP + IP kısıtı — M
+- [ ] Kullanıcı başına giriş kilidi (IP'den bağımsız) + kısa parolaları (pickys/emir) internete açmadan uzat — S (NOTES "Kısa parola")
 - [ ] Uygulama içi bayi stüdyosunu ve GitHub güncelleme yolunu kaldır (`apply-update`, `prepare-github`, raw GitHub fetch) — M
 - [ ] Oturumu httpOnly çereze taşı / token TTL 15 dk + refresh — M (3.9.0 notu: Vercel ↔ Linux çapraz köken; çerez yerine başlık seçildi, NOTES)
 - [ ] 4.0: tenant bağlantı anahtarı (`syncKey`, `/api/login {tenantId,key}`, `rotate-key`) tamamen kaldırılır; yalnızca kullanıcı girişi + kurucu anahtarı — S
-- [ ] QR'ı yerelde üret (api.qrserver.com'a adres gidiyor) — S
+- [→] QR'ı yerelde üret — S (3.10-E)
 - [ ] Yedeği geri yüklemeyi bir kez gerçekten dene — S
 - [ ] Panoda: son senkron, hata oranı, tenant DB boyutu (kısmen var) — S
 
