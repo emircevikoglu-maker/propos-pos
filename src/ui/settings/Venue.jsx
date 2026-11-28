@@ -2,6 +2,7 @@ import React from "react";
 import { usePos } from "../../context/PosContext";
 import { formatTL } from "../../utils/formatters";
 import { ProductOptionsEditor } from "../../components/settings/ProductOptionsEditor";
+import { RecipeEditor } from "./RecipeEditor";
 import { Ic } from "../Ic";
 import { Card, Chips, Empty, Field, ItemRow, SwitchRow, Tag } from "../page";
 import { Sheet, useSheet } from "../Sheet";
@@ -66,13 +67,8 @@ function ProductSheet({ onClose }) {
   const {
     handleSaveProduct, editingPrdId, newPrdName, setNewPrdName, newPrdPrice, setNewPrdPrice, newPrdEmoji, setNewPrdEmoji, newPrdBarcode, setNewPrdBarcode,
     newPrdCategory, setNewPrdCategory, categories, newPrdQuickFav, setNewPrdQuickFav, newPrdRecipe, setNewPrdRecipe, ingredients,
-    selectedRecipeIng, setSelectedRecipeIng, selectedRecipeAmt, setSelectedRecipeAmt, newPrdOptions, setNewPrdOptions
+    newPrdOptions, setNewPrdOptions, handleSaveIngredient
   } = usePos();
-  const addRecipe = () => {
-    if (!selectedRecipeAmt || Number(selectedRecipeAmt) <= 0) return;
-    setNewPrdRecipe((prev) => [...prev, { ingredientId: selectedRecipeIng, amount: Number(selectedRecipeAmt) }]);
-    setSelectedRecipeAmt("");
-  };
   return (
     <Sheet
       onClose={onClose}
@@ -86,24 +82,7 @@ function ProductSheet({ onClose }) {
         <div className="field"><span className="ops-title">Kategori</span><Chips value={newPrdCategory} onChange={setNewPrdCategory} items={categories} /></div>
         <SwitchRow title="Favoriler kategorisinde göster" desc="Adisyon ekranında ilk kategori" checked={newPrdQuickFav} onChange={setNewPrdQuickFav} />
 
-        <div className="field">
-          <span className="ops-title">Reçete (satılınca stoktan düşer)</span>
-          <div className="ops-row">
-            <select className="field-input" style={{ flex: 1, minWidth: 150 }} value={selectedRecipeIng} onChange={(e) => setSelectedRecipeIng(e.target.value)} aria-label="Malzeme">
-              {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>)}
-            </select>
-            <input className="field-input" style={{ width: 96 }} type="number" min="0" step="any" inputMode="decimal" value={selectedRecipeAmt} onChange={(e) => setSelectedRecipeAmt(e.target.value)} placeholder="Miktar" aria-label="Miktar" />
-            <button type="button" className="btn btn-secondary" onClick={addRecipe}><Ic n="plus" className="ic-sm" />Ekle</button>
-          </div>
-          {newPrdRecipe.length > 0 && (
-            <div className="ops-list">
-              {newPrdRecipe.map((r, idx) => {
-                const ing = ingredients.find((x) => x.id === r.ingredientId);
-                return <ItemRow key={idx} title={ing?.name || "Malzeme"} sub={`${r.amount} ${ing?.unit || ""}`} onDelete={() => setNewPrdRecipe((prev) => prev.filter((_, i) => i !== idx))} name={`${ing?.name || "Malzeme"} reçete satırı`} />;
-              })}
-            </div>
-          )}
-        </div>
+        <RecipeEditor value={newPrdRecipe} onChange={setNewPrdRecipe} ingredients={ingredients} price={newPrdPrice} onCreate={(value) => handleSaveIngredient(value)} />
 
         <Field label="Barkod (isteğe bağlı)"><input className="field-input" inputMode="numeric" value={newPrdBarcode} onChange={(e) => setNewPrdBarcode(e.target.value.replace(/[^A-Za-z0-9._-]/g, "").slice(0, 32))} placeholder="8690000000012" aria-label="Barkod" /></Field>
         <Field label="İkon (emoji)"><input className="field-input" style={{ width: 96 }} value={newPrdEmoji} onChange={(e) => setNewPrdEmoji(e.target.value)} /></Field>

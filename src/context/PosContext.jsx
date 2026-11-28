@@ -24,6 +24,7 @@ import {
 import { sanitizeOptionGroups, buildOrderLine, mergeIntoItems, optionSummary, lineConsumption } from "../utils/productOptions";
 import { applyStockAction, appendLog } from "../utils/stockLog";
 import { productStats, itemCount, closingTotals, paymentLine } from "../utils/ledger";
+import { removeIngredientFromProducts, cleanRecipe } from "../utils/ingredients";
 import { findByBarcode, cleanBarcode, barcodeTaken, normalizeGuests } from "../utils/posHelpers";
 import { exportExcelByCategory as runExcelExport } from "../utils/excelExport";
 
@@ -166,8 +167,6 @@ export function PosProvider({ children }) {
   const [newPrdRecipe, setNewPrdRecipe] = useState([]);
   const [newPrdOptions, setNewPrdOptions] = useState([]);
   const [optionPickerProduct, setOptionPickerProduct] = useState(null);
-  const [selectedRecipeIng, setSelectedRecipeIng] = useState(INITIAL_INGREDIENTS[0]?.id || "");
-  const [selectedRecipeAmt, setSelectedRecipeAmt] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingCategoryOldName, setEditingCategoryOldName] = useState(null);
   const [editingStaffId, setEditingStaffId] = useState(null);
@@ -662,6 +661,35 @@ export function PosProvider({ children }) {
     setStockModalIng(null); setStockAdjustAmount(""); setStockExpenseCost("");
   };
 
+  /** Yönetim işlemi: kilit kapalıysa PIN ister. */
+  const requireAdmin = () => {
+    if (isAdminUnlocked) return true;
+    setPendingProtectedTab(null); setPinInput(""); setPinError(false); setPinModalOpen(true);
+    return false;
+  };
+
+  /** Malzeme ekler/günceller; yeni kimliği döndürür. Düzenlemede stok miktarı korunur (stok hareketleri kayıtlı kalsın). */
+  const handleSaveIngredient = (value, id) => {
+    if (id) {
+      setIngredients((prev) => prev.map((i) => (i.id === id ? { ...i, ...value, stock: i.stock } : i)));
+      showToast(`${value.name} güncellendi.`);
+      return id;
+    }
+    const newId = `ing-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+    setIngredients((prev) => [...prev, { id: newId, ...value }]);
+    showToast(`${value.name} malzemelere eklendi.`);
+    return newId;
+  };
+
+  const handleDeleteIngredient = (id) => {
+    const target = ingredients.find((i) => i.id === id);
+    if (!target) return;
+    const snap = { ingredients, products };
+    setIngredients((prev) => prev.filter((i) => i.id !== id));
+    setProducts((prev) => removeIngredientFromProducts(prev, id));
+    offerUndo(`${target.name} silindi`, () => { setIngredients(snap.ingredients); setProducts(snap.products); });
+  };
+
   const handleAddExpense = (e) => {
     e.preventDefault();
     const amt = Number(newExpAmount);
@@ -682,7 +710,7 @@ export function PosProvider({ children }) {
     if (!newPrdName.trim() || !price || price <= 0) return;
     const barcode = cleanBarcode(newPrdBarcode);
     if (barcode && barcodeTaken(products, barcode, editingPrdId)) return showToast("Bu barkod başka bir üründe kayıtlı.");
-    const itemData = { name: newPrdName.trim(), category: newPrdCategory, price, image: newPrdEmoji || "☕", isQuickFav: newPrdQuickFav, recipe: newPrdRecipe, options: sanitizeOptionGroups(newPrdOptions), barcode };
+    const itemData = { name: newPrdName.trim(), category: newPrdCategory, price, image: newPrdEmoji || "☕", isQuickFav: newPrdQuickFav, recipe: cleanRecipe(newPrdRecipe), options: sanitizeOptionGroups(newPrdOptions), barcode };
     if (editingPrdId) {
       setProducts((prev) => prev.map((p) => (p.id === editingPrdId ? { ...p, ...itemData } : p)));
       showToast(`${itemData.name} ürünü güncellendi!`); setEditingPrdId(null);
@@ -898,11 +926,12 @@ export function PosProvider({ children }) {
     analyticsSubTab, setAnalyticsSubTab, reportProductSearch, setReportProductSearch, reportProductCategory, setReportProductCategory, reportProductSort, setReportProductSort,
     reportReceiptSearch, setReportReceiptSearch, reportReceiptMethod, setReportReceiptMethod, reportReceiptStaff, setReportReceiptStaff, reportExpenseSearch, setReportExpenseSearch, reportExpenseCategory, setReportExpenseCategory,
     settingsSubTab, setSettingsSubTab, editingTableId, setEditingTableId, newTableName, setNewTableName, newTableZone, setNewTableZone, newZoneName, setNewZoneName, editingZoneOldName, setEditingZoneOldName,
-    editingPrdId, setEditingPrdId, newPrdName, setNewPrdName, newPrdCategory, setNewPrdCategory, newPrdPrice, setNewPrdPrice, newPrdEmoji, setNewPrdEmoji, newPrdQuickFav, setNewPrdQuickFav, newPrdRecipe, setNewPrdRecipe, selectedRecipeIng, setSelectedRecipeIng, selectedRecipeAmt, setSelectedRecipeAmt,
+    editingPrdId, setEditingPrdId, newPrdName, setNewPrdName, newPrdCategory, setNewPrdCategory, newPrdPrice, setNewPrdPrice, newPrdEmoji, setNewPrdEmoji, newPrdQuickFav, setNewPrdQuickFav, newPrdRecipe, setNewPrdRecipe,
     newCategoryName, setNewCategoryName, editingCategoryOldName, setEditingCategoryOldName, editingStaffId, setEditingStaffId, newStaffName, setNewStaffName, newStaffRole, setNewStaffRole, newStaffColor, setNewStaffColor,
     editingEsnafId, setEditingEsnafId, editEsnafName, setEditEsnafName, editEsnafShopType, setEditEsnafShopType, editEsnafPhone, setEditEsnafPhone, editEsnafDiscount, setEditEsnafDiscount, editEsnafNote, setEditEsnafNote,
     resetConfirmOpen, setResetConfirmOpen, criticalIngredients, filteredSales, filteredExpenses, totalEsnafReceivable, kpiMetrics, topProducts, staffPerformance, trendChartData, activeOccupiedCount, openTablesTotalAmount,
     addProductToTable, updateOrderItemQty, setTableStaff, setTableDiscount, saveItemNote, completeTableOrder, handlePartialPayment, handleConfirmEsnafCharge, handleQuickCreateEsnaf, handleCollectEsnafPayment, copyEsnafWhatsAppSummary, startFastEsnafOrder,
+    requireAdmin, handleSaveIngredient, handleDeleteIngredient,
     handleTransferTable, handleStockAdjustment, handleAddExpense, handleSaveProduct, startEditProduct, handleDeleteProduct, handleSaveTable, handleDeleteTable, handleSaveZone, handleDeleteZone, handleSaveCategory, handleDeleteCategory,
     handleSaveStaff, handleDeleteStaff, handleSaveEsnafEdit, handleDeleteEsnaf, handleDeleteSaleReceipt, handleLogoFileUpload, handleManualForceSync, exportFullBackupFile, handleImportBackupFile, handleResetDemoData, exportExcelByCategory
   };

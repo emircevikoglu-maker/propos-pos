@@ -4,10 +4,12 @@ import { formatTL } from "../utils/formatters";
 import { summarizeStockLog } from "../utils/stockLog";
 import { Ic } from "./Ic";
 import { Bar, Card, Empty, Page, Seg, Tag } from "./page";
+import { useSheet } from "./Sheet";
+import { IngredientSheet } from "./IngredientSheet";
 
 const status = (ing) => (ing.stock <= 0 ? ["danger", "Tükendi"] : ing.stock <= ing.minLimit ? ["warning", "Kritik"] : ["success", "Yeterli"]);
 
-function Ingredients() {
+function Ingredients({ onEdit, onNew }) {
   const { ingredients, setStockModalIng, setStockAdjustType, setStockAdjustAmount, setStockExpenseCost } = usePos();
   // Kritik olanlar başa: ilk bakışta "neye dikkat etmeli" görünür; kendi içinde ad sırası sabit.
   const list = React.useMemo(
@@ -16,7 +18,12 @@ function Ingredients() {
   );
   const open = (ing) => { setStockModalIng(ing); setStockAdjustType("add"); setStockAdjustAmount(""); setStockExpenseCost(""); };
   return (
-    <Card span={12} title="Malzemeler" aside={<span className="label">Adisyon kapanınca reçeteye göre otomatik düşer</span>}>
+    <Card
+      span={12}
+      title="Malzemeler"
+      aside={<span className="page-actions"><span className="label">Adisyon kapanınca reçeteye göre otomatik düşer</span><button type="button" className="btn btn-primary" onClick={onNew}><Ic n="plus" className="ic-sm" />Yeni malzeme</button></span>}
+    >
+      {list.length === 0 && <Empty icon="box">Henüz malzeme yok. "Yeni malzeme" ile birim ve maliyetini tanımlayın; ürün reçetelerinde kullanın.</Empty>}
       <div className="stock-grid">
         {list.map((ing) => {
           const [tone, text] = status(ing);
@@ -27,7 +34,10 @@ function Ingredients() {
               <Bar value={ing.stock / (ing.minLimit * 2.5 || 1)} tone={tone} />
               <div className="stock-foot">
                 <span className="label">Kritik {ing.minLimit} {ing.unit} · ~{ing.unitCost} ₺/{ing.unit}</span>
-                <button type="button" className="btn btn-secondary" onClick={() => open(ing)}><Ic n="plus" className="ic-sm" />Stok gir</button>
+                <span className="row-actions">
+                  <button type="button" className="icon-btn" aria-label={`${ing.name} malzemesini düzenle`} onClick={() => onEdit(ing)}><Ic n="note" /></button>
+                  <button type="button" className="btn btn-secondary" onClick={() => open(ing)}><Ic n="plus" className="ic-sm" />Stok gir</button>
+                </span>
               </div>
             </div>
           );
@@ -106,8 +116,11 @@ function Waste() {
 }
 
 export function StockView() {
-  const { criticalIngredients, ingredients, products, stockLog } = usePos();
+  const { criticalIngredients, ingredients, products, stockLog, requireAdmin } = usePos();
   const [tab, setTab] = React.useState("items");
+  const sheet = useSheet();
+  const [editing, setEditing] = React.useState(null); // düzenlenen malzemenin kimliği (null = yeni)
+  const openSheet = (ing) => { if (!requireAdmin()) return; setEditing(ing ? ing.id : null); sheet.open("malzeme"); };
   return (
     <Page
       label="Hammadde ve reçete"
@@ -130,9 +143,10 @@ export function StockView() {
       <div className="toolbar">
         <Seg label="Stok bölümü" value={tab} onChange={setTab} items={[["items", "Malzemeler", ingredients.length], ["recipes", "Reçeteler", products.length], ["waste", "Atık ve sayım", (stockLog || []).length]]} />
       </div>
-      {tab === "items" && <Ingredients />}
+      {tab === "items" && <Ingredients onEdit={openSheet} onNew={() => openSheet(null)} />}
       {tab === "recipes" && <Recipes />}
       {tab === "waste" && <Waste />}
+      {sheet.current === "malzeme" && <IngredientSheet ingredient={ingredients.find((i) => i.id === editing) || null} onClose={sheet.close} />}
     </Page>
   );
 }

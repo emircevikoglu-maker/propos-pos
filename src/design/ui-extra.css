@@ -184,3 +184,18 @@
   .cats, .products, .mobile-ticket-bar { min-width: 0; }
 }
 @media (max-width: 900px) { .cat-list .cat { flex: none; } }
+
+/* Malzeme paneli ve reçete düzenleyici (3.10.0) */
+.field-error { color: var(--danger); font-size: var(--fs-xs); }
+.field-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.sheet-foot { flex-wrap: wrap; }
+.recipe-row { display: grid; grid-template-columns: minmax(0, 1fr) 130px auto auto; gap: 8px; align-items: center; padding: 8px 8px 8px 14px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line-soft); }
+.recipe-name { display: grid; gap: 2px; min-width: 0; }
+.recipe-amount { display: flex; align-items: center; gap: 6px; }
+.recipe-amount .field-input { min-width: 0; background: var(--surface-3); }
+.recipe-new { display: grid; grid-template-columns: minmax(0, 1.4fr) 96px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+@media (max-width: 600px) {
+  .recipe-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .recipe-name { grid-column: 1 / -1; }
+  .recipe-new { grid-template-columns: 1fr 1fr; }
+}
