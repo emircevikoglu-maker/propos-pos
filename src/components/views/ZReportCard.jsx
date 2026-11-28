@@ -3,6 +3,7 @@ import { usePos } from "../../context/PosContext";
 import { formatTL } from "../../utils/formatters";
 import { celebrateZReport } from "../../design/celebrations";
 import { coverStats, cashDifference } from "../../utils/posHelpers";
+import { summarizeVoids } from "../../utils/voids";
 import { Card } from "../../ui/page";
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -19,7 +20,7 @@ const groupSum = (list, keyOf, pick) => {
 
 /** Gün sonu (Z) raporu: seçilen günün ciro, ödeme türü, personel ve kasa özeti. */
 export function ZReportCard() {
-  const { sales, expenses, staffList, brandSettings } = usePos();
+  const { sales, expenses, staffList, brandSettings, voidLog } = usePos();
   const today = dayKey(new Date().toISOString());
   const [day, setDay] = React.useState(today);
 
@@ -43,6 +44,7 @@ export function ZReportCard() {
     };
   }, [sales, expenses, staffList, day]);
 
+  const voids = React.useMemo(() => summarizeVoids((voidLog || []).filter((v) => v.timestamp && dayKey(v.timestamp) === day)), [voidLog, day]);
   const printReport = () => {
     const rows = (pairs) => pairs.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="r">${esc(formatTL(v))}</td></tr>`).join("") || '<tr><td colspan="2">Kayıt yok</td></tr>';
     const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Z Raporu ${esc(day)}</title>
@@ -53,6 +55,7 @@ table{width:100%;border-collapse:collapse}td{padding:3px 0}.r{text-align:right}.
 <h2>Ödeme türüne göre</h2><table>${rows(report.byMethod)}</table>
 <h2>Personele göre</h2><table>${rows(report.byStaff)}</table>
 <h2>Giderler</h2><table>${rows(report.expenseByMethod)}<tr class="t"><td>Toplam gider</td><td class="r">${esc(formatTL(report.expenseTotal))}</td></tr></table>
+<h2>İptaller</h2><table><tr><td>Kayıt</td><td class="r">${esc(voids.count)}</td></tr><tr><td>Tutar</td><td class="r">${esc(formatTL(voids.amount))}</td></tr><tr><td>Gönderildikten sonra</td><td class="r">${esc(formatTL(voids.afterSendAmount))}</td></tr></table>
 <h2>Kasa (nakit)</h2><table><tr><td>Nakit satış</td><td class="r">${esc(formatTL(report.cashIn))}</td></tr><tr><td>Nakit gider</td><td class="r">-${esc(formatTL(report.cashOut))}</td></tr><tr class="t"><td>Çekmecede olması gereken</td><td class="r">${esc(formatTL(report.drawer))}</td></tr></table>
 <script>window.onload=function(){window.print()}<\/script></body></html>`;
     const w = window.open("", "_blank", "width=420,height=700");
@@ -97,6 +100,7 @@ table{width:100%;border-collapse:collapse}td{padding:3px 0}.r{text-align:right}.
           <Row label="Brüt" value={report.gross} />
           <Row label="İndirim" value={-report.discount} />
           <Row label="Net ciro" value={report.net} strong />
+          {voids.count > 0 && <div className="sum-row"><span>İptal ({voids.count} kayıt)</span><span className="num">{formatTL(voids.amount)}</span></div>}
         </div>
         <Group title="Ödeme türü" pairs={report.byMethod} />
         <Group title="Personel" pairs={report.byStaff} />

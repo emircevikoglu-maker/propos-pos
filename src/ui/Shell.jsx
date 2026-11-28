@@ -129,7 +129,7 @@ function SystemMenu() {
 }
 
 function Topbar() {
-  const { brandSettings, celebration, goalProgressToday, sales, cloudStatus, syncPending, lastSyncedAt, setSyncModalOpen, showToast } = usePos();
+  const { brandSettings, celebration, goalProgressToday, sales, cloudStatus, syncPending, lastSyncedAt, setSyncModalOpen, showToast, streak } = usePos();
   const fill = React.useRef(null);
   const prev = React.useRef(0);
   const [now, setNow] = React.useState(() => new Date());
@@ -159,6 +159,11 @@ function Topbar() {
               <span className="goal-row"><span>{formatTL(Math.round(goal * progress))} / {formatTL(goal)}</span><span className="num">%{Math.min(999, Math.round(progress * 100))}</span></span>
               <span className="bar"><span className="bar-fill" ref={fill} /></span>
             </span>
+          </button>
+        )}
+        {streak && (
+          <button type="button" className="streak pressable" aria-label={`Hatasız sipariş serisi ${streak.current}`} onClick={() => showToast(`Hatasız sipariş serisi: ${streak.current} · en iyi ${streak.best}`)}>
+            <Ic n="flame" /><span className="num">{streak.current}</span>
           </button>
         )}
         {busy && <span className="busy-chip"><Ic n="zap" className="ic-sm" />Yoğun saat · kutlamalar sade</span>}

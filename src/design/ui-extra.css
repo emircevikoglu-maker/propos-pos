@@ -212,3 +212,8 @@
 /* Adisyon altı: İşlemler (ikon) · Gönder (n) · Ödeme */
 .ticket-actions.is-3 { grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1.15fr); }
 .ticket-actions.is-3 .btn { padding: 0 10px; white-space: nowrap; }
+
+/* Gönderim durumu ve hatasız sipariş serisi */
+.line-sent { display: flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--success); }
+.line-sent .ic { width: 12px; height: 12px; }
+@media (max-width: 600px) { .topbar .streak { display: none; } }

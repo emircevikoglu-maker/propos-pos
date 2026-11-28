@@ -9,6 +9,8 @@ import { ContentSheet } from "./ContentSheet";
 import { tableSubtotal, tableRemaining, tableCount, fmtMin } from "./hooks";
 import { PaySheet } from "./PaySheet";
 import { unsentCount } from "../print/model";
+import { VoidSheet } from "./VoidSheet";
+import { removalEffect } from "../utils/voids";
 import { OpsSheet } from "./OpsSheet";
 
 const FAV = "__fav";
@@ -41,8 +43,10 @@ function ProductCard({ product, qty, onAdd, onContent }) {
   );
 }
 
-function Line({ item, open, onToggle, onEdit }) {
+function Line({ item, open, onToggle, onEdit, onReduce }) {
   const { updateOrderItemQty, saveItemNote } = usePos();
+  // Gönderilmiş adet eksilecekse önce neden sorulur.
+  const reduce = (delta) => (onReduce ? onReduce(item, delta) : updateOrderItemQty(item.id, delta));
   const notes = parseNote(item.note);
   const toggleNote = (nt) => {
     const next = notes.includes(nt) ? notes.filter((x) => x !== nt) : [...notes, nt];
@@ -65,6 +69,7 @@ function Line({ item, open, onToggle, onEdit }) {
           <span className="line-name">{item.name}</span>
           {opts && <span className="line-opts">{opts}</span>}
           {removed && <span className="line-without">{removed}</span>}
+          {item.sentQty > 0 && <span className="line-sent"><Ic n="send" className="ic-sm" />{item.sentQty >= item.qty ? "Gönderildi" : `${item.sentQty}/${item.qty} gönderildi`}</span>}
           {notes.length > 0 && <span className="line-note">{notes.join(" · ")}</span>}
         </span>
         <span className="line-price">{formatTL(item.price * item.qty)}</span>
@@ -72,12 +77,12 @@ function Line({ item, open, onToggle, onEdit }) {
       {open && (
         <div className="line-tools">
           <span className="stepper">
-            <button type="button" aria-label="Azalt" onClick={() => updateOrderItemQty(item.id, -1)}><Ic n="minus" className="ic-sm" /></button>
+            <button type="button" aria-label="Azalt" onClick={() => reduce(-1)}><Ic n="minus" className="ic-sm" /></button>
             <span className="num">{item.qty}</span>
             <button type="button" aria-label="Artır" onClick={() => updateOrderItemQty(item.id, 1)}><Ic n="plus" className="ic-sm" /></button>
           </span>
           {onEdit && <button type="button" className="btn btn-secondary" onClick={onEdit}><Ic n="sliders" className="ic-sm" />İçerik</button>}
-          <button type="button" className="btn btn-danger btn-icon" aria-label="Satırı sil" onClick={() => updateOrderItemQty(item.id, -item.qty)}><Ic n="trash" className="ic-sm" /></button>
+          <button type="button" className="btn btn-danger btn-icon" aria-label="Satırı sil" onClick={() => reduce(-item.qty)}><Ic n="trash" className="ic-sm" /></button>
           <span className="line-notes">
             {NOTES.map((nt) => (
               <button key={nt} type="button" className="chip" aria-pressed={notes.includes(nt)} onClick={() => toggleNote(nt)}>{nt}</button>
@@ -103,13 +108,14 @@ export function OrderView() {
   const {
     activeTable: table, activeTableId, products, categories, setActiveTableId, addProductToTable,
     posSearch, setPosSearch, handleSearchEnter, optionPickerProduct, setOptionPickerProduct, confirmOptionPicker,
-    ingredients, updateLineContent, sendOrder
+    ingredients, updateLineContent, sendOrder, updateOrderItemQty
   } = usePos();
   const sheet = useSheet();
   const [cat, setCat] = React.useState(null);
   const [expanded, setExpanded] = React.useState(null);
   const [ticketOpen, setTicketOpen] = React.useState(false);
   const [editId, setEditId] = React.useState(null); // içeriği düzenlenen adisyon satırı
+  const [voiding, setVoiding] = React.useState(null); // {id, delta}: neden bekleyen iptal
   const badgeRef = React.useRef(null);
   const productsRef = React.useRef(null);
   const flying = React.useRef(false);
@@ -169,6 +175,11 @@ export function OrderView() {
   const editItem = editId ? table.items.find((i) => i.id === editId) : null;
   const editProduct = editItem ? products.find((p) => p.id === editItem.productId) : null;
   const openEdit = (item) => { setEditId(item.id); sheet.open("icerik"); };
+  const reduceLine = (item, delta) => {
+    if (removalEffect(item, delta).sentRemoved > 0) { setVoiding({ id: item.id, delta }); sheet.open("iptal"); return; }
+    updateOrderItemQty(item.id, delta);
+  };
+  const voidItem = voiding ? table.items.find((i) => i.id === voiding.id) : null;
 
   const onSearchKey = (e) => { if (e.key === "Enter" && handleSearchEnter()) e.preventDefault(); };
   const sub = tableSubtotal(table), rest = tableRemaining(table);
@@ -215,7 +226,7 @@ export function OrderView() {
             <div className="ticket-empty"><Ic n="receipt" /><div>Adisyon boş<br /><span className="label">Ürüne dokunun; çeşitli ürünlerde seçim penceresi açılır</span></div></div>
           ) : table.items.map((it) => (
             <Line key={it.id} item={it} open={expanded === it.id} onToggle={() => setExpanded(expanded === it.id ? null : it.id)}
-              onEdit={products.some((p) => p.id === it.productId) ? () => openEdit(it) : null} />
+              onEdit={products.some((p) => p.id === it.productId) ? () => openEdit(it) : null} onReduce={reduceLine} />
           ))}
         </div>
         <div className="ticket-foot">
@@ -240,6 +251,9 @@ export function OrderView() {
           confirmOptionPicker(content);
           fly(from);
         }} />
+      )}
+      {sheet.current === "iptal" && voidItem && (
+        <VoidSheet item={voidItem} delta={voiding.delta} onClose={sheet.close} onPick={(reason) => updateOrderItemQty(voidItem.id, voiding.delta, reason)} />
       )}
       {sheet.current === "icerik" && editItem && editProduct && (
         <ContentSheet product={editProduct} ingredients={ingredients} line={editItem} onClose={sheet.close} onConfirm={(content) => {

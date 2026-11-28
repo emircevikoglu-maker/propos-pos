@@ -51,7 +51,7 @@ export function isBusyNow(sales, now = Date.now()) {
  * `sales` yeni satışı İÇERİR. Her satışta en fazla bir an döner (ya da null).
  * `already` aynı gün zaten kutlananlar (once: true anlar) — PPCelebrate de kendi içinde engeller, burada çift güvence.
  */
-export function pickMoment({ sales, sale, goal = 0, now = Date.now(), already = {} }) {
+export function pickMoment({ sales, sale, goal = 0, now = Date.now(), already = {}, streak }) {
   const rev = revenueSales(sales);
   if (!sale || NON_REVENUE.includes(sale.paymentMethod)) return null;
   const today = dayKey(now);
@@ -75,16 +75,18 @@ export function pickMoment({ sales, sale, goal = 0, now = Date.now(), already = 
     const avg = prevTickets.reduce((a, b) => a + b, 0) / prevTickets.length;
     if (Number(sale.total) >= avg * BIG_TICKET_FACTOR && Number(sale.total) >= Math.max(...prevTickets)) return { kind: "bigTicket", data: { sub: `${sale.tableName} · ₺${Math.round(sale.total)}` } };
   }
-  if (todays.length > 0 && todays.length % STREAK_STEP === 0) return { kind: "streak", data: { n: todays.length } };
+  // Hatasız sipariş serisi (verilmezse bugünkü satış sayısı).
+  const run = Number.isFinite(streak) ? streak : todays.length;
+  if (run > 0 && run % STREAK_STEP === 0) return { kind: "streak", data: { n: run } };
   return null;
 }
 
 let lastDay = null;
 /** Yeni satış kaydedildiğinde çağrılır. */
-export function celebrateSale({ sales, sale, goal }) {
+export function celebrateSale({ sales, sale, goal, streak }) {
   const today = dayKey(Date.now());
   if (lastDay !== today) { PPCelebrate.resetDay(); lastDay = today; }
-  const m = pickMoment({ sales, sale, goal });
+  const m = pickMoment({ sales, sale, goal, streak });
   if (m) PPCelebrate.moment(m.kind, m.data);
   return m;
 }

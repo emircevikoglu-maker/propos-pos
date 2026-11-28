@@ -3,13 +3,13 @@
 // Saf fonksiyonlar: DOM/ağ yok, test edilebilir.
 //
 // Kurallar
-//  - Defterler (sales, expenses, stockLog): kimliğe göre BİRLEŞİM; silme, base'e göre iki taraftan birinin sildiği kayıt silinir.
+//  - Defterler (sales, expenses, stockLog, voidLog): kimliğe göre BİRLEŞİM; silme, base'e göre iki taraftan birinin sildiği kayıt silinir.
 //  - Varlık listeleri (tables, products, ingredients, staffList, esnafList, ...): kimlik başına 3 yönlü; iki taraf da değiştirdiyse alan alan.
 //  - Sayısal sayaçlar (stock, qty, paidAmount, balance, guests): iki taraf da değiştirdiyse DELTA birleşir (remote + (local − base)).
 //  - Başka alanlarda gerçek çakışma: yerel kazanır ve çakışma yolu raporlanır.
 //  - Metin listeleri (zones, categories): küme birleşimi (eklenenler korunur, silinenler silinir).
 
-export const LEDGERS = ["sales", "expenses", "stockLog"];
+export const LEDGERS = ["sales", "expenses", "stockLog", "voidLog"];
 export const STRING_SETS = ["zones", "categories"];
 export const DELTA_KEYS = ["stock", "qty", "paidAmount", "balance", "guests"];
 export const META_KEYS = ["version", "tenantId", "rev", "exportedAt", "updatedBy"];

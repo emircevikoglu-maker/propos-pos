@@ -5,6 +5,7 @@ import { PPMotion as M } from "../design/motion";
 import { Ic } from "./Ic";
 import { Bar, Card, Empty, Kpi, Page, Seg, Tag } from "./page";
 import { PeriodBar } from "./PeriodBar";
+import { summarizeVoids } from "../utils/voids";
 
 const EXPENSE_CATEGORIES = ["Toptancı / Malzeme", "Fatura / Sabit Gider", "Kira & Aidat", "Personel Gideri", "Bakım / Ekipman", "Vergi & Diğer"];
 const METHOD_TONE = { "Nakit": "success", "Kredi Kartı": "primary", "Yemek Kartı": "warning", "Esnaf Cariye Yazıldı": undefined, "İkram / İptal": "danger" };
@@ -232,22 +233,71 @@ function Expenses() {
   );
 }
 
+function Voids() {
+  const { filteredVoids = [], staffList } = usePos();
+  const staffName = (id) => staffList.find((s) => s.id === id)?.name || "";
+  const sum = summarizeVoids(filteredVoids, (e) => staffName(e.staffId) || e.user || "Kasa");
+  return (
+    <>
+      <Kpi hero label="İptal tutarı" value={formatTL(sum.amount)} sub={`${sum.count} kayıt · ${sum.qty} adet`} />
+      <Kpi label="Gönderildikten sonra" value={formatTL(sum.afterSendAmount)} tone={sum.afterSendAmount > 0 ? "warning" : undefined} sub={`${sum.afterSendCount} kayıt · hazırlanmış olabilir`} />
+      <Card span={6} title="Masa sorumlusuna göre">
+        {sum.byPerson.length === 0 ? <Empty icon="users">Bu dönemde iptal yok.</Empty> : (
+          <div className="rank">
+            {sum.byPerson.slice(0, 6).map((p) => (
+              <div key={p.name} className="rank-row">
+                <span className="rank-name">{p.name} <span className="label">{p.count} kayıt</span></span>
+                <span className="rank-v">{formatTL(p.amount)}</span>
+                <Bar value={p.amount / Math.max(1, sum.byPerson[0].amount)} tone="warning" />
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+      <Card span={12} title="İptal ve silinen kayıtlar" aside={<span className="label">{filteredVoids.length > 60 ? "İlk 60 kayıt · " : ""}{filteredVoids.length} kayıt</span>}>
+        {filteredVoids.length === 0 ? <Empty icon="check">Bu dönemde silinen ürün ya da kayıt yok.</Empty> : (
+          <div className="dt-wrap">
+            <table className="dt">
+              <thead><tr><th>Zaman</th><th>Ürün</th><th>Masa</th><th className="r">Adet</th><th className="r">Tutar</th><th>Durum</th><th>Neden</th><th>Yapan</th></tr></thead>
+              <tbody>
+                {filteredVoids.slice(0, 60).map((v) => (
+                  <tr key={v.id}>
+                    <td className="muted" style={{ whiteSpace: "nowrap" }}>{formatDateShort(v.timestamp)}</td>
+                    <td>{v.name}{v.details && <span className="label" style={{ display: "block" }}>{v.details}</span>}</td>
+                    <td className="muted">{v.tableName}</td>
+                    <td className="r">{v.qty}</td>
+                    <td className="r">{formatTL(v.amount)}</td>
+                    <td><Tag tone={v.kind === "receipt" ? "danger" : v.afterSend ? "warning" : undefined}>{v.kind === "receipt" ? "Kayıt silme" : v.afterSend ? "Gönderildikten sonra" : "Gönderilmeden"}</Tag></td>
+                    <td className="muted">{v.reason || "—"}</td>
+                    <td className="muted">{v.user || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </>
+  );
+}
+
 export function AnalyticsView() {
   const { analyticsSubTab, setAnalyticsSubTab, exportExcelByCategory } = usePos();
-  const tab = EXCEL_LABEL[analyticsSubTab] ? analyticsSubTab : "overview";
+  const tab = EXCEL_LABEL[analyticsSubTab] || analyticsSubTab === "voids" ? analyticsSubTab : "overview";
   return (
     <Page
       label="Satış, ürün ve gider raporları"
       title="Analiz"
-      actions={<button type="button" className="btn btn-secondary" onClick={() => exportExcelByCategory(tab)}><Ic n="receipt" className="ic-sm" />{EXCEL_LABEL[tab]} Excel (.xls)</button>}
+      actions={EXCEL_LABEL[tab] && <button type="button" className="btn btn-secondary" onClick={() => exportExcelByCategory(tab)}><Ic n="receipt" className="ic-sm" />{EXCEL_LABEL[tab]} Excel (.xls)</button>}
     >
       <PeriodBar />
       <div className="toolbar">
-        <Seg label="Rapor bölümü" value={tab} onChange={setAnalyticsSubTab} items={[["overview", "Özet"], ["products", "Ürünler"], ["receipts", "Adisyonlar"], ["expenses", "Giderler"]]} />
+        <Seg label="Rapor bölümü" value={tab} onChange={setAnalyticsSubTab} items={[["overview", "Özet"], ["products", "Ürünler"], ["receipts", "Adisyonlar"], ["voids", "İptaller"], ["expenses", "Giderler"]]} />
       </div>
       {tab === "overview" && <Overview />}
       {tab === "products" && <Products />}
       {tab === "receipts" && <Receipts />}
+      {tab === "voids" && <Voids />}
       {tab === "expenses" && <Expenses />}
     </Page>
   );

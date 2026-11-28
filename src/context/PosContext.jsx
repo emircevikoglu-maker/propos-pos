@@ -12,7 +12,7 @@ import {
 } from "../utils/formatters";
 import {
   pushState, pullState, verifyManagerPin, changeManagerPin, clearManagerSession, unpairDevice,
-  fetchRealtimeConfig
+  fetchRealtimeConfig, getUserSession
 } from "../services/apiService";
 import { createSyncEngine } from "../services/syncEngine";
 import { saveState as saveLocalState, saveBase as saveLocalBase, saveMeta as saveLocalMeta, requestPersistence, storageEstimate } from "../services/localDb";
@@ -28,6 +28,7 @@ import { removeIngredientFromProducts, cleanRecipe } from "../utils/ingredients"
 import { buildKitchenTickets, buildTableReceipt, buildSaleReceipt, pendingEntries, markSent, unsentCount } from "../print/model";
 import { renderTickets, printHtml } from "../print/render";
 import { loadDevicePrint, saveDevicePrint } from "../print/device";
+import { removalEffect, lineVoid, receiptVoid, appendVoids, cleanStreak } from "../utils/voids";
 import { findByBarcode, cleanBarcode, barcodeTaken, normalizeGuests } from "../utils/posHelpers";
 import { exportExcelByCategory as runExcelExport } from "../utils/excelExport";
 
@@ -91,6 +92,7 @@ export function PosProvider({ children }) {
   const [expenses, setExpenses] = useState(() => INITIAL_DB_SNAPSHOT?.expenses || generateInitialExpenses());
   const [esnafList, setEsnafList] = useState(() => INITIAL_DB_SNAPSHOT?.esnafList || INITIAL_ESNAF);
   const [stockLog, setStockLog] = useState(() => (Array.isArray(INITIAL_DB_SNAPSHOT?.stockLog) ? INITIAL_DB_SNAPSHOT.stockLog : []));
+  const [voidLog, setVoidLog] = useState(() => (Array.isArray(INITIAL_DB_SNAPSHOT?.voidLog) ? INITIAL_DB_SNAPSHOT.voidLog : []));
   const [stockReason, setStockReason] = useState("Son kullanma");
   const [newPrdBarcode, setNewPrdBarcode] = useState("");
 
@@ -205,7 +207,7 @@ export function PosProvider({ children }) {
 
   // ---- Eşitleme: IndexedDB'de kalıcı yerel durum + sunucuyla üç yönlü birleştirme (services/syncEngine.js) ----
   const stateRef = useRef(null);
-  stateRef.current = { brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog };
+  stateRef.current = { brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog, voidLog };
   const engineRef = useRef(null);
 
   const applySyncedState = (st, { remote }) => {
@@ -221,6 +223,7 @@ export function PosProvider({ children }) {
     if (Array.isArray(st.expenses)) setExpenses(st.expenses);
     if (Array.isArray(st.esnafList)) setEsnafList(st.esnafList);
     if (Array.isArray(st.stockLog)) setStockLog(st.stockLog);
+    if (Array.isArray(st.voidLog)) setVoidLog(st.voidLog);
     setLastSyncedAt(new Date().toISOString());
     if (remote) setTimeout(() => { isRemoteUpdateRef.current = false; }, 250);
   };
@@ -307,7 +310,7 @@ export function PosProvider({ children }) {
     if (isInitialMountRef.current) { isInitialMountRef.current = false; return; }
     if (isRemoteUpdateRef.current) return;
     if (engineRef.current) engineRef.current.localChanged(stateRef.current);
-  }, [brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog]);
+  }, [brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog, voidLog]);
 
   // 429: sunucu "yavaşla" dedi. Kasada pop-up yok, kısa bir bilgi yeter; senkron kendini toparlar.
   useEffect(() => {
@@ -487,20 +490,46 @@ export function PosProvider({ children }) {
     const product = item && products.find((x) => x.id === item.productId);
     if (!product) return;
     const tid = activeTable.id;
+    const { cancelled } = editLine(activeTable.items, itemId, product, content);
     setTables((prev) => prev.map((t) => (t.id === tid ? { ...t, items: editLine(t.items, itemId, product, content).items } : t)));
+    if (cancelled) {
+      if (printDevice.autoKitchen) printTickets(kitchenTickets(activeTable, [{ item: cancelled, qty: cancelled.qty }], { cancel: true, reason: "İçerik değişti" }));
+      showToast("İçerik değişti: yeni hali için tekrar \"Gönder\" deyin.", "warning");
+    }
   };
 
-  const updateOrderItemQty = (itemId, delta) => {
+  const currentUser = () => { const s = getUserSession(); return s ? s.displayName || s.username : ""; };
+
+  /** Adet değişimi. Gönderilmiş adet eksilirse (neden ile) iptal defterine yazılır; satır silme 5 sn geri alınabilir. */
+  const updateOrderItemQty = (itemId, delta, reason = "") => {
     if (!activeTable) return;
-    const removing = activeTable.items.find((i) => i.id === itemId && i.qty + delta <= 0);
-    if (removing) {
+    const item = activeTable.items.find((i) => i.id === itemId);
+    if (!item) return;
+    const tid = activeTable.id;
+    const effect = delta < 0 ? removalEffect(item, delta) : null;
+    const entry = effect ? lineVoid({ table: activeTable, item, delta, reason, user: currentUser() }) : null;
+    if (effect && (effect.wholeLine || entry)) {
       const prevTable = activeTable;
-      const tid = activeTable.id;
-      offerUndo(`${removing.name} adisyondan çıkarıldı`, () => setTables((prev) => prev.map((t) => (t.id === tid ? prevTable : t))));
+      const cancelTickets = effect.sentRemoved ? kitchenTickets(activeTable, [{ item, qty: effect.sentRemoved }], { cancel: true, reason }) : [];
+      offerUndo(
+        effect.wholeLine ? `${item.name} adisyondan çıkarıldı` : `${effect.removed}× ${item.name} iptal edildi`,
+        () => {
+          setTables((prev) => prev.map((t) => (t.id === tid ? prevTable : t)));
+          if (entry) setVoidLog((prev) => prev.filter((v) => v.id !== entry.id));
+        },
+        // İptal fişi geri alma süresi dolunca basılır: geri alınan iptal mutfağa gitmez.
+        () => { if (printDevice.autoKitchen && cancelTickets.length) printTickets(cancelTickets); }
+      );
     }
+    if (entry) setVoidLog((prev) => appendVoids(prev, [entry]));
     setTables((prev) => prev.map((t) => {
-      if (t.id !== activeTable.id) return t;
-      const items = t.items.map((i) => (i.id === itemId ? { ...i, qty: i.qty + delta } : i)).filter((i) => i.qty > 0);
+      if (t.id !== tid) return t;
+      const items = t.items.map((i) => {
+        if (i.id !== itemId) return i;
+        const next = { ...i, qty: i.qty + delta };
+        if (effect && i.sentQty) next.sentQty = removalEffect(i, delta).sentQty;
+        return next;
+      }).filter((i) => i.qty > 0);
       const occ = items.length > 0;
       return { ...t, status: occ ? "occupied" : "empty", openedAt: occ ? t.openedAt : null, discount: occ ? t.discount : 0, paidAmount: occ ? t.paidAmount : 0, guests: occ ? t.guests : 0, items };
     }));
@@ -544,7 +573,7 @@ export function PosProvider({ children }) {
     offerUndo(
       `${closedName} kapatıldı · ${formatTL(remainingTotal)} · ${paymentMethod} · ${staffName}`,
       () => { setTables(snap.tables); setSales(snap.sales); setIngredients(snap.ingredients); },
-      () => celebrateSale({ sales: [newSale, ...snap.sales], sale: newSale, goal: celebration.goal })
+      () => celebrateSale({ sales: [newSale, ...snap.sales], sale: newSale, goal: celebration.goal, streak: cleanStreak([newSale, ...snap.sales], voidLog).current })
     );
   };
 
@@ -888,9 +917,16 @@ export function PosProvider({ children }) {
   };
 
   const handleDeleteSaleReceipt = (saleId) => {
+    const sale = sales.find((s) => s.id === saleId);
+    if (!sale) return;
+    const entry = receiptVoid({ sale, user: currentUser() });
     setSales((prev) => prev.filter((s) => s.id !== saleId));
+    setVoidLog((prev) => appendVoids(prev, [entry]));
     setInspectedSale(null);
-    showToast("Adisyon kaydı satış geçmişinden silindi.");
+    offerUndo(`${sale.tableName} kaydı silindi`, () => {
+      setSales((prev) => (prev.some((s) => s.id === sale.id) ? prev : [sale, ...prev].sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))));
+      setVoidLog((prev) => prev.filter((v) => v.id !== entry.id));
+    });
   };
 
   const handleLogoFileUpload = (e) => {
@@ -913,7 +949,7 @@ export function PosProvider({ children }) {
   };
 
   const exportFullBackupFile = () => {
-    const backupPayload = { version: "1.0", exportedAt: new Date().toISOString(), brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog };
+    const backupPayload = { version: "1.0", exportedAt: new Date().toISOString(), brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog, voidLog };
     const url = URL.createObjectURL(new Blob([JSON.stringify(backupPayload, null, 2)], { type: "application/json" }));
     Object.assign(document.createElement("a"), { href: url, download: `ProPos_Tam_Sistem_Yedegi_${new Date().toISOString().slice(0, 10)}.json` }).click();
     URL.revokeObjectURL(url);
@@ -939,6 +975,7 @@ export function PosProvider({ children }) {
         if (p.expenses) setExpenses(p.expenses);
         if (p.esnafList) setEsnafList(p.esnafList);
         if (Array.isArray(p.stockLog)) setStockLog(p.stockLog);
+        if (Array.isArray(p.voidLog)) setVoidLog(p.voidLog);
         showToast("✅ Yedek dosyası başarıyla geri yüklendi ve tüm cihazlarla eşitlendi!");
       } catch (err) {
         showToast("Yedek dosyası okunamadı.");
@@ -958,6 +995,9 @@ export function PosProvider({ children }) {
   const exportExcelByCategory = (reportType = "overview") =>
     runExcelExport({ reportType, brandSettings, globalPeriod, customStartDate, customEndDate, filteredSales, filteredExpenses, kpiMetrics, topProducts, staffList, staffPerformance, esnafList, totalEsnafReceivable, showToast });
 
+  const filteredVoids = useMemo(() => voidLog.filter((v) => isWithinPeriod(v.timestamp, globalPeriod, customStartDate, customEndDate)), [voidLog, globalPeriod, customStartDate, customEndDate]);
+  const streak = useMemo(() => cleanStreak(sales, voidLog), [sales, voidLog]);
+
   const activeOccupiedCount = tables.filter((t) => t.status === "occupied").length;
   const openTablesTotalAmount = tables.reduce((acc, t) => acc + Math.max(0, t.items.reduce((s, i) => s + i.price * i.qty, 0) - (t.discount || 0) - (t.paidAmount || 0)), 0);
 
@@ -965,7 +1005,7 @@ export function PosProvider({ children }) {
     ACTIVE_TENANT_ID, activeCurrencyObj, clientDeviceId: clientDeviceIdRef.current,
     activeTab, setActiveTab, handleTabNavigation, globalPeriod, setGlobalPeriod, customStartDate, setCustomStartDate, customEndDate, setCustomEndDate,
     cloudStatus, lastSyncedAt, syncModalOpen, setSyncModalOpen,
-    syncPending, storageInfo, stockLog, stockReason, setStockReason, newPrdBarcode, setNewPrdBarcode, changeTableGuests, handleSearchEnter,
+    voidLog, filteredVoids, streak, syncPending, storageInfo, stockLog, stockReason, setStockReason, newPrdBarcode, setNewPrdBarcode, changeTableGuests, handleSearchEnter,
     celebration, updateCelebration, goalProgressToday: goalProgress(sales, celebration.goal), celebrateZReport,
     isAdminUnlocked, pinBusy, handleChangePin, handleSetupFirstPin, handleUnpairDevice,
     optionPickerProduct, setOptionPickerProduct, confirmOptionPicker, newPrdOptions, setNewPrdOptions, setIsAdminUnlocked, pinModalOpen, setPinModalOpen, pinInput, setPinInput, pinError, setPinError, pendingProtectedTab, setPendingProtectedTab, newPinValue, setNewPinValue, handleVerifyPin, handleLockAdmin,
