@@ -8,6 +8,7 @@ import { useSheet } from "./Sheet";
 import { ContentSheet } from "./ContentSheet";
 import { tableSubtotal, tableRemaining, tableCount, fmtMin } from "./hooks";
 import { PaySheet } from "./PaySheet";
+import { unsentCount } from "../print/model";
 import { OpsSheet } from "./OpsSheet";
 
 const FAV = "__fav";
@@ -102,7 +103,7 @@ export function OrderView() {
   const {
     activeTable: table, activeTableId, products, categories, setActiveTableId, addProductToTable,
     posSearch, setPosSearch, handleSearchEnter, optionPickerProduct, setOptionPickerProduct, confirmOptionPicker,
-    ingredients, updateLineContent
+    ingredients, updateLineContent, sendOrder
   } = usePos();
   const sheet = useSheet();
   const [cat, setCat] = React.useState(null);
@@ -173,6 +174,7 @@ export function OrderView() {
   const sub = tableSubtotal(table), rest = tableRemaining(table);
   const min = table.openedAt ? getElapsedMinutes(table.openedAt) : 0;
   const empty = table.items.length === 0;
+  const unsent = unsentCount(table.items);
 
   return (
     <div className="order">
@@ -220,8 +222,9 @@ export function OrderView() {
           <div className="sum-row"><span>{count} ürün</span><span>{table.discount > 0 ? <span className="ticket-discount">İndirim −{formatTL(table.discount)}</span> : "KDV dahil"}</span></div>
           {table.paidAmount > 0 && <div className="sum-row"><span>Alınan kısmi ödeme</span><span>−{formatTL(table.paidAmount)}</span></div>}
           <div className="total-row"><span className="label" style={{ fontSize: "var(--fs-md)" }}>{table.paidAmount > 0 ? "Kalan" : "Toplam"}</span><span className="money-total">{formatTL(rest)}</span></div>
-          <div className="ticket-actions">
-            <button type="button" className="btn btn-secondary btn-lg" onClick={() => sheet.open("islem")}><Ic n="sliders" className="ic-sm" />İşlemler</button>
+          <div className="ticket-actions is-3">
+            <button type="button" className="btn btn-secondary btn-lg" aria-label="İşlemler" title="İşlemler" onClick={() => sheet.open("islem")}><Ic n="sliders" /></button>
+            <button type="button" className="btn btn-secondary btn-lg" disabled={!unsent} onClick={sendOrder}><Ic n="send" className="ic-sm" />Gönder{unsent > 0 && <span className="num"> ({unsent})</span>}</button>
             <button type="button" className="btn btn-primary btn-lg" disabled={empty || (sub <= 0 && rest <= 0 && !table.paidAmount)} onClick={() => sheet.open("odeme")}>Ödeme<Ic n="arrow" className="ic-sm" /></button>
           </div>
         </div>

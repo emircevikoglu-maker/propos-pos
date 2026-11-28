@@ -5,6 +5,7 @@ import { PPMotion as M } from "../design/motion";
 import { Ic } from "./Ic";
 import { Sheet } from "./Sheet";
 import { tableRemaining, tableCount } from "./hooks";
+import { SwitchRow } from "./page";
 
 const money0 = (n) => formatTL(Math.round(n));
 
@@ -23,7 +24,7 @@ export function cashChoices(sum) {
 export function PaySheet({ table, onClose }) {
   const {
     completeTableOrder, handlePartialPayment, setPartialPayModalOpen, setEsnafChargeMode, setEsnafChargeModalOpen,
-    selectedEsnafForCharge, setSelectedEsnafForCharge, esnafList
+    selectedEsnafForCharge, setSelectedEsnafForCharge, esnafList, printDevice, updatePrintDevice
   } = usePos();
   const sum = tableRemaining(table);
   const [method, setMethod] = React.useState("card");
@@ -125,6 +126,7 @@ export function PaySheet({ table, onClose }) {
           </div>
         )}
       </div>
+      {printDevice && <SwitchRow title="Ödeme sonrası adisyon yazdır" checked={printDevice.receiptAfterPay} onChange={(receiptAfterPay) => updatePrintDevice({ receiptAfterPay })} />}
     </Sheet>
   );
 }

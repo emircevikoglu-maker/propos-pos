@@ -25,6 +25,9 @@ import { sanitizeOptionGroups, buildOrderLine, mergeIntoItems, lineDetails, line
 import { applyStockAction, appendLog } from "../utils/stockLog";
 import { productStats, itemCount, closingTotals, paymentLine } from "../utils/ledger";
 import { removeIngredientFromProducts, cleanRecipe } from "../utils/ingredients";
+import { buildKitchenTickets, buildTableReceipt, buildSaleReceipt, pendingEntries, markSent, unsentCount } from "../print/model";
+import { renderTickets, printHtml } from "../print/render";
+import { loadDevicePrint, saveDevicePrint } from "../print/device";
 import { findByBarcode, cleanBarcode, barcodeTaken, normalizeGuests } from "../utils/posHelpers";
 import { exportExcelByCategory as runExcelExport } from "../utils/excelExport";
 
@@ -97,6 +100,10 @@ export function PosProvider({ children }) {
   const updateCelebration = (patch) => {
     setCelebrationState((prev) => { const next = { ...prev, ...patch }; saveCelebrationSettings(ACTIVE_TENANT_ID, next); return next; });
   };
+
+  // Yazdırma: cihaza özel kısım (kağıt, otomatik baskı)
+  const [printDevice, setPrintDeviceState] = useState(() => loadDevicePrint(ACTIVE_TENANT_ID));
+  const updatePrintDevice = (patch) => setPrintDeviceState((prev) => { const next = { ...prev, ...patch }; saveDevicePrint(ACTIVE_TENANT_ID, next); return next; });
 
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
@@ -530,6 +537,7 @@ export function PosProvider({ children }) {
     const staffName = staffList.find((st) => st.id === activeTable.staffId)?.name || "Personel";
     setSales((prev) => [newSale, ...prev]);
     deductRecipeIngredients(activeTable.items);
+    if (printDevice.receiptAfterPay && paymentMethod !== "İkram / İptal") printSaleReceipt(newSale);
     setTables((prev) => prev.map((t) => (t.id === activeTable.id ? { ...t, status: "empty", openedAt: null, discount: 0, paidAmount: 0, guests: 0, items: [] } : t)));
     setActiveTableId(null);
     // 5 sn içinde geri alınabilir; kutlama yalnızca kalıcılaşınca (geri alınan satış kutlanmaz).
@@ -554,6 +562,41 @@ export function PosProvider({ children }) {
     showToast(`${activeTable.name} için ${formatTL(amount)} (${paymentMethod}) kısmi ödeme alındı.`);
     setPartialPayAmount(""); setPartialPayModalOpen(false);
   };
+
+  // ---- Mutfak/bar gönderimi ve yazdırma ------------------------------------
+  const printTickets = (models) => {
+    const list = (Array.isArray(models) ? models : [models]).filter(Boolean);
+    if (list.length === 0) return false;
+    const ok = printHtml(renderTickets(list, { width: printDevice.width, money: formatTL }));
+    if (!ok) showToast("Bu tarayıcıda yazdırma başlatılamadı.", "warning");
+    return ok;
+  };
+  const staffNameOf = (id) => staffList.find((s) => s.id === id)?.name || "";
+  const receiptInfo = (staffId) => ({ businessName: brandSettings.businessName, footer: brandSettings.printing?.footer || "", staffName: staffNameOf(staffId) });
+  const kitchenTickets = (table, entries, flags = {}) => buildKitchenTickets(entries, {
+    tableName: table.name, staffName: staffNameOf(table.staffId), stations: brandSettings.printing?.stations,
+    categoryOf: (pid) => products.find((x) => x.id === pid)?.category || "", ...flags
+  });
+
+  /** "Gönder": yalnızca henüz gitmemiş adetler istasyonlara gider; bu cihaz otomatik basıyorsa fiş çıkar. */
+  const sendOrder = () => {
+    if (!activeTable) return;
+    const count = unsentCount(activeTable.items);
+    if (!count) return;
+    const tickets = kitchenTickets(activeTable, pendingEntries(activeTable.items));
+    const tid = activeTable.id;
+    setTables((prev) => prev.map((t) => (t.id === tid ? { ...t, items: markSent(t.items) } : t)));
+    if (printDevice.autoKitchen) printTickets(tickets);
+    const where = tickets.map((t) => t.station.toLocaleLowerCase("tr-TR")).join(" + ");
+    showToast(where ? `${count} yeni ürün gönderildi (${where}).` : `${count} ürün gönderildi olarak işaretlendi.`);
+  };
+  const reprintKitchen = () => activeTable && printTickets(kitchenTickets(activeTable, activeTable.items.map((item) => ({ item, qty: item.qty })), { reprint: true }));
+  const printTableReceipt = () => activeTable && printTickets(buildTableReceipt(activeTable, receiptInfo(activeTable.staffId)));
+  const printSaleReceipt = (sale) => sale && printTickets(buildSaleReceipt(sale, receiptInfo(sale.staffId)));
+  const printTestTicket = () => printTickets([
+    { kind: "kitchen", station: "Bar", tableName: "Deneme masası", staffName: "", time: new Date().toISOString(), lines: [{ qty: 2, name: "Deneme ürünü", details: "Büyük · Süt yok", note: "Az şekerli" }] },
+    buildTableReceipt({ name: "Deneme masası", items: [{ name: "Şğüçöı İĞÜŞÇÖ deneme", price: 100, qty: 1 }] }, receiptInfo(""))
+  ]);
 
   // Esnaf & Cari Operations
   const handleConfirmEsnafCharge = () => {
@@ -941,6 +984,7 @@ export function PosProvider({ children }) {
     newCategoryName, setNewCategoryName, editingCategoryOldName, setEditingCategoryOldName, editingStaffId, setEditingStaffId, newStaffName, setNewStaffName, newStaffRole, setNewStaffRole, newStaffColor, setNewStaffColor,
     editingEsnafId, setEditingEsnafId, editEsnafName, setEditEsnafName, editEsnafShopType, setEditEsnafShopType, editEsnafPhone, setEditEsnafPhone, editEsnafDiscount, setEditEsnafDiscount, editEsnafNote, setEditEsnafNote,
     resetConfirmOpen, setResetConfirmOpen, criticalIngredients, filteredSales, filteredExpenses, totalEsnafReceivable, kpiMetrics, topProducts, staffPerformance, trendChartData, activeOccupiedCount, openTablesTotalAmount,
+    printDevice, updatePrintDevice, sendOrder, reprintKitchen, printTableReceipt, printSaleReceipt, printTestTicket,
     addProductToTable, updateLineContent, updateOrderItemQty, setTableStaff, setTableDiscount, saveItemNote, completeTableOrder, handlePartialPayment, handleConfirmEsnafCharge, handleQuickCreateEsnaf, handleCollectEsnafPayment, copyEsnafWhatsAppSummary, startFastEsnafOrder,
     requireAdmin, handleSaveIngredient, handleDeleteIngredient,
     handleTransferTable, handleStockAdjustment, handleAddExpense, handleSaveProduct, startEditProduct, handleDeleteProduct, handleSaveTable, handleDeleteTable, handleSaveZone, handleDeleteZone, handleSaveCategory, handleDeleteCategory,

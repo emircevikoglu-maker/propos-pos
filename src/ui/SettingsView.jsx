@@ -5,6 +5,7 @@ import { Feel, Identity } from "./settings/Identity";
 import { Menu, Tables } from "./settings/Venue";
 import { EsnafCards, Staff } from "./settings/People";
 import { Security } from "./settings/Security";
+import { Printing } from "./settings/Printing";
 
 const SECTIONS = [
   ["branding", "Kimlik"],
@@ -12,10 +13,11 @@ const SECTIONS = [
   ["menu", "Menü"],
   ["staff", "Çalışanlar"],
   ["esnaf", "Esnaf"],
+  ["print", "Yazdırma"],
   ["security", "Güvenlik ve yedek"],
   ["feel", "Hareket"]
 ];
-const VIEWS = { branding: Identity, tables: Tables, menu: Menu, staff: Staff, esnaf: EsnafCards, security: Security, feel: Feel };
+const VIEWS = { branding: Identity, tables: Tables, menu: Menu, staff: Staff, esnaf: EsnafCards, print: Printing, security: Security, feel: Feel };
 
 /** Yönetim: tüm ayarlar tek yerde, bölümler segmentle; ekleme/düzenleme formları pencerede (?s=…). */
 export function SettingsView() {

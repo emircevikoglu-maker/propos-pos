@@ -7,7 +7,7 @@ import { tableSubtotal } from "./hooks";
 
 /** Masa işlemleri: garson, kişi sayısı, indirim, masa taşı. Adisyon panelini sade tutmak için ayrı pencerede. */
 export function OpsSheet({ table, onClose }) {
-  const { staffList, setTableStaff, changeTableGuests, setTableDiscount, setTransferModalOpen } = usePos();
+  const { staffList, setTableStaff, changeTableGuests, setTableDiscount, setTransferModalOpen, printTableReceipt, reprintKitchen } = usePos();
   const sub = tableSubtotal(table);
   const [amount, setAmount] = React.useState("");
   const currentStaff = table.staffId || (staffList[0] && staffList[0].id);
@@ -49,6 +49,8 @@ export function OpsSheet({ table, onClose }) {
       </div>
 
       <div className="ops-list">
+        <button type="button" className="btn btn-secondary" disabled={table.items.length === 0} onClick={() => { printTableReceipt(); onClose(); }}><Ic n="receipt" />Adisyon yazdır</button>
+        <button type="button" className="btn btn-secondary" disabled={table.items.length === 0} onClick={() => { reprintKitchen(); onClose(); }}><Ic n="send" />Mutfak/bar fişini yeniden yazdır</button>
         <button type="button" className="btn btn-secondary" onClick={() => { onClose(); setTimeout(() => setTransferModalOpen(true), 0); }}><Ic n="right" />Masayı başka masaya taşı</button>
       </div>
     </Sheet>
