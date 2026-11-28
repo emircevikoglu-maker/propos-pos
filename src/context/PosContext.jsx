@@ -23,6 +23,7 @@ import {
 } from "../design/celebrations";
 import { sanitizeOptionGroups, buildOrderLine, mergeIntoItems, optionSummary, lineConsumption } from "../utils/productOptions";
 import { applyStockAction, appendLog } from "../utils/stockLog";
+import { productStats, itemCount, closingTotals, paymentLine } from "../utils/ledger";
 import { findByBarcode, cleanBarcode, barcodeTaken, normalizeGuests } from "../utils/posHelpers";
 import { exportExcelByCategory as runExcelExport } from "../utils/excelExport";
 
@@ -399,25 +400,7 @@ export function PosProvider({ children }) {
     return { grossRevenue, cariWrittenTotal, totalExpenses, netProfit: grossRevenue - totalExpenses, orderCount, avgTicket: orderCount > 0 ? Math.round((grossRevenue + cariWrittenTotal) / orderCount) : 0, byMethod };
   }, [filteredSales, filteredExpenses]);
 
-  const topProducts = useMemo(() => {
-    const map = {};
-    let totalSoldRevenue = 0;
-    filteredSales.forEach((sale) => {
-      if (sale.paymentMethod === "İkram / İptal") return;
-      sale.items.forEach((item) => {
-        if (!map[item.productId]) {
-          const prdObj = products.find((p) => p.id === item.productId);
-          const unitCost = (prdObj?.recipe || []).reduce((sum, r) => sum + ((ingredients.find((i) => i.id === r.ingredientId)?.unitCost || 0) * r.amount), 0);
-          map[item.productId] = { id: item.productId, name: item.name, category: prdObj?.category || "Diğer", image: prdObj?.image || "☕", unitPrice: item.price, unitCost: Math.round(unitCost * 10) / 10, qty: 0, revenue: 0, costTotal: 0, profit: 0 };
-        }
-        const entry = map[item.productId];
-        const rev = item.qty * item.price, cost = item.qty * entry.unitCost;
-        entry.qty += item.qty; entry.revenue += rev; entry.costTotal += cost; entry.profit += rev - cost;
-        totalSoldRevenue += rev;
-      });
-    });
-    return Object.values(map).sort((a, b) => b.qty - a.qty).map((p) => ({ ...p, share: totalSoldRevenue > 0 ? Math.round((p.revenue / totalSoldRevenue) * 100) : 0 }));
-  }, [filteredSales, products, ingredients]);
+  const topProducts = useMemo(() => productStats(filteredSales, products, ingredients), [filteredSales, products, ingredients]);
 
   const staffPerformance = useMemo(() => {
     const stats = Object.fromEntries(staffList.map((st) => [st.id, { ...st, cash: 0, card: 0, mealCard: 0, cariWritten: 0, comp: 0, total: 0, orderCount: 0, itemCount: 0 }]));
@@ -425,7 +408,7 @@ export function PosProvider({ children }) {
       const st = stats[s.staffId];
       if (!st) return;
       st.orderCount += 1;
-      st.itemCount += s.items.reduce((sum, i) => sum + i.qty, 0);
+      st.itemCount += itemCount(s);
       if (s.paymentMethod === "Nakit") { st.cash += s.total; st.total += s.total; }
       else if (s.paymentMethod === "Kredi Kartı") { st.card += s.total; st.total += s.total; }
       else if (s.paymentMethod === "Yemek Kartı") { st.mealCard += s.total; st.total += s.total; }
@@ -530,11 +513,8 @@ export function PosProvider({ children }) {
 
   const completeTableOrder = (paymentMethod) => {
     if (!activeTable?.items.length) return;
-    const subtotal = activeTable.items.reduce((sum, i) => sum + i.price * i.qty, 0);
-    const remainingTotal = Math.max(0, subtotal - (activeTable.discount || 0) - (activeTable.paidAmount || 0));
-    // Kısmi ödemeler kendi satış kaydında sayıldı; burada yalnızca kalan brüt yazılır (Z raporu brütü şişmesin).
-    const remainingGross = Math.max(0, subtotal - (activeTable.paidAmount || 0));
-    const newSale = { id: `sl-${Date.now()}`, timestamp: new Date().toISOString(), guests: normalizeGuests(activeTable.guests), tableName: activeTable.name, staffId: activeTable.staffId || staffList[0]?.id, paymentMethod, subtotal: remainingGross, discount: Math.min(activeTable.discount || 0, remainingGross), total: remainingTotal, items: activeTable.items };
+    const { gross, discount, remaining: remainingTotal } = closingTotals(activeTable);
+    const newSale = { id: `sl-${Date.now()}`, timestamp: new Date().toISOString(), guests: normalizeGuests(activeTable.guests), tableName: activeTable.name, staffId: activeTable.staffId || staffList[0]?.id, paymentMethod, subtotal: gross, discount, total: remainingTotal, items: activeTable.items };
     const snap = { tables, sales, ingredients };
     const closedName = activeTable.name;
     const staffName = staffList.find((st) => st.id === activeTable.staffId)?.name || "Personel";
@@ -559,7 +539,7 @@ export function PosProvider({ children }) {
       setPartialPayModalOpen(false); setPartialPayAmount("");
       return completeTableOrder(paymentMethod);
     }
-    setSales((prev) => [{ id: `sl-part-${Date.now()}`, timestamp: new Date().toISOString(), tableName: `${activeTable.name} (Kısmi Ödeme)`, staffId: activeTable.staffId || staffList[0]?.id, paymentMethod, subtotal: amount, discount: 0, total: amount, items: [{ productId: "prd-1", name: "Kısmi Hesap Tahsilatı", price: amount, qty: 1 }] }, ...prev]);
+    setSales((prev) => [{ id: `sl-part-${Date.now()}`, timestamp: new Date().toISOString(), tableName: `${activeTable.name} (Kısmi Ödeme)`, staffId: activeTable.staffId || staffList[0]?.id, paymentMethod, subtotal: amount, discount: 0, total: amount, items: [paymentLine("Kısmi Hesap Tahsilatı", amount)] }, ...prev]);
     setTables((prev) => prev.map((t) => (t.id === activeTable.id ? { ...t, paidAmount: (t.paidAmount || 0) + amount } : t)));
     showToast(`${activeTable.name} için ${formatTL(amount)} (${paymentMethod}) kısmi ödeme alındı.`);
     setPartialPayAmount(""); setPartialPayModalOpen(false);
@@ -569,8 +549,8 @@ export function PosProvider({ children }) {
   const handleConfirmEsnafCharge = () => {
     const esnaf = esnafList.find((e) => e.id === selectedEsnafForCharge);
     if (!activeTable || !esnaf) return;
-    const subtotal = activeTable.items.reduce((sum, i) => sum + i.price * i.qty, 0);
-    const currentRemaining = Math.max(0, subtotal - (activeTable.discount || 0) - (activeTable.paidAmount || 0));
+    const totals = closingTotals(activeTable);
+    const currentRemaining = totals.remaining;
     let chargeAmount = currentRemaining, appliedDiscount = activeTable.discount || 0;
     if (esnafChargeMode === "partial") {
       chargeAmount = Math.min(currentRemaining, Math.max(1, Number(partialPayAmount) || 0));
@@ -586,8 +566,8 @@ export function PosProvider({ children }) {
     setEsnafList((prev) => prev.map((e) => (e.id === esnaf.id ? { ...e, balance: (e.balance || 0) + chargeAmount, transactions: [txRecord, ...(e.transactions || [])] } : e)));
     setSales((prev) => [{
       id: `sl-cari-${Date.now()}`, timestamp: new Date().toISOString(), tableName: `${activeTable.name} ➔ ${esnaf.name}`, staffId: activeTable.staffId || staffList[0]?.id, paymentMethod: "Esnaf Cariye Yazıldı",
-      subtotal: esnafChargeMode === "partial" ? chargeAmount : subtotal, discount: esnafChargeMode === "partial" ? 0 : appliedDiscount, total: chargeAmount,
-      items: esnafChargeMode === "partial" ? [{ productId: "prd-17", name: `Cari Aktarım (${esnaf.name})`, price: chargeAmount, qty: 1 }] : activeTable.items
+      subtotal: esnafChargeMode === "partial" ? chargeAmount : totals.gross, discount: esnafChargeMode === "partial" ? 0 : Math.min(appliedDiscount, totals.gross), total: chargeAmount,
+      items: esnafChargeMode === "partial" ? [paymentLine(`Cari Aktarım (${esnaf.name})`, chargeAmount)] : activeTable.items
     }, ...prev]);
 
     if (esnafChargeMode === "partial" && chargeAmount < currentRemaining) {
@@ -622,7 +602,7 @@ export function PosProvider({ children }) {
       if (selectedEsnafDetail?.id === esn.id) setSelectedEsnafDetail(updated);
       return updated;
     }));
-    setSales((prev) => [{ id: `sl-col-${Date.now()}`, timestamp: new Date().toISOString(), tableName: `Cari Tahsilat: ${esnafCollectModal.name}`, staffId: esnafCollectStaffId || staffList[0]?.id, paymentMethod: esnafCollectMethod, subtotal: amount, discount: 0, total: amount, items: [{ productId: "prd-17", name: `Esnaf Cari Tahsilatı (${esnafCollectModal.name})`, price: amount, qty: 1 }] }, ...prev]);
+    setSales((prev) => [{ id: `sl-col-${Date.now()}`, timestamp: new Date().toISOString(), tableName: `Cari Tahsilat: ${esnafCollectModal.name}`, staffId: esnafCollectStaffId || staffList[0]?.id, paymentMethod: esnafCollectMethod, subtotal: amount, discount: 0, total: amount, items: [paymentLine(`Esnaf Cari Tahsilatı (${esnafCollectModal.name})`, amount)] }, ...prev]);
     showToast(`${esnafCollectModal.name} hesabından ${formatTL(amount)} (${esnafCollectMethod}) tahsilat alındı ve kasaya işlendi!`);
     setEsnafCollectModal(null); setEsnafCollectAmount(""); setEsnafCollectNote("");
   };
