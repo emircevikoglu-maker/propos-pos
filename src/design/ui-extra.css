@@ -217,3 +217,54 @@
 .line-sent { display: flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--success); }
 .line-sent .ic { width: 12px; height: 12px; }
 @media (max-width: 600px) { .topbar .streak { display: none; } }
+
+/* Sheet'e taşınan pencereler (3.10.0) */
+.seg-full { display: flex; overflow-x: auto; scrollbar-width: none; }
+.seg-full > button { flex: 1 0 auto; }
+.field-money { font-size: var(--fs-2xl); font-weight: var(--fw-head); min-height: var(--tap-lg); font-variant-numeric: tabular-nums; }
+.field-area { padding: 12px 14px; resize: vertical; font-family: inherit; }
+.qr-box { display: flex; gap: 14px; align-items: center; padding: 14px; margin-bottom: 12px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line-soft); flex-wrap: wrap; }
+.qr-box img { border-radius: var(--r-sm); background: #fff; padding: 4px; flex: none; }
+.qr-text { display: grid; gap: 6px; min-width: 0; flex: 1 1 180px; }
+.qr-url { justify-self: start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.receipt-foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-soft); display: grid; gap: 6px; }
+.cari-pick, .move-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.cari-chip, .move-chip { display: grid; gap: 2px; justify-items: start; text-align: left; min-height: 60px; padding: 8px 12px; height: auto; }
+.move-chip.is-busy { border-color: var(--primary-line); }
+.error-pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-xs); color: var(--text-2); background: var(--surface-2); border-radius: var(--r-md); padding: 12px; }
+
+/* PIN (prototipin .pin düzeni): gerçek girdi noktaların üstünde görünmez durur. */
+.pin-wrap { z-index: 90; }
+.pin-sheet { width: min(400px, 100%); }
+.pin-form { margin: 0 auto; gap: 12px; }
+.pin-field { position: relative; display: grid; place-items: center; min-width: 220px; min-height: var(--tap); padding: 0 16px; border-radius: var(--r-md); border: 1px solid transparent; cursor: text; }
+.pin-field:focus-within { border-color: var(--primary-line); }
+.pin-field.is-error { border-color: var(--danger); }
+.pin-field input { position: absolute; inset: 0; width: 100%; opacity: 0; border: 0; text-align: center; }
+.pin-field .pin-dots { margin: 0; pointer-events: none; flex-wrap: wrap; justify-content: center; }
+.pin-key.is-small { font-size: var(--fs-sm); color: var(--text-3); }
+.pin-key.is-primary { font-size: var(--fs-md); background: var(--primary); color: var(--primary-ink); font-weight: var(--fw-head); }
+.pin-key.is-primary:disabled { opacity: .45; }
+.pin-setup { color: var(--primary); font-size: var(--fs-sm); }
+
+/* Ürün çeşitleri düzenleyicisi */
+.chip-dashed { border-style: dashed; }
+.opt-card { display: grid; gap: 10px; padding: 12px; border-radius: var(--r-md); border: 1px solid var(--line-soft); background: var(--surface-2); }
+.opt-card .field-input { background: var(--surface-3); }
+.opt-card-head { display: flex; gap: 4px; align-items: center; }
+.opt-card-name { flex: 1; min-width: 0; }
+.opt-card-max { display: flex; gap: 6px; align-items: center; }
+.opt-card-max .field-input { width: 76px; }
+.opt-card-choice { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+.opt-card-price { display: flex; gap: 6px; align-items: center; }
+.opt-card-price .field-input { width: 90px; }
+.choice-recipe { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.choice-recipe .field-input { width: auto; min-width: 120px; flex: 1 1 120px; }
+.choice-recipe-toggle { font-size: var(--fs-xs); }
+@media (max-width: 480px) { .opt-card-price .label { display: none; } .opt-card-price .field-input { width: 72px; } }
+
+/* İnce kaydırma çubuğu (eskiden App.jsx içindeydi) */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface-4); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }

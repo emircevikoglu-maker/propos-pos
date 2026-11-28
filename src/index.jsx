@@ -18,18 +18,12 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#080706] text-stone-100 flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-stone-900 border border-rose-500/40 rounded-2xl p-6 space-y-4">
-            <h2 className="text-base font-semibold text-rose-400">Beklenmeyen Bir Hata Oluştu</h2>
-            <pre className="text-xs text-stone-300 bg-stone-950 p-3 rounded-xl overflow-x-auto">
-              {String(this.state.error)}
-            </pre>
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full py-2.5 rounded-xl bg-amber-500 text-stone-950 font-medium text-xs"
-            >
-              Sayfayı Yenile
-            </button>
+        <div className="auth-wrap">
+          <div className="card auth-card">
+            <span className="auth-brand">ProPos</span>
+            <h2 className="auth-title">Beklenmeyen bir hata oluştu</h2>
+            <pre className="error-pre">{String(this.state.error)}</pre>
+            <button type="button" className="btn btn-primary btn-lg btn-block" onClick={() => window.location.reload()}>Sayfayı yenile</button>
           </div>
         </div>
       );

@@ -35,15 +35,18 @@ execFileSync(process.execPath, [
   "-i", path.join(root, "src", "styles", "base.css"),
   "-o", cssTmp, "--minify"
 ], { stdio: "inherit" });
-const designCss = ["ui.css", "ui-extra.css", "skin.css"].map((f) => fs.readFileSync(path.join(root, "src", "design", f), "utf8")).join(String.fromCharCode(10));
-const css = fs.readFileSync(cssTmp, "utf8") + String.fromCharCode(10) + designCss;
+const readDesign = (files) => files.map((f) => fs.readFileSync(path.join(root, "src", "design", f), "utf8")).join(String.fromCharCode(10));
+const baseCss = fs.readFileSync(cssTmp, "utf8") + String.fromCharCode(10);
 fs.unlinkSync(cssTmp);
+// POS yalnızca prototip tasarım sistemiyle; skin.css (eski Tailwind sınıflarını boyayan katman) yalnızca kontrol panelinde kaldı.
+const css = baseCss + readDesign(["ui.css", "ui-extra.css"]);
+const adminCss = baseCss + readDesign(["ui.css", "ui-extra.css", "skin.css"]);
 
 // 3) Tek dosyada birleştir
 const icon = "data:image/svg+xml," + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#f59e0b"/><text x="32" y="43" font-size="30" text-anchor="middle" fill="#0c0a09" font-family="Arial" font-weight="600">P</text></svg>'
 );
-const page = (title, body, scriptText, extraHead = "") => `<!DOCTYPE html>
+const page = (title, body, scriptText, extraHead = "", style = css) => `<!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
@@ -51,7 +54,7 @@ const page = (title, body, scriptText, extraHead = "") => `<!DOCTYPE html>
 <title>${title}</title>
 <meta name="theme-color" content="#080706">
 <link rel="icon" href="${icon}">
-${extraHead}<style>${css}</style>
+${extraHead}<style>${style}</style>
 </head>
 <body class="${body}">
 <div id="root"></div>
@@ -74,7 +77,7 @@ const html = `<!DOCTYPE html>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
-<body class="bg-[#080706] text-stone-100 select-none">
+<body class="select-none">
 <div id="root"></div>
 <script>${js.replace(/<\/script/gi, "<\\/script")}</script>
 </body>
@@ -101,7 +104,7 @@ fs.writeFileSync(path.join(distDir, "manifest.webmanifest"), JSON.stringify({
 console.log(`PWA hazır: sw.js sürüm ${version}`);
 const adminDir = path.join(root, "dist-admin");
 fs.mkdirSync(adminDir, { recursive: true });
-const adminHtml = page("ProPos — Kontrol Paneli", "bg-stone-950 text-stone-100 min-h-screen", adminJs, '<meta name="robots" content="noindex, nofollow">');
+const adminHtml = page("ProPos — Kontrol Paneli", "bg-stone-950 text-stone-100 min-h-screen", adminJs, '<meta name="robots" content="noindex, nofollow">', adminCss);
 fs.writeFileSync(path.join(adminDir, "index.html"), adminHtml);
 console.log(`dist-admin/index.html hazır: ${(adminHtml.length / 1024).toFixed(0)} KB`);
 console.log(`dist/index.html hazır: ${(html.length / 1024).toFixed(0)} KB (v${pkg.version})`);

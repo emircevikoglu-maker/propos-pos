@@ -1,7 +1,8 @@
 import React from "react";
+import { Ic } from "../../ui/Ic";
 
 /**
- * Yönetici PIN'i girişi. PIN'in uzunluğu istemcide bilinmez (sunucu doğrular);
+ * Yönetici PIN'i girişi (prototipin .pin düzeni). PIN'in uzunluğu istemcide bilinmez (sunucu doğrular);
  * bu yüzden otomatik gönderim yok, "Giriş" ya da Enter ile gönderilir. Klavyeden harf de yazılabilir.
  *
  * props: onSubmit(pin) → Promise<{ok, error?, code?, retryAfter?}>, onCancel(), title, description, footer
@@ -56,38 +57,40 @@ export function PinPad({ onSubmit, onSetup, onCancel, title = "Yönetici girişi
   };
 
   const press = (d) => { setError(""); setPin((p) => (p + d).slice(0, 12)); };
+  const dots = Math.max(4, pin.length);
 
   return (
-    <form onSubmit={submit} aria-label={title} className="bg-[#181512] border border-amber-500/40 rounded-2xl max-w-xs w-full p-6 space-y-4 shadow-2xl text-center">
-      <div>
-        <h3 className="text-base font-semibold text-white">{title}</h3>
-        {setupFirst !== null
-          ? <p role="status" className="text-xs text-amber-300 mt-1">Bu işletmenin henüz yönetici PIN'i yok. Belirlemek için aynı PIN'i tekrar girin.</p>
-          : description && <p className="text-xs text-stone-400 mt-1">{description}</p>}
-      </div>
-      <input
-        ref={inputRef}
-        type="password"
-        aria-label="PIN"
-        autoFocus
-        autoComplete="off"
-        inputMode="numeric"
-        maxLength={12}
-        value={pin}
-        onChange={(e) => { setError(""); setPin(e.target.value.replace(/\s/g, "").slice(0, 12)); }}
-        className={`w-full rounded-xl border bg-stone-950 px-3 py-3 text-center font-mono text-xl tracking-[0.4em] text-white ${error ? "border-rose-500" : "border-stone-700"}`}
-      />
-      {error && <p role="alert" className="text-xs font-medium text-rose-400">{error}</p>}
-      <div className="grid grid-cols-3 gap-2">
+    <form onSubmit={submit} aria-label={title} className="pin pin-form">
+      <span className="pin-lock"><Ic n="lock" className="ic-lg" /></span>
+      <h2>{title}</h2>
+      {setupFirst !== null
+        ? <p role="status" className="pin-setup">Bu işletmenin henüz yönetici PIN'i yok. Belirlemek için aynı PIN'i tekrar girin.</p>
+        : description && <p className="muted">{description}</p>}
+      <label className={`pin-field${error ? " is-error" : ""}`}>
+        <span className="pin-dots" aria-hidden="true">{Array.from({ length: dots }, (_, i) => <span key={i} className={`pin-dot${i < pin.length ? " is-on" : ""}`} />)}</span>
+        <input
+          ref={inputRef}
+          type="password"
+          aria-label="PIN"
+          autoFocus
+          autoComplete="off"
+          inputMode="numeric"
+          maxLength={12}
+          value={pin}
+          onChange={(e) => { setError(""); setPin(e.target.value.replace(/\s/g, "").slice(0, 12)); }}
+        />
+      </label>
+      {error && <p role="alert" className="auth-error">{error}</p>}
+      <div className="pin-pad">
         {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
-          <button key={d} type="button" onClick={() => press(d)} className="min-h-[48px] rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-base font-semibold text-white active:scale-95 transition-all">{d}</button>
+          <button key={d} type="button" onClick={() => press(d)} className="pin-key num">{d}</button>
         ))}
-        <button type="button" onClick={() => { setPin(""); setError(""); }} className="min-h-[48px] rounded-xl bg-stone-900 border border-stone-800 text-xs font-medium text-rose-400">Temizle</button>
-        <button type="button" onClick={() => press("0")} className="min-h-[48px] rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-base font-semibold text-white active:scale-95 transition-all">0</button>
-        <button type="submit" disabled={busy || !pin} className="min-h-[48px] rounded-xl bg-amber-500 hover:bg-amber-400 text-xs font-semibold text-stone-950 disabled:opacity-50">{busy ? "…" : "Giriş"}</button>
+        <button type="button" onClick={() => { setPin(""); setError(""); }} className="pin-key is-small">Temizle</button>
+        <button type="button" onClick={() => press("0")} className="pin-key num">0</button>
+        <button type="submit" disabled={busy || !pin} className="pin-key is-primary">{busy ? "…" : "Giriş"}</button>
       </div>
       {footer}
-      <button type="button" onClick={onCancel} className="w-full min-h-[40px] rounded-xl bg-stone-800 text-xs font-medium text-stone-400 hover:text-white">Vazgeç</button>
+      <button type="button" onClick={onCancel} className="btn btn-ghost btn-block">Vazgeç</button>
     </form>
   );
 }
