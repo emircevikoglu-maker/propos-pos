@@ -185,7 +185,7 @@ describe("SettingsView (Yönetim)", () => {
     staffList: [{ id: "s1", name: "Zeynep", role: "Barista", color: "#10b981", avatar: "Z" }], handleDeleteStaff: vi.fn(),
     setEditingStaffId: vi.fn(), setNewStaffName: vi.fn(), setNewStaffRole: vi.fn(), setNewStaffColor: vi.fn(),
     isAdminUnlocked: true, newPinValue: "", setNewPinValue: vi.fn(), handleChangePin: vi.fn(), exportExcelByCategory: vi.fn(), exportFullBackupFile: vi.fn(),
-    handleImportBackupFile: vi.fn(), setResetConfirmOpen: vi.fn(), ACTIVE_TENANT_ID: "X", isFounderUnlocked: false, setIsFounderUnlocked: vi.fn(), setInstallModalOpen: vi.fn()
+    handleImportBackupFile: vi.fn(), setResetConfirmOpen: vi.fn(), ACTIVE_TENANT_ID: "X"
   });
 
   it("bölüm segmenti bağlama yazar; kimlik: para birimi değişimi toast gösterir", () => {

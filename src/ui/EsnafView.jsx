@@ -37,7 +37,7 @@ function NewCariSheet({ onClose }) {
 function StatementSheet({ esnaf, onClose }) {
   const { staffList, setEsnafCollectModal, setEsnafCollectAmount, copyEsnafWhatsAppSummary, startFastEsnafOrder } = usePos();
   const txs = esnaf.transactions || [];
-  const collect = () => { onClose(); setEsnafCollectModal(esnaf); setEsnafCollectAmount(String(esnaf.balance)); };
+  const collect = () => { setEsnafCollectModal(esnaf); setEsnafCollectAmount(String(esnaf.balance)); };
   const order = () => { onClose(); startFastEsnafOrder(esnaf.id); };
   return (
     <Sheet

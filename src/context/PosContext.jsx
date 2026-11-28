@@ -57,6 +57,14 @@ export function PosProvider({ children }) {
     }
     navigate(tablePath(id), { replace: !!activeTableId, state: { fromTables: activeTableId ? !!st.fromTables : true } });
   };
+  /** Pencere açıkken başka masaya geçiş: önce pencerenin geçmiş girdisi geri alınır, sonra masa yerine konur. */
+  const goToTable = (id) => {
+    const target = () => navigate(tablePath(id), { replace: true, state: { fromTables: !!(location.state || {}).fromTables } });
+    if (!(location.state || {}).sheet) { target(); return; }
+    const onPop = () => { window.removeEventListener("popstate", onPop); setTimeout(target, 0); };
+    window.addEventListener("popstate", onPop);
+    navigate(-1);
+  };
   const [globalPeriod, setGlobalPeriod] = useState("daily");
   const [customStartDate, setCustomStartDate] = useState(() => toDateInputValue(new Date(Date.now() - 7 * 86400000)));
   const [customEndDate, setCustomEndDate] = useState(() => toDateInputValue(new Date()));
@@ -121,13 +129,7 @@ export function PosProvider({ children }) {
   const [mobilePosPanel, setMobilePosPanel] = useState("menu");
   const [posCategory, setPosCategory] = useState("Tümü");
   const [posSearch, setPosSearch] = useState("");
-  const [transferModalOpen, setTransferModalOpen] = useState(false);
-  const [partialPayModalOpen, setPartialPayModalOpen] = useState(false);
-  const [partialPayAmount, setPartialPayAmount] = useState("");
-  const [noteModalItem, setNoteModalItem] = useState(null);
   const [inspectedSale, setInspectedSale] = useState(null);
-  const [esnafChargeModalOpen, setEsnafChargeModalOpen] = useState(false);
-  const [esnafChargeMode, setEsnafChargeMode] = useState("full");
   const [selectedEsnafForCharge, setSelectedEsnafForCharge] = useState(INITIAL_ESNAF[0]?.id || "");
   const [applyEsnafDiscount, setApplyEsnafDiscount] = useState(true);
   const [esnafOrderNote, setEsnafOrderNote] = useState("");
@@ -545,7 +547,6 @@ export function PosProvider({ children }) {
   }));
   const saveItemNote = (itemId, note) => {
     setTables((prev) => prev.map((t) => (t.id !== activeTable?.id ? t : { ...t, items: t.items.map((i) => (i.id === itemId ? { ...i, note } : i)) })));
-    setNoteModalItem(null);
   };
 
   const deductRecipeIngredients = (orderItems) => {
@@ -577,19 +578,17 @@ export function PosProvider({ children }) {
     );
   };
 
-  // Tutar parametreli: eski pencere state'ten, yeni "Böl" akışı doğrudan hesaplanan paydan çağırır.
-  const handlePartialPayment = (paymentMethod, amountOverride) => {
-    const amount = Number(amountOverride !== undefined ? amountOverride : partialPayAmount);
+  // Böl akışı hesaplanan payla, "tutar gir" adımı girilen tutarla çağırır.
+  const handlePartialPayment = (paymentMethod, value) => {
+    const amount = Number(value);
     if (!activeTable || !amount || amount <= 0) return;
     const subtotal = activeTable.items.reduce((sum, i) => sum + i.price * i.qty, 0);
     if (amount >= subtotal - (activeTable.discount || 0) - (activeTable.paidAmount || 0)) {
-      setPartialPayModalOpen(false); setPartialPayAmount("");
       return completeTableOrder(paymentMethod);
     }
     setSales((prev) => [{ id: `sl-part-${Date.now()}`, timestamp: new Date().toISOString(), tableName: `${activeTable.name} (Kısmi Ödeme)`, staffId: activeTable.staffId || staffList[0]?.id, paymentMethod, subtotal: amount, discount: 0, total: amount, items: [paymentLine("Kısmi Hesap Tahsilatı", amount)] }, ...prev]);
     setTables((prev) => prev.map((t) => (t.id === activeTable.id ? { ...t, paidAmount: (t.paidAmount || 0) + amount } : t)));
     showToast(`${activeTable.name} için ${formatTL(amount)} (${paymentMethod}) kısmi ödeme alındı.`);
-    setPartialPayAmount(""); setPartialPayModalOpen(false);
   };
 
   // ---- Mutfak/bar gönderimi ve yazdırma ------------------------------------
@@ -628,31 +627,33 @@ export function PosProvider({ children }) {
   ]);
 
   // Esnaf & Cari Operations
-  const handleConfirmEsnafCharge = () => {
+  /** @returns {"closed"|"partial"|null} masa kapandı mı, yalnızca bir kısmı mı yazıldı */
+  const handleConfirmEsnafCharge = ({ mode = "full", amount = 0 } = {}) => {
     const esnaf = esnafList.find((e) => e.id === selectedEsnafForCharge);
-    if (!activeTable || !esnaf) return;
+    if (!activeTable || !esnaf) return null;
     const totals = closingTotals(activeTable);
     const currentRemaining = totals.remaining;
     let chargeAmount = currentRemaining, appliedDiscount = activeTable.discount || 0;
-    if (esnafChargeMode === "partial") {
-      chargeAmount = Math.min(currentRemaining, Math.max(1, Number(partialPayAmount) || 0));
+    if (mode === "partial") {
+      chargeAmount = Math.min(currentRemaining, Math.max(1, Number(amount) || 0));
     } else if (applyEsnafDiscount && esnaf.discountRate > 0 && !activeTable.discount) {
       const disc = Math.round((currentRemaining * esnaf.discountRate) / 100);
       appliedDiscount += disc; chargeAmount = Math.max(0, currentRemaining - disc);
     }
     const txRecord = {
       id: `etr-${Date.now()}`, type: "charge", timestamp: new Date().toISOString(), staffId: activeTable.staffId || staffList[0]?.id, amount: chargeAmount,
-      items: esnafChargeMode === "partial" ? [{ name: `${activeTable.name} Kısmi Adisyon Aktarımı`, qty: 1, price: chargeAmount }] : activeTable.items.map((i) => ({ name: lineDetails(i) ? `${i.name} (${lineDetails(i)})` : i.name, qty: i.qty, price: i.price, note: i.note })),
+      items: mode === "partial" ? [{ name: `${activeTable.name} Kısmi Adisyon Aktarımı`, qty: 1, price: chargeAmount }] : activeTable.items.map((i) => ({ name: lineDetails(i) ? `${i.name} (${lineDetails(i)})` : i.name, qty: i.qty, price: i.price, note: i.note })),
       note: esnafOrderNote.trim() || `${activeTable.name} adisyonu`
     };
     setEsnafList((prev) => prev.map((e) => (e.id === esnaf.id ? { ...e, balance: (e.balance || 0) + chargeAmount, transactions: [txRecord, ...(e.transactions || [])] } : e)));
     setSales((prev) => [{
       id: `sl-cari-${Date.now()}`, timestamp: new Date().toISOString(), tableName: `${activeTable.name} ➔ ${esnaf.name}`, staffId: activeTable.staffId || staffList[0]?.id, paymentMethod: "Esnaf Cariye Yazıldı",
-      subtotal: esnafChargeMode === "partial" ? chargeAmount : totals.gross, discount: esnafChargeMode === "partial" ? 0 : Math.min(appliedDiscount, totals.gross), total: chargeAmount,
-      items: esnafChargeMode === "partial" ? [paymentLine(`Cari Aktarım (${esnaf.name})`, chargeAmount)] : activeTable.items
+      subtotal: mode === "partial" ? chargeAmount : totals.gross, discount: mode === "partial" ? 0 : Math.min(appliedDiscount, totals.gross), total: chargeAmount,
+      items: mode === "partial" ? [paymentLine(`Cari Aktarım (${esnaf.name})`, chargeAmount)] : activeTable.items
     }, ...prev]);
 
-    if (esnafChargeMode === "partial" && chargeAmount < currentRemaining) {
+    const isPartial = mode === "partial" && chargeAmount < currentRemaining;
+    if (isPartial) {
       setTables((prev) => prev.map((t) => (t.id === activeTable.id ? { ...t, paidAmount: (t.paidAmount || 0) + chargeAmount } : t)));
       showToast(`${esnaf.name} carisine ${formatTL(chargeAmount)} kısmi hesap yazıldı!`);
     } else {
@@ -661,7 +662,8 @@ export function PosProvider({ children }) {
       showToast(`${esnaf.name} hesabına ${formatTL(chargeAmount)} yazıldı ve stoktan düşüldü!`);
       setActiveTableId(null);
     }
-    setEsnafChargeModalOpen(false); setPartialPayModalOpen(false); setPartialPayAmount(""); setEsnafOrderNote("");
+    setEsnafOrderNote("");
+    return isPartial ? "partial" : "closed";
   };
 
   const handleQuickCreateEsnaf = (e) => {
@@ -723,8 +725,9 @@ export function PosProvider({ children }) {
       }
       return t.id === activeTable.id ? { ...t, status: "empty", openedAt: null, discount: 0, paidAmount: 0, guests: 0, items: [] } : t;
     }));
-    showToast(`${activeTable.name} adisyonu ${targetTable.name} masasına aktarıldı!`);
-    setTransferModalOpen(false); setActiveTableId(targetTableId);
+    const snap = tables;
+    offerUndo(`${activeTable.name} → ${targetTable.name} aktarıldı`, () => setTables(snap));
+    goToTable(targetTableId);
   };
 
   // Stock, Expense & Settings CRUD Operations
@@ -988,7 +991,7 @@ export function PosProvider({ children }) {
     setBrandSettings(INITIAL_BRAND_SETTINGS); setZones(INITIAL_ZONES); setCategories(INITIAL_CATEGORIES);
     setStaffList(INITIAL_STAFF); setIngredients(INITIAL_INGREDIENTS); setProducts(INITIAL_PRODUCTS);
     setTables(INITIAL_TABLES); setSales(generateInitialSales()); setExpenses(generateInitialExpenses());
-    setEsnafList(INITIAL_ESNAF); setResetConfirmOpen(false);
+    setEsnafList(INITIAL_ESNAF); setStockLog([]); setVoidLog([]); setResetConfirmOpen(false);
     showToast("Sistem verileri tüm cihazlarda (PC & Telefon) başlangıç demo durumuna sıfırlandı.");
   };
 
@@ -1011,8 +1014,8 @@ export function PosProvider({ children }) {
     optionPickerProduct, setOptionPickerProduct, confirmOptionPicker, newPrdOptions, setNewPrdOptions, setIsAdminUnlocked, pinModalOpen, setPinModalOpen, pinInput, setPinInput, pinError, setPinError, pendingProtectedTab, setPendingProtectedTab, newPinValue, setNewPinValue, handleVerifyPin, handleLockAdmin,
     brandSettings, setBrandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, setExpenses, esnafList, toast, showToast,
     selectedZone, setSelectedZone, activeTableId, setActiveTableId, activeTable, mobilePosPanel, setMobilePosPanel, posCategory, setPosCategory, posSearch, setPosSearch,
-    transferModalOpen, setTransferModalOpen, partialPayModalOpen, setPartialPayModalOpen, partialPayAmount, setPartialPayAmount, noteModalItem, setNoteModalItem, inspectedSale, setInspectedSale,
-    esnafChargeModalOpen, setEsnafChargeModalOpen, esnafChargeMode, setEsnafChargeMode, selectedEsnafForCharge, setSelectedEsnafForCharge, applyEsnafDiscount, setApplyEsnafDiscount, esnafOrderNote, setEsnafOrderNote,
+    inspectedSale, setInspectedSale,
+    selectedEsnafForCharge, setSelectedEsnafForCharge, applyEsnafDiscount, setApplyEsnafDiscount, esnafOrderNote, setEsnafOrderNote,
     quickNewEsnafName, setQuickNewEsnafName, quickNewEsnafPhone, setQuickNewEsnafPhone, quickNewEsnafDiscount, setQuickNewEsnafDiscount, esnafSearch, setEsnafSearch, selectedEsnafDetail, setSelectedEsnafDetail,
     esnafCollectModal, setEsnafCollectModal, esnafCollectAmount, setEsnafCollectAmount, esnafCollectMethod, setEsnafCollectMethod, esnafCollectStaffId, setEsnafCollectStaffId, esnafCollectNote, setEsnafCollectNote,
     stockModalIng, setStockModalIng, stockAdjustType, setStockAdjustType, stockAdjustAmount, setStockAdjustAmount, recordAsExpense, setRecordAsExpense, stockExpenseCost, setStockExpenseCost,

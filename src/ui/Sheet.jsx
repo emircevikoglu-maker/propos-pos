@@ -21,7 +21,29 @@ export function useSheet() {
     if (location.state && location.state.sheet) navigate(-1);
     else navigate({ pathname: location.pathname }, { replace: true, state: location.state });
   }, [navigate, location.pathname, location.state]);
-  return { current, open, close };
+  /** Açık pencereyi başka bir pencereyle değiştirir (geçmişe ikinci girdi eklemez). */
+  const swap = React.useCallback((name) => {
+    navigate({ pathname: location.pathname, search: `?${SHEET_PARAM}=${encodeURIComponent(name)}` }, { replace: true, state: location.state });
+  }, [navigate, location.pathname, location.state]);
+  return { current, open, close, swap };
+}
+
+/**
+ * Açık/kapalı bilgisi bağlamda duran pencereyi URL ile eşler: açılınca ?s=ad eklenir, geri tuşu URL'yi
+ * kaldırınca `onGone` durumu temizler, durum koddan temizlenirse URL de kapanır.
+ */
+export function useStateSheet(name, isOpen, onGone) {
+  const sheet = useSheet();
+  const shown = React.useRef(false);
+  React.useEffect(() => {
+    if (isOpen && sheet.current !== name && !shown.current) { if (sheet.current) sheet.swap(name); else sheet.open(name); }
+    else if (!isOpen && shown.current && sheet.current === name) { shown.current = false; sheet.close(); }
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  React.useEffect(() => {
+    if (sheet.current === name) shown.current = true;
+    else if (shown.current) { shown.current = false; if (isOpen) onGone(); }
+  }, [sheet.current]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { visible: isOpen && sheet.current === name, close: sheet.close };
 }
 
 /** Prototipteki openSheet'in React karşılığı: aynı işaretleme, aynı giriş/çıkış hareketi, Esc ve arka plana tıkla kapatır. */

@@ -1,10 +1,9 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { OptionPicker } from "../../src/components/pos/OptionPicker";
+import { ContentSheet } from "../../src/ui/ContentSheet";
 import { ProductOptionsEditor } from "../../src/components/settings/ProductOptionsEditor";
 
-const fmt = (n) => `₺${n}`;
 const latte = {
   id: "prd-1", name: "Latte", price: 95, image: "☕", options: [
     { id: "og-size", name: "Boy", type: "single", required: true, choices: [{ id: "s", name: "Küçük", price: 0 }, { id: "l", name: "Büyük", price: 20 }] },
@@ -12,48 +11,52 @@ const latte = {
   ]
 };
 
-describe("OptionPicker", () => {
+// Eski OptionPicker davranışları (3.10.0'da ContentSheet'e taşındı).
+const open = (product, props = {}) => render(<ContentSheet product={product} onClose={vi.fn()} onConfirm={vi.fn()} {...props} />);
+
+describe("çeşit seçimi (ContentSheet)", () => {
   it("varsayılan seçimle hemen eklenebilir (2 dokunuş)", () => {
     const onConfirm = vi.fn();
-    render(<OptionPicker product={latte} formatPrice={fmt} onConfirm={onConfirm} onCancel={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: /Ekle — ₺95/ }));
-    expect(onConfirm).toHaveBeenCalledWith({ "og-size": ["s"], "og-extra": [] });
+    open(latte, { onConfirm });
+    fireEvent.click(screen.getByRole("button", { name: /Ekle · ₺95/ }));
+    expect(onConfirm.mock.calls[0][0].selection).toEqual({ "og-size": ["s"], "og-extra": [] });
   });
 
   it("seçim toplamı günceller; çoklu grupta sınır aşılmaz", () => {
-    render(<OptionPicker product={latte} formatPrice={fmt} onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    open(latte);
     fireEvent.click(screen.getByRole("button", { name: /Büyük/ }));
     fireEvent.click(screen.getByRole("button", { name: /Shot/ }));
     fireEvent.click(screen.getByRole("button", { name: /Karamel/ }));
-    expect(screen.getByRole("button", { name: /Ekle — ₺130/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Ekle · ₺130/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Karamel/ }).getAttribute("aria-pressed")).toBe("false");
   });
 
   it("zorunlu seçim boşaltılamaz", () => {
-    render(<OptionPicker product={latte} formatPrice={fmt} onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    open(latte);
     fireEvent.click(screen.getByRole("button", { name: /Küçük/ }));
     expect(screen.getByRole("button", { name: /Küçük/ }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: /Ekle/ }).disabled).toBe(false);
+    expect(screen.getByRole("button", { name: /^Ekle/ }).disabled).toBe(false);
   });
 
-  it("Escape iptal eder", () => {
-    const onCancel = vi.fn();
-    render(<OptionPicker product={latte} formatPrice={fmt} onConfirm={vi.fn()} onCancel={onCancel} />);
+  it("Escape pencereyi kapatır, ekleme yapmaz", () => {
+    const onClose = vi.fn(), onConfirm = vi.fn();
+    open(latte, { onClose, onConfirm });
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(onCancel).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+    expect(onConfirm).not.toHaveBeenCalled();
   });
 
   it("XSS: ürün/seçenek adındaki HTML metin olarak kalır", () => {
     const evil = { ...latte, name: "<img src=x onerror=alert(1)>", options: [{ id: "g", name: "<b>G</b>", type: "single", required: true, choices: [{ id: "c", name: "<script>alert(1)</script>", price: 0 }] }] };
-    const { container } = render(<OptionPicker product={evil} formatPrice={fmt} onConfirm={vi.fn()} onCancel={vi.fn()} />);
-    expect(container.querySelector("img, script, b")).toBe(null);
+    open(evil);
+    expect(document.querySelector(".sheet img, .sheet script, .sheet b")).toBe(null);
     expect(screen.getByText("<img src=x onerror=alert(1)>")).toBeTruthy();
   });
 
   it("bozuk seçenek verisi çökertmez", () => {
     const broken = { id: "x", name: "X", price: "abc", options: [null, { name: "G", choices: "nope" }, { name: "H", choices: [{ name: "c", price: "NaN" }] }] };
-    render(<OptionPicker product={broken} formatPrice={fmt} onConfirm={vi.fn()} onCancel={vi.fn()} />);
-    expect(screen.getByRole("button", { name: /Ekle — ₺0/ })).toBeTruthy();
+    open(broken);
+    expect(screen.getByRole("button", { name: /Ekle · ₺0/ })).toBeTruthy();
   });
 });
 

@@ -16,6 +16,7 @@ import { AnalyticsView } from "./AnalyticsView";
 import { StaffView } from "./StaffView";
 import { FinanceView } from "./FinanceView";
 import { SettingsView } from "./SettingsView";
+import { GlobalSheets } from "./GlobalSheets";
 
 const NAV = [
   { id: "pos", label: "Masalar", icon: "grid" },
@@ -223,6 +224,7 @@ export function Shell() {
           </Routes>
         </main>
       </div>
+      <GlobalSheets />
       {toast && (
         <div className="cel-layer" aria-live="polite">
           <div className="cel-toast tone-neutral"><span className="cel-toast-ic"><Ic n="check" /></span><span className="cel-toast-body"><span className="cel-toast-title">{toast.message}</span></span></div>

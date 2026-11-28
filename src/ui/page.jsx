@@ -152,3 +152,18 @@ export function ItemRow({ lead, title, sub, tags, onEdit, onDelete, name }) {
 export function Field({ label, children }) {
   return <label className="field"><span className="ops-title">{label}</span>{children}</label>;
 }
+
+/** Geri alınamayan eylemler için onay penceresi yerine 600 ms basılı tutma (klavyede Enter). */
+export function HoldButton({ onConfirm, disabled, className = "btn btn-primary btn-lg btn-block", children }) {
+  const btn = React.useRef(null);
+  const fill = React.useRef(null);
+  const cb = React.useRef(onConfirm);
+  cb.current = onConfirm;
+  React.useEffect(() => { M.holdToConfirm(btn.current, fill.current, 600, () => { if (!btn.current || !btn.current.disabled) cb.current(); }); }, []);
+  return (
+    <button type="button" ref={btn} className={`${className} hold`} disabled={disabled}>
+      <span className="hold-fill" ref={fill} />
+      <span className="hold-label">{children}</span>
+    </button>
+  );
+}
