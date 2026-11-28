@@ -72,6 +72,12 @@ switch ($cmd) {
         ], $min);
         $out($r['ok'], $r['ok'] ? "Tamam ($cmd): {$u['username']} — açık oturumları düştü." : $r['error']);
         // no break
+    case 'pin': // php backend/users.php pin <yeni-pin> [--tenant=KOD]: yönetici PIN'ini sıfırlar (kilitlenme kurtarma)
+        $pins = new ProPos\Services\PinService($t, new ProPos\Services\Throttle());
+        $tid = is_string($opts['tenant'] ?? null) ? $opts['tenant'] : 'DEFAULT';
+        $r = $pins->change($tid, null, $pos[1] ?? '', true);
+        $out($r['ok'], $r['ok'] ? "Yönetici PIN'i değişti ($tid)." : $r['error']);
+        // no break
     case 'delete':
         $out($t->deleteUser($pos[1] ?? ''), 'Silindi ya da bulunamadı: ' . ($pos[1] ?? ''));
         // no break
