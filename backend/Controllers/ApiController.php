@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace ProPos\Controllers;
 
 use ProPos\Services\AuthService;
-use ProPos\Services\PackageService;
 use ProPos\Services\PinService;
 use ProPos\Services\Realtime;
 use ProPos\Services\Storage\StorageFactory;
@@ -22,14 +21,13 @@ use function ProPos\sendApiHeaders;
 use function ProPos\sendJson;
 
 /**
- * POS API (işletme cihazları). Kurucu uçları geçiş dönemi için burada da duruyor;
- * asıl yönetim ayrı kontrol panelinde (backend/control.php).
+ * POS API (işletme cihazları). Kurucu/bayi uçları BİLEREK yok (3.10.0'da kaldırıldı);
+ * yönetim yalnızca ayrı kontrol panelinde (backend/control.php).
  */
 class ApiController
 {
     private TenantService $tenants;
     private AuthService $auth;
-    private PackageService $packages;
     private PinService $pins;
     private Throttle $throttle;
 
@@ -37,7 +35,6 @@ class ApiController
     {
         $this->tenants = new TenantService();
         $this->auth = new AuthService($this->tenants);
-        $this->packages = new PackageService($this->tenants);
         $this->throttle = new Throttle();
         $this->pins = new PinService($this->tenants, $this->throttle);
     }
@@ -152,69 +149,9 @@ class ApiController
                 $this->pinChange($method, $rawBody);
                 break;
 
-            case '/api/tenants':
-                $this->auth->requireFounder();
-                if ($method === 'GET') {
-                    sendJson(['ok' => true, 'tenants' => $this->tenants->loadRegistry()]);
-                }
-                if ($method === 'POST' && $this->tenants->saveRegistry($rawBody)) {
-                    sendJson(['ok' => true, 'tenants' => $this->tenants->loadRegistry()]);
-                }
-                sendJson(['ok' => false, 'error' => 'Geçersiz kayıt listesi'], 400);
-                break;
-
-            case '/api/apply-update':
-                $this->auth->requireFounder();
-                if ($method === 'POST' && $this->packages->applyHtmlUpdate($rawBody)) {
-                    sendJson(['ok' => true]);
-                }
-                sendJson(['ok' => false, 'error' => 'Geçersiz güncelleme paketi'], 400);
-                break;
-
-            case '/api/prepare-github':
-                $this->auth->requireFounder();
-                if ($method === 'POST' && $this->packages->prepareGithubRelease($rawBody)) {
-                    sendJson(['ok' => true]);
-                }
-                sendJson(['ok' => false, 'error' => 'Geçersiz sürüm bildirimi'], 400);
-                break;
-
-            case '/api/package':
-                $this->auth->requireFounder();
-                self::sendPackage($this->packages);
-                break;
-
-            case '/api/audit':
-                $this->auth->requireFounder();
-                sendJson(['ok' => true, 'lines' => self::auditTail(200)]);
-                break;
-
             default:
                 sendJson(['ok' => false, 'error' => 'Endpoint bulunamadı'], 404);
         }
-    }
-
-    public static function auditTail(int $n): array
-    {
-        $lines = is_file(PROPOS_AUDIT_FILE) ? array_slice(file(PROPOS_AUDIT_FILE, FILE_IGNORE_NEW_LINES) ?: [], -$n) : [];
-        return array_reverse($lines);
-    }
-
-    public static function sendPackage(PackageService $packages): void
-    {
-        $pkg = $packages->buildCustomerZip(
-            qs('tenantId', 'DEFAULT'),
-            qs('businessName', ''),
-            qs('githubRepo', ''),
-            qs('appVersion', '3.0.0')
-        );
-        http_response_code(200);
-        sendApiHeaders();
-        header('Content-Type: application/zip');
-        header('Content-Disposition: attachment; filename="' . $pkg['filename'] . '"');
-        header('Content-Length: ' . strlen($pkg['bytes']));
-        echo $pkg['bytes'];
-        exit;
     }
 
     /**

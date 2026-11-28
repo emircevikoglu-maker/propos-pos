@@ -47,6 +47,9 @@ if (in_array('unit', $want, true) || in_array('supabase', $want, true)) {
         putenv('PROPOS_STORAGE=file');
     }
     require_once dirname(__DIR__, 2) . '/backend/bootstrap.php';
+    // Paket üretici bootstrap'ta değil (yalnızca panel ister).
+    require_once dirname(__DIR__, 2) . '/backend/Services/ZipBuilder.php';
+    require_once dirname(__DIR__, 2) . '/backend/Services/PackageService.php';
 }
 
 foreach ($want as $w) {

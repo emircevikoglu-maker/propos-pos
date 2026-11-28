@@ -146,7 +146,7 @@ t('Müşteri paketi PWA dosyalarını içerir (çevrimdışı açılış kurulum
     foreach (['index.html' => '<html><head></head><body>x</body></html>', 'sw.js' => 'const VERSION="abc";', 'manifest.webmanifest' => '{"name":"x"}', 'icon-192.png' => "\x89PNG", 'icon-512.png' => "\x89PNG", 'icon-maskable-512.png' => "\x89PNG", 'apple-touch-icon.png' => "\x89PNG"] as $f => $c) {
         file_put_contents(PROPOS_DIST_DIR . DIRECTORY_SEPARATOR . $f, $c);
     }
-    $files = readZip((new \ProPos\Services\PackageService($ts))->buildCustomerZip('PWA-1', '', '', '3.0.0')['bytes']);
+    $files = readZip((new \ProPos\Services\PackageService($ts))->buildCustomerZip('PWA-1', '', '3.0.0')['bytes']);
     foreach (['dist/sw.js', 'dist/manifest.webmanifest', 'dist/icon-192.png', 'dist/icon-512.png', 'dist/icon-maskable-512.png', 'dist/apple-touch-icon.png'] as $need) {
         assertTrue(isset($files[$need]), "pakette eksik: $need");
     }

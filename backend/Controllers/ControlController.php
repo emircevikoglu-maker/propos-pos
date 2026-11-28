@@ -43,6 +43,24 @@ class ControlController
         }
     }
 
+    private static function auditTail(int $n): array
+    {
+        $lines = is_file(PROPOS_AUDIT_FILE) ? array_slice(file(PROPOS_AUDIT_FILE, FILE_IGNORE_NEW_LINES) ?: [], -$n) : [];
+        return array_reverse($lines);
+    }
+
+    private function sendPackage(): void
+    {
+        $pkg = $this->packages->buildCustomerZip(qs('tenantId', 'DEFAULT'), qs('businessName', ''), qs('appVersion', '3.0.0'));
+        http_response_code(200);
+        sendApiHeaders();
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . $pkg['filename'] . '"');
+        header('Content-Length: ' . strlen($pkg['bytes']));
+        echo $pkg['bytes'];
+        exit;
+    }
+
     /** Kurucu listesi: anahtarlar dahil, PIN'ler hariç. */
     private function tenantList(): array
     {
@@ -135,11 +153,11 @@ class ControlController
                 break;
 
             case '/api/package':
-                ApiController::sendPackage($this->packages);
+                $this->sendPackage();
                 break;
 
             case '/api/audit':
-                sendJson(['ok' => true, 'lines' => ApiController::auditTail(300)]);
+                sendJson(['ok' => true, 'lines' => self::auditTail(300)]);
                 break;
 
             default:

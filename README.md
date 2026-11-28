@@ -62,7 +62,7 @@ php backend/users.php disable ali.kasa
 - Kurucu anahtarı sunucuda hash olarak durur; ilk kurulumda `data/KURUCU_ANAHTARI.txt` dosyasına yazılır (okuyup silin).
 - Her işletmenin ayrı `syncKey`'i vardır; cihazlar `/api/login` ile 12 saatlik imzalı oturum alır. Lisans (askı/süre) sunucuda kontrol edilir.
 - İstek hızı sınırı: aşımda `429` + `Retry-After` (yoklama ve kullanıcı eylemleri ayrı kovalarda).
-- Bayi uçları (`/api/tenants`, `/api/package`, `/api/apply-update`, `/api/prepare-github`, `/api/audit`) yalnızca kurucu oturumuyla çalışır.
+- POS sunucusunda bayi ucu yoktur (3.10.0); işletme, lisans, kullanıcı ve müşteri paketi yalnızca kontrol panelinde (`npm run control`).
 - Başka bir işletmenin verisine erişim yok; kayıtsız işletme verisi `DEFAULT`'a düşmez.
 - Hatalı girişte hız sınırı (10 dk'da 8 deneme), `data/audit.log` denetim kaydı, günlük otomatik yedek (`data/backups`, 14 gün).
 - CORS kapalı; ayrı alan adı gerekirse `PROPOS_CORS_ORIGIN` (tek köken, virgüllü liste ya da `*`; liste verilirse yalnızca listedeki köken yansır).

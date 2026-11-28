@@ -94,12 +94,12 @@ t('kullanıcı uçları yalnızca kurucuya açık; POS sunucusunda yok', functio
     assertStatus(404, jpost(posUrl(), '/api/users/save', ['tenantId' => 'USR-A', 'username' => 'sizma.deneme', 'password' => 'parola-999'], tok(founderToken())));
 });
 
-t('kullanıcı: toplu kayıt defteri yazımı kullanıcıları silemez/değiştiremez', function () {
+t('kullanıcı: POS\'ta toplu kayıt yazımı yok (404); hash enjekte edilemez', function () {
     $f = tok(founderToken());
     $list = jget(controlUrl(), '/api/tenants', $f)['json']['tenants'];
     foreach ($list as &$e) { $e['users'] = [['username' => 'kasa.ali', 'hash' => password_hash('saldirgan', PASSWORD_DEFAULT), 'active' => true]]; }
     unset($e);
-    jpost(posUrl(), '/api/tenants', $list, $f);
+    assertStatus(404, jpost(posUrl(), '/api/tenants', $list, $f));
     assertStatus(401, userLogin('kasa.ali', 'saldirgan'), 'enjekte edilen hash kabul edilmez');
     assertStatus(200, userLogin('kasa.ali', 'parola-123'));
 });

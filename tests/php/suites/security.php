@@ -53,7 +53,7 @@ t('statik: izin verilmeyen uzantılar servis edilmez', function () {
 t('belirteç: rolü founder yapılan işletme belirteci kurucu uçlarına giremez', function () {
     $c = secCtx();
     $forged = tamperToken($c['ta'], static function ($p) { $p['r'] = 'founder'; return $p; });
-    assertStatus(401, jget(posUrl(), '/api/tenants', tok($forged)));
+    assertStatus(401, jget(posUrl(), '/api/sync?tenantId=SEC-B', tok($forged)));
     assertStatus(401, jget(controlUrl(), '/api/tenants', tok($forged)));
 });
 
@@ -68,10 +68,10 @@ t('belirteç: süre uzatma, alg:none ve JWT biçimi reddedilir', function () {
     $longer = tamperToken($c['ta'], static function ($p) { $p['e'] = time() + 10 * 365 * 86400; return $p; });
     assertStatus(401, jget(posUrl(), '/api/sync?tenantId=SEC-A', tok($longer)));
     $none = rtrim(strtr(base64_encode('{"alg":"none"}'), '+/', '-_'), '=') . '.' . rtrim(strtr(base64_encode('{"r":"founder","t":"DEFAULT","e":9999999999}'), '+/', '-_'), '=') . '.';
-    assertStatus(401, jget(posUrl(), '/api/tenants', tok($none)));
+    assertStatus(401, jget(controlUrl(), '/api/tenants', tok($none)));
     $body = rtrim(strtr(base64_encode('{"r":"founder","t":"DEFAULT","e":9999999999}'), '+/', '-_'), '=');
-    assertStatus(401, jget(posUrl(), '/api/tenants', tok($body . '.')));
-    assertStatus(401, jget(posUrl(), '/api/tenants', tok($body)));
+    assertStatus(401, jget(controlUrl(), '/api/tenants', tok($body . '.')));
+    assertStatus(401, jget(posUrl(), '/api/sync?tenantId=SEC-A', tok($body)));
 });
 
 t('belirteç: devasa başlık sunucuyu düşürmez', function () {
@@ -113,11 +113,11 @@ t('çapraz işletme: gövdeye yazılan tenantId başka işletmeye yönlendirmez'
 
 // ---- Yetki yükseltme -------------------------------------------------------------------
 
-t('yetki: işletme ve yönetici belirteci POS\'taki kurucu uçlarına giremez', function () {
+t('yetki: POS\'ta kurucu/bayi uçları yok — kurucu belirteciyle bile 404', function () {
     $c = secCtx();
-    foreach ([$c['ta'], $c['ma']] as $t) {
-        foreach ([['GET', '/api/tenants', null], ['POST', '/api/tenants', '[]'], ['POST', '/api/apply-update', '<html>hack</html>'], ['GET', '/api/package?tenantId=SEC-B', null], ['GET', '/api/audit', null], ['POST', '/api/prepare-github', '{"version":"9"}']] as [$m, $p, $b]) {
-            assertStatus(401, http(posUrl(), $m, $p, tok($t), $b), "$m $p");
+    foreach ([$c['ta'], $c['ma'], founderToken()] as $t) {
+        foreach ([['GET', '/api/tenants', null], ['POST', '/api/tenants', '[]'], ['POST', '/api/apply-update', '<html>hack</html>'], ['GET', '/api/package?tenantId=SEC-B', null], ['GET', '/api/audit', null], ['POST', '/api/prepare-github', '{"version":"9"}'], ['POST', '/api/users/save', '{}']] as [$m, $p, $b]) {
+            assertStatus(404, http(posUrl(), $m, $p, tok($t), $b), "$m $p");
         }
     }
 });
@@ -136,13 +136,9 @@ t('yetki: cihaz oturumu mevcut PIN\'i bilmeden PIN değiştiremez', function () 
     assertStatus(401, jpost(posUrl(), '/api/pin/change?tenantId=SEC-A', ['current' => '', 'next' => '0000'], tok($c['ta'])));
 });
 
-t('yetki: kurucu kayıt listesine sahte syncKey gönderse bile anahtar değişmez', function () {
+t('yetki: panelden kayıt güncellerken sahte syncKey gönderilse bile anahtar değişmez', function () {
     $c = secCtx();
-    $f = tok(founderToken());
-    $list = jget(posUrl(), '/api/tenants', $f)['json']['tenants'];
-    foreach ($list as &$e) if ($e['tenantId'] === 'SEC-A') $e['syncKey'] = 'SYNC-HACK-HACK-HACK';
-    unset($e);
-    assertStatus(200, jpost(posUrl(), '/api/tenants', $list, $f));
+    assertStatus(200, jpost(controlUrl(), '/api/tenants/save', ['tenantId' => 'SEC-A', 'businessName' => 'Test SEC-A', 'syncKey' => 'SYNC-HACK-HACK-HACK'], tok(founderToken())));
     assertStatus(401, jpost(posUrl(), '/api/login', ['tenantId' => 'SEC-A', 'key' => 'SYNC-HACK-HACK-HACK']));
     assertStatus(200, jpost(posUrl(), '/api/login', ['tenantId' => 'SEC-A', 'key' => $c['ka']]));
 });
@@ -250,14 +246,11 @@ t('kullanıcı adı numaralandırma: kayıtlı ve kayıtsız işletme aynı hata
     assertSame($a['json']['error'] ?? null, $b['json']['error'] ?? null);
 });
 
-t('apply-update (kurucu): HTML olmayan içerik reddedilir; yalnızca dist/ içine yazar', function () {
-    $f = tok(founderToken());
-    assertStatus(400, http(posUrl(), 'POST', '/api/apply-update', $f + ['Content-Type' => 'text/html'], '<?php echo 1; ?>'));
+t('apply-update kaldırıldı: kurucu belirteciyle bile dist/ değiştirilemez', function () {
     $marker = 'PROPOS-TEST-' . bin2hex(random_bytes(4));
     $html = '<!DOCTYPE html><html><head></head><body><div id="root"></div>' . $marker . '</body></html>';
-    assertStatus(200, http(posUrl(), 'POST', '/api/apply-update', $f + ['Content-Type' => 'text/html'], $html));
-    assertContains($marker, jget(posUrl(), '/')['body'], 'test dist klasörüne yazılmalı');
-    assertNotContains($marker, jget(controlUrl(), '/')['body'], 'panel etkilenmemeli');
+    assertStatus(404, http(posUrl(), 'POST', '/api/apply-update', tok(founderToken()) + ['Content-Type' => 'text/html'], $html));
+    assertNotContains($marker, jget(posUrl(), '/')['body']);
 });
 
 t('CORS: PROPOS_CORS_ORIGIN listesi — ön kontrol Cache-Control/Pragma/X-ProPos-Token izni, yalnızca listedeki köken yansır', function () {

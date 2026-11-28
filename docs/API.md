@@ -20,7 +20,8 @@ Kimlik: `X-ProPos-Token` başlığı (HMAC imzalı oturum: kullanıcı girişind
 | `/api/pin/verify` | POST `{pin}` | oturum | `manager` belirteci; 6 hatada 5 dk kilit |
 | `/api/pin/change` | POST `{current?,next}` | oturum | yönetici oturumunda `current` gerekmez |
 | `/api/keepalive` | GET/POST/HEAD | yok | `{ok:true}`; yalnızca bu uçta CORS `*`; IP başına ~4/gün, genel 12 patlama + 2 saatte 1 |
-| `/api/tenants`, `/api/package`, `/api/apply-update`, `/api/prepare-github`, `/api/audit` | | kurucu | eski bayi uçları (kaldırılacak, TODO P8); yeni yer kontrol paneli |
+
+3.10.0: POS API'sinde bayi/kurucu ucu yoktur (`/api/tenants`, `/api/package`, `/api/audit`, `/api/apply-update`, `/api/prepare-github` → 404). Yönetim yalnızca kontrol panelinde; `apply-update` ve `prepare-github` tamamen kalktı.
 
 Yoklama, eylem ve IP kovaları ayrıdır (`PROPOS_RL_POLL|ACTION|IP`); aşımda `429` ve istemci `Retry-After` kadar bekler.
 

@@ -169,20 +169,12 @@ t('publicData: PIN alanları istemciye gitmez', function () {
 
 // ---- Bayi kaydı ---------------------------------------------------------------
 
-t('saveRegistry: istemcinin gönderdiği syncKey yok sayılır', function () {
+t('upsertEntry: istemcinin gönderdiği syncKey yok sayılır', function () {
     [$ts] = freshServices();
     $orig = unitTenant($ts, 'REG-1')['syncKey'];
-    assertTrue($ts->saveRegistry(json_encode([['tenantId' => 'REG-1', 'businessName' => 'X', 'syncKey' => 'SYNC-HACK-HACK-HACK'], ['tenantId' => 'REG-NEW', 'syncKey' => 'SYNC-AAAA-AAAA-AAAA']])));
+    assertTrue($ts->upsertEntry(['tenantId' => 'REG-1', 'businessName' => 'X', 'syncKey' => 'SYNC-HACK-HACK-HACK'])['ok']);
     assertSame($orig, $ts->findRegistryEntry('REG-1')['syncKey']);
-    assertNotSame('SYNC-AAAA-AAAA-AAAA', $ts->findRegistryEntry('REG-NEW')['syncKey']);
     assertTrue($ts->findRegistryEntry('DEFAULT') !== null, 'DEFAULT listeden düşmemeli');
-});
-
-t('saveRegistry: dev liste ve bozuk girdi reddedilir', function () {
-    [$ts] = freshServices();
-    assertFalse($ts->saveRegistry(json_encode(array_fill(0, 5001, ['tenantId' => 'X']))));
-    assertFalse($ts->saveRegistry('{bozuk'));
-    assertFalse($ts->saveRegistry('"metin"'));
 });
 
 t('registryViewFor: yalnızca kendi kaydı, sırlar olmadan', function () {
@@ -339,7 +331,7 @@ t('Müşteri paketi: yalnızca o işletmenin verisi; kontrol paneli kodu yok', f
     $ts->saveTenant('PKG-A', json_encode(minimalState(['marker' => 'VERI-A'])), 'd');
     $ts->saveTenant('PKG-B', json_encode(minimalState(['marker' => 'VERI-B'])), 'd');
     file_put_contents(PROPOS_DIST_DIR . '/index.html', '<html><head></head><body>x</body></html>');
-    $pkg = (new PackageService($ts))->buildCustomerZip('PKG-A', '', '', '3.0.0');
+    $pkg = (new PackageService($ts))->buildCustomerZip('PKG-A', '', '3.0.0');
     $files = readZip($pkg['bytes']);
     $all = implode("\n", array_keys($files)) . "\n" . implode("\n", $files);
     assertContains('VERI-A', $all);
@@ -348,6 +340,7 @@ t('Müşteri paketi: yalnızca o işletmenin verisi; kontrol paneli kodu yok', f
     assertNotContains($b['syncKey'], $all, 'başka işletmenin anahtarı');
     assertNotContains('ControlController', $all, 'kontrol paneli kodu pakete girmemeli');
     assertNotContains('control.php', implode("\n", array_keys($files)));
+    assertFalse(isset($files['backend/Services/PackageService.php']) || isset($files['backend/Services/ZipBuilder.php']), 'bayi paket üreticisi müşteriye gitmemeli');
     assertFalse(isset($files['data/config.json']), 'sunucu sırrı pakete girmemeli');
     assertFalse(isset($files['.env']) || isset($files['backend/.env']), 'sırlar pakete girmemeli');
     assertNotContains('SUPABASE_SECRET_KEY=', $all, '.env içeriği pakete girmemeli');
@@ -364,12 +357,4 @@ t('Müşteri paketi: bootstrap.php yalnızca pakette olan dosyaları ister', fun
     foreach ($m[1] as $rel) {
         assertContains("'backend/$rel'", $pkgSrc, "bootstrap $rel istiyor ama paket listesinde yok");
     }
-});
-
-t('applyHtmlUpdate: HTML olmayan ya da boş içerik reddedilir', function () {
-    [$ts] = freshServices();
-    $p = new PackageService($ts);
-    assertFalse($p->applyHtmlUpdate(''));
-    assertFalse($p->applyHtmlUpdate('<?php system($_GET["c"]); ?>'));
-    assertFalse($p->applyHtmlUpdate(str_repeat('a', 100)));
 });

@@ -7,6 +7,9 @@ declare(strict_types=1);
  * VDS: ayrı alt alan adı + nginx ters vekil + IP kısıtı önerilir. Müşteri paketine girmez.
  */
 require_once __DIR__ . '/bootstrap.php';
+// Paket üretici yalnızca panelde: müşteri kurulumuna giden bootstrap bunları istemez.
+require_once __DIR__ . '/Services/ZipBuilder.php';
+require_once __DIR__ . '/Services/PackageService.php';
 require_once __DIR__ . '/Controllers/ControlController.php';
 
 use ProPos\Controllers\ControlController;

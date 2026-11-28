@@ -268,44 +268,6 @@ class TenantService
     }
 
     /**
-     * Kurucudan gelen listeyi kaydeder. syncKey istemciden ASLA alınmaz:
-     * var olan kayıtta korunur, yeni kayıtta sunucu üretir.
-     */
-    public function saveRegistry(string $rawBody): bool
-    {
-        $parsed = json_decode($rawBody, true);
-        if (!is_array($parsed) || count($parsed) > 5000) {
-            return false;
-        }
-        $existing = [];
-        foreach ($this->loadRegistry() as $e) {
-            $existing[$e['tenantId']] = $e;
-        }
-        $next = [];
-        $seen = [];
-        foreach ($parsed as $entry) {
-            if (!is_array($entry) || empty($entry['tenantId'])) {
-                continue;
-            }
-            $id = normalizeTenantId((string)$entry['tenantId']);
-            if (isset($seen[$id])) {
-                continue;
-            }
-            $seen[$id] = true;
-            $entry['tenantId'] = $id;
-            $entry['syncKey'] = $existing[$id]['syncKey'] ?? AuthService::generateKey('SYNC', 3);
-            // Kullanıcılar (parola hash'leri) yalnızca kullanıcı uçlarıyla değişir; toplu kayıttan alınmaz.
-            $entry['users'] = $existing[$id]['users'] ?? [];
-            $next[] = $entry;
-        }
-        if (!isset($seen['DEFAULT']) && isset($existing['DEFAULT'])) {
-            array_unshift($next, $existing['DEFAULT']);
-        }
-        audit('registry.save', (string)count($next));
-        return $this->writeRegistry($next);
-    }
-
-    /**
      * Kontrol panelinden tek kayıt oluşturur/günceller. Alanlar doğrulanır; syncKey istemciden alınmaz.
      *
      * @return array{ok:bool, error?:string, tenant?:array}

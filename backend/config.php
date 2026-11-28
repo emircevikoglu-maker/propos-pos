@@ -73,7 +73,6 @@ define('PROPOS_AUDIT_FILE', PROPOS_DATA_DIR . DIRECTORY_SEPARATOR . 'audit.log')
 define('PROPOS_RATE_DIR', PROPOS_DATA_DIR . DIRECTORY_SEPARATOR . 'ratelimit');
 define('PROPOS_PORT', 8586);
 define('PROPOS_MAX_DB_BYTES', envInt('PROPOS_MAX_DB_BYTES', 20 * 1024 * 1024));
-define('PROPOS_MAX_HTML_BYTES', 12 * 1024 * 1024);
 
 function bootstrapStorage(): void
 {
