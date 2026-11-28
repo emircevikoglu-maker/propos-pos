@@ -3,6 +3,9 @@ import { usePos } from "../../context/PosContext";
 import { CURRENCY_OPTIONS, THEME_PRESETS } from "../../constants/initialData";
 import { Ic } from "../Ic";
 import { Card, Chips, Field, SwitchRow } from "../page";
+import { previewMoment } from "../../design/celebrations";
+
+const PREVIEWS = [["firstSale", "İlk satış"], ["goal", "Hedef"], ["record", "Rekor"], ["streak", "Seri"], ["zReport", "Gün sonu"]];
 
 const LOGO_TYPES = [["text", "Harf"], ["emoji", "Emoji"], ["image", "Görsel"]];
 const EMOJIS = ["☕", "🥐", "🍔", "🍕", "🍰", "🍸", "🌿", "🔥", "👑", "💎"];
@@ -97,6 +100,11 @@ export function Feel() {
             <button type="button" aria-pressed={celebration.motion === "auto"} onClick={() => updateCelebration({ motion: "auto" })}>Sistem</button>
             <button type="button" aria-pressed={celebration.motion === "reduce"} onClick={() => updateCelebration({ motion: "reduce" })}>Azalt</button>
           </div>
+        </div>
+        <SwitchRow title="Liderlik tablosu" desc="Kapalıyken patron görünümünde sıralama yok" checked={!!celebration.leaderboard} onChange={(v) => updateCelebration({ leaderboard: v })} />
+        <div className="field" style={{ marginTop: 12 }}>
+          <span className="ops-title">Önizleme (satış verisi değişmez)</span>
+          <div className="ops-row">{PREVIEWS.map(([kind, label]) => <button key={kind} type="button" className="chip" disabled={!celebration.enabled && kind !== "zReport"} onClick={() => previewMoment(kind)}>{label}</button>)}</div>
         </div>
       </Card>
       <Card span={5} title="Günlük ciro hedefi" aside={<span className="label">0 = kapalı</span>}>

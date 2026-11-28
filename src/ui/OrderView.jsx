@@ -192,7 +192,7 @@ export function OrderView() {
       <nav className="cats" aria-label="Kategoriler">
         <button type="button" className="btn btn-ghost order-back" onClick={() => setActiveTableId(null)}><Ic n="left" />Masalar</button>
         <label className="search" style={{ marginBottom: 6 }}>
-          <Ic n="eye" className="ic-sm" />
+          <Ic n="search" className="ic-sm" />
           <input value={posSearch} onChange={(e) => setPosSearch(e.target.value)} onKeyDown={onSearchKey} placeholder="Ürün ara" aria-label="Ürün ara" />
         </label>
         <div className="cat-list">

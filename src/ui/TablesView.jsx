@@ -6,14 +6,28 @@ import { Ic } from "./Ic";
 import { useNow, tableRemaining, tableCount, fmtMin } from "./hooks";
 
 
-function TableCard({ table, onOpen }) {
+/** Masa az önce kapandıysa kartın üstünde bir kez onay işareti (prototip). */
+function useClosedFlash(ref, closedAt) {
+  React.useEffect(() => {
+    if (!closedAt || Date.now() - closedAt > 1500 || !ref.current) return;
+    const done = ref.current.querySelector(".pp-table-done");
+    if (!done) return;
+    M.anim(done, [{ opacity: 0, transform: "scale(.9)" }, { opacity: 1, transform: "scale(1)", offset: 0.35 }, { opacity: 0, transform: "scale(1)" }], { duration: 600 });
+    M.anim(done.querySelector(".ic"), [{ transform: "scale(.4)" }, { transform: "scale(1.15)", offset: 0.5 }, { transform: "scale(1)" }], { duration: 420, easing: M.EASE.spring });
+  }, [closedAt, ref]);
+}
+
+function TableCard({ table, onOpen, closedAt }) {
+  const ref = React.useRef(null);
+  useClosedFlash(ref, closedAt);
   const busy = table.status === "occupied" && table.items.length > 0;
   const sub = table.zone;
   if (!busy) {
     return (
-      <button type="button" className="pp-table is-empty pressable" onClick={(e) => onOpen(table, e.currentTarget)}>
+      <button type="button" ref={ref} className="pp-table is-empty pressable" onClick={(e) => onOpen(table, e.currentTarget)}>
         <div className="pp-table-top"><div><div className="pp-table-name">{table.name}</div><div className="pp-table-seats">{sub}</div></div></div>
         <div className="pp-table-empty-hint"><Ic n="plus" className="ic-sm" />Adisyon aç</div>
+        <span className="pp-table-done" aria-hidden="true"><Ic n="check" /></span>
       </button>
     );
   }
@@ -35,7 +49,7 @@ function TableCard({ table, onOpen }) {
 }
 
 export function TablesView() {
-  const { tables, zones, selectedZone, setSelectedZone, setActiveTableId, startFastEsnafOrder, sales, activeOccupiedCount, openTablesTotalAmount } = usePos();
+  const { tables, zones, selectedZone, setSelectedZone, setActiveTableId, startFastEsnafOrder, sales, activeOccupiedCount, openTablesTotalAmount, lastClosed } = usePos();
   // Eski kenar çubuğundaki "bugünkü kasa / açık masalardaki tutar" özetleri (3.9.0'da geri geldi).
   const todayTotal = React.useMemo(() => {
     const d = new Date().toDateString();
@@ -80,7 +94,7 @@ export function TablesView() {
         <button type="button" className="btn btn-secondary" onClick={() => startFastEsnafOrder()}><Ic n="bag" />Hızlı satış</button>
       </div>
       <div className="tables" ref={boxRef}>
-        {visible.map((t) => <TableCard key={t.id} table={t} onOpen={open} />)}
+        {visible.map((t) => <TableCard key={t.id} table={t} onOpen={open} closedAt={lastClosed && lastClosed.id === t.id ? lastClosed.at : null} />)}
       </div>
     </div>
   );

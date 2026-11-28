@@ -115,6 +115,7 @@ export function PosProvider({ children }) {
   const [printDevice, setPrintDeviceState] = useState(() => loadDevicePrint(ACTIVE_TENANT_ID));
   const updatePrintDevice = (patch) => setPrintDeviceState((prev) => { const next = { ...prev, ...patch }; saveDevicePrint(ACTIVE_TENANT_ID, next); return next; });
 
+  const [lastClosed, setLastClosed] = useState(null); // masalar ekranındaki kapanış onayı animasyonu
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
   const showToast = (message, type = "success") => {
@@ -558,12 +559,13 @@ export function PosProvider({ children }) {
     setIngredients((prev) => prev.map((ing) => (deductions[ing.id] ? { ...ing, stock: Math.max(0, +(ing.stock - deductions[ing.id]).toFixed(1)) } : ing)));
   };
 
-  const completeTableOrder = (paymentMethod) => {
+  const completeTableOrder = (paymentMethod, { change = 0 } = {}) => {
     if (!activeTable?.items.length) return;
     const { gross, discount, remaining: remainingTotal } = closingTotals(activeTable);
     const newSale = { id: `sl-${Date.now()}`, timestamp: new Date().toISOString(), guests: normalizeGuests(activeTable.guests), tableName: activeTable.name, staffId: activeTable.staffId || staffList[0]?.id, paymentMethod, subtotal: gross, discount, total: remainingTotal, items: activeTable.items };
     const snap = { tables, sales, ingredients };
     const closedName = activeTable.name;
+    setLastClosed({ id: activeTable.id, at: Date.now() });
     const staffName = staffList.find((st) => st.id === activeTable.staffId)?.name || "Personel";
     setSales((prev) => [newSale, ...prev]);
     deductRecipeIngredients(activeTable.items);
@@ -572,8 +574,8 @@ export function PosProvider({ children }) {
     setActiveTableId(null);
     // 5 sn içinde geri alınabilir; kutlama yalnızca kalıcılaşınca (geri alınan satış kutlanmaz).
     offerUndo(
-      `${closedName} kapatıldı · ${formatTL(remainingTotal)} · ${paymentMethod} · ${staffName}`,
-      () => { setTables(snap.tables); setSales(snap.sales); setIngredients(snap.ingredients); },
+      `${closedName} kapatıldı · ${formatTL(remainingTotal)} · ${paymentMethod}${change > 0 ? ` · para üstü ${formatTL(change)}` : ""} · ${staffName}`,
+      () => { setTables(snap.tables); setSales(snap.sales); setIngredients(snap.ingredients); setLastClosed(null); },
       () => celebrateSale({ sales: [newSale, ...snap.sales], sale: newSale, goal: celebration.goal, streak: cleanStreak([newSale, ...snap.sales], voidLog).current })
     );
   };
@@ -1027,7 +1029,7 @@ export function PosProvider({ children }) {
     newCategoryName, setNewCategoryName, editingCategoryOldName, setEditingCategoryOldName, editingStaffId, setEditingStaffId, newStaffName, setNewStaffName, newStaffRole, setNewStaffRole, newStaffColor, setNewStaffColor,
     editingEsnafId, setEditingEsnafId, editEsnafName, setEditEsnafName, editEsnafShopType, setEditEsnafShopType, editEsnafPhone, setEditEsnafPhone, editEsnafDiscount, setEditEsnafDiscount, editEsnafNote, setEditEsnafNote,
     resetConfirmOpen, setResetConfirmOpen, criticalIngredients, filteredSales, filteredExpenses, totalEsnafReceivable, kpiMetrics, topProducts, staffPerformance, trendChartData, activeOccupiedCount, openTablesTotalAmount,
-    printDevice, updatePrintDevice, sendOrder, reprintKitchen, printTableReceipt, printSaleReceipt, printTestTicket,
+    lastClosed, printDevice, updatePrintDevice, sendOrder, reprintKitchen, printTableReceipt, printSaleReceipt, printTestTicket,
     addProductToTable, updateLineContent, updateOrderItemQty, setTableStaff, setTableDiscount, saveItemNote, completeTableOrder, handlePartialPayment, handleConfirmEsnafCharge, handleQuickCreateEsnaf, handleCollectEsnafPayment, copyEsnafWhatsAppSummary, startFastEsnafOrder,
     requireAdmin, handleSaveIngredient, handleDeleteIngredient,
     handleTransferTable, handleStockAdjustment, handleAddExpense, handleSaveProduct, startEditProduct, handleDeleteProduct, handleSaveTable, handleDeleteTable, handleSaveZone, handleDeleteZone, handleSaveCategory, handleDeleteCategory,
