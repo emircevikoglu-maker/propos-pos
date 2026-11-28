@@ -1,7 +1,9 @@
 // Ürün seçenekleri (içecek çeşitleri: boy, süt, şeker, ekstra shot…).
 // Veri modeli (ürün üzerinde):
 //   options: [{ id, name, type: "single"|"multi", required, max, choices: [{ id, name, price }] }]
-// Sepet satırı: { productId, name, basePrice, price (birim, seçenekler dahil), qty, note, options: [...], optionKey }
+// Sepet satırı: { productId, name, basePrice, price (birim, seçenekler dahil), qty, note, options: [...], optionKey, without?: [...], sentQty? }
+//   without: satışta çıkarılan reçete malzemeleri [{ ingredientId, name }]; optionKey'e de girer (farklı içerik = ayrı satır).
+//   sentQty: mutfağa/bara gönderilmiş adet.
 // Saf fonksiyonlar: senkrondan gelen bozuk/kötü niyetli veri de buradan geçer.
 
 export const MAX_GROUPS = 10;
@@ -87,7 +89,8 @@ export function sanitizeRecipe(r) {
 export function lineConsumption(product, item) {
   const out = {};
   const add = (ingredientId, amount) => { out[ingredientId] = (out[ingredientId] || 0) + amount * (Number(item && item.qty) || 0); };
-  ((product && product.recipe) || []).forEach((r) => add(r.ingredientId, Number(r.amount) || 0));
+  const removed = new Set(withoutList(item).map((w) => w.ingredientId));
+  ((product && product.recipe) || []).forEach((r) => { if (r.fixed || !removed.has(r.ingredientId)) add(r.ingredientId, Number(r.amount) || 0); });
   const groups = sanitizeOptionGroups(product && product.options);
   ((item && item.options) || []).forEach((o) => {
     const g = groups.find((x) => x.id === (o && o.groupId));
@@ -162,28 +165,106 @@ export const optionKey = (resolved) => (Array.isArray(resolved) ? resolved : [])
 
 export const optionSummary = (options) => (Array.isArray(options) ? options : []).map((o) => cleanText(o && o.name, 40)).filter(Boolean).join(" · ");
 
-export function buildOrderLine(product, selection, id = newId("oi")) {
+// ---- İçerik (reçeteden çıkarma) ------------------------------------------------
+
+export const withoutList = (item) => (item && Array.isArray(item.without) ? item.without.filter((w) => w && typeof w.ingredientId === "string") : []);
+
+/** Satışta çıkarılabilecek malzemeler: reçetede "fixed" olmayan ve malzeme listesinde bulunanlar. */
+export function removableIngredients(product, ingredients) {
+  const byId = new Map((Array.isArray(ingredients) ? ingredients : []).map((i) => [i.id, i]));
+  const seen = new Set();
+  return ((product && Array.isArray(product.recipe) && product.recipe) || []).reduce((out, r) => {
+    if (!r || r.fixed || seen.has(r.ingredientId) || !byId.has(r.ingredientId)) return out;
+    seen.add(r.ingredientId);
+    out.push({ ingredientId: r.ingredientId, name: cleanText(byId.get(r.ingredientId).name, 60) });
+    return out;
+  }, []);
+}
+
+/** Dokununca doğrudan eklenmesin, içerik penceresi açılsın mı? */
+export const needsContentSheet = (product) => hasOptions(product) || !!(product && product.askContent);
+
+export const withoutSummary = (item) => withoutList(item).map((w) => `${cleanText(w.name, 60)} yok`).join(" · ");
+
+/** Fiş, cari ve listeler için tek satırlık içerik özeti: seçenekler + çıkarılanlar. */
+export const lineDetails = (item) => [optionSummary(item && item.options), withoutSummary(item)].filter(Boolean).join(" · ");
+
+const contentKey = (resolved, without) => [optionKey(resolved), ...without.map((w) => `x:${w.ingredientId}`).sort()].filter(Boolean).join("|");
+
+export const MAX_LINE_QTY = 99;
+const clampQty = (v) => Math.max(1, Math.min(MAX_LINE_QTY, Math.floor(Number(v)) || 1));
+
+/**
+ * @param {object} [extra] { without: çıkarılacak malzeme listesi (removableIngredients'tan), note, qty }
+ */
+export function buildOrderLine(product, selection, id = newId("oi"), extra = {}) {
   const resolved = resolveSelection(product, selection);
+  const without = withoutList(extra);
   return {
     id,
     productId: product.id,
     name: product.name,
     basePrice: cleanPrice(product.price),
     price: unitPrice(product, resolved),
-    qty: 1,
-    note: "",
+    qty: clampQty(extra.qty),
+    note: cleanText(extra.note, 160),
     options: resolved,
-    optionKey: optionKey(resolved)
+    optionKey: contentKey(resolved, without),
+    ...(without.length ? { without } : {})
   };
 }
 
-/** Aynı ürün + aynı seçenekler + notsuz satır varsa adedi artırır, yoksa yeni satır ekler. */
+const sameContent = (a, b) => a.productId === b.productId && (a.note || "") === (b.note || "") && (a.optionKey || "") === (b.optionKey || "");
+
+/** Aynı ürün + aynı içerik + aynı not varsa adedi artırır, yoksa yeni satır ekler. */
 export function mergeIntoItems(items, line) {
   const list = Array.isArray(items) ? items : [];
-  const key = line.optionKey || "";
-  const idx = list.findIndex((i) => i.productId === line.productId && !i.note && (i.optionKey || "") === key);
+  const idx = list.findIndex((i) => sameContent(i, line));
   if (idx === -1) return [...list, line];
-  return list.map((it, i) => (i === idx ? { ...it, qty: it.qty + 1 } : it));
+  return list.map((it, i) => (i === idx ? { ...it, qty: it.qty + (line.qty || 1), ...(line.sentQty ? { sentQty: (it.sentQty || 0) + line.sentQty } : {}) } : it));
+}
+
+/** Adisyon satırının seçimini içerik penceresine geri yükler. */
+export function selectionFromLine(product, item) {
+  const sel = {};
+  sanitizeOptionGroups(product && product.options).forEach((g) => {
+    sel[g.id] = ((item && item.options) || []).filter((o) => o.groupId === g.id && g.choices.some((c) => c.id === o.choiceId)).map((o) => o.choiceId);
+  });
+  return sel;
+}
+
+/**
+ * Açık adisyondaki satırın içeriğini değiştirir. `qty` satırdan azsa satır bölünür (önce gönderilmemiş adetler değişir).
+ * Birim fiyat yalnızca seçenekler değiştiyse yeniden hesaplanır (satıra sabitlenen fiyat korunur).
+ * @returns {{items: object[], cancelled: object|null}} cancelled: mutfağa gönderilmişken içeriği değişen eski satır (qty ile)
+ */
+export function editLine(items, itemId, product, { selection, without = [], note = "", qty }) {
+  const list = Array.isArray(items) ? items : [];
+  const idx = list.findIndex((i) => i.id === itemId);
+  if (idx === -1) return { items: list, cancelled: null };
+  const old = list[idx];
+  const count = Math.min(old.qty, clampQty(qty === undefined ? old.qty : qty));
+  const built = buildOrderLine(product, selection, old.id, { without, note });
+  const sameOptions = optionKey(old.options) === optionKey(built.options);
+  const next = {
+    ...old, note: built.note, options: built.options, optionKey: built.optionKey,
+    price: sameOptions ? old.price : built.price,
+    without: built.without
+  };
+  if (!next.without) delete next.without;
+  if (sameContent(old, next)) return { items: list, cancelled: null };
+
+  const sent = Math.min(old.qty, old.sentQty || 0);
+  const sentMoved = Math.max(0, count - (old.qty - sent));
+  const edited = { ...next, id: count === old.qty ? old.id : newId("oi"), qty: count };
+  delete edited.sentQty;
+  const rest = count === old.qty ? [] : [{ ...old, qty: old.qty - count, ...(sent ? { sentQty: sent - sentMoved } : {}) }];
+  const others = [...list.slice(0, idx), ...rest, ...list.slice(idx + 1)];
+  const twin = others.findIndex((i) => i.id !== old.id && sameContent(i, edited) && i.price === edited.price);
+  const out = twin === -1
+    ? [...others.slice(0, idx + rest.length), edited, ...others.slice(idx + rest.length)]
+    : others.map((i, n) => (n === twin ? { ...i, qty: i.qty + edited.qty } : i));
+  return { items: out, cancelled: sentMoved > 0 ? { ...old, qty: sentMoved } : null };
 }
 
 /** Kartta gösterilecek fiyat etiketi: seçenekle artabiliyorsa "₺65+" gibi. */

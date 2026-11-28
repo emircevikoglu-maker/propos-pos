@@ -199,3 +199,12 @@
   .recipe-name { grid-column: 1 / -1; }
   .recipe-new { grid-template-columns: 1fr 1fr; }
 }
+
+/* Satışta içerik seçimi (3.10.0). Ürün kartı aynı; sağ alttaki ikon artık dokunulabilir. */
+.product-cell { position: relative; display: grid; min-width: 0; }
+.product-content { position: absolute; right: 4px; bottom: 4px; width: var(--tap); height: var(--tap); display: grid; place-items: center; border-radius: var(--r-md); color: var(--text-3); }
+.product-content:hover, .product-content:focus-visible { background: var(--surface-3); color: var(--primary); }
+.product-content .ic { width: 18px; height: 18px; }
+.line-without { display: block; font-size: var(--fs-xs); color: var(--warning); }
+.chip.is-out { text-decoration: line-through; color: var(--text-3); border-style: dashed; }
+.opt-note { width: 100%; margin-top: 10px; }

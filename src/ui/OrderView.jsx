@@ -1,12 +1,11 @@
 import React from "react";
 import { usePos } from "../context/PosContext";
 import { formatTL, getElapsedMinutes } from "../utils/formatters";
-import {
-  hasOptions, optionSummary, defaultSelection, toggleChoice, validateSelection, resolveSelection, unitPrice, sanitizeOptionGroups
-} from "../utils/productOptions";
+import { hasOptions, optionSummary, withoutSummary, removableIngredients, needsContentSheet } from "../utils/productOptions";
 import { PPMotion as M } from "../design/motion";
 import { Ic } from "./Ic";
-import { useSheet, Sheet } from "./Sheet";
+import { useSheet } from "./Sheet";
+import { ContentSheet } from "./ContentSheet";
 import { tableSubtotal, tableRemaining, tableCount, fmtMin } from "./hooks";
 import { PaySheet } from "./PaySheet";
 import { OpsSheet } from "./OpsSheet";
@@ -15,7 +14,7 @@ const FAV = "__fav";
 const NOTES = ["Acele", "Az buzlu", "Paket"];
 const parseNote = (n) => String(n || "").split(" · ").map((x) => x.trim()).filter(Boolean);
 
-function ProductCard({ product, qty, onAdd }) {
+function ProductCard({ product, qty, onAdd, onContent }) {
   const prev = React.useRef(qty);
   const badge = React.useRef(null);
   React.useEffect(() => {
@@ -26,18 +25,22 @@ function ProductCard({ product, qty, onAdd }) {
     prev.current = qty;
   }, [qty]);
   return (
-    <button type="button" className="product pressable" onClick={(e) => onAdd(product, e.currentTarget)}>
-      <span className="product-name">{product.name}</span>
-      <span className="product-foot">
-        <span className="product-price">{formatTL(product.price)}</span>
-        {hasOptions(product) && <span className="product-opt" title="Çeşitli"><Ic n="sliders" /></span>}
-      </span>
-      {qty > 0 && <span className="product-qty num" ref={badge}>{qty}</span>}
-    </button>
+    <div className="product-cell">
+      <button type="button" className="product pressable" onClick={(e) => onAdd(product, e.currentTarget)}>
+        <span className="product-name">{product.name}</span>
+        <span className="product-foot"><span className="product-price">{formatTL(product.price)}</span></span>
+        {qty > 0 && <span className="product-qty num" ref={badge}>{qty}</span>}
+      </button>
+      {onContent && (
+        <button type="button" className="product-content" aria-label={`${product.name} içeriğini seç`} title={hasOptions(product) ? "Çeşit ve içerik" : "İçerik ve not"} onClick={() => onContent(product)}>
+          <Ic n="sliders" />
+        </button>
+      )}
+    </div>
   );
 }
 
-function Line({ item, open, onToggle }) {
+function Line({ item, open, onToggle, onEdit }) {
   const { updateOrderItemQty, saveItemNote } = usePos();
   const notes = parseNote(item.note);
   const toggleNote = (nt) => {
@@ -52,6 +55,7 @@ function Line({ item, open, onToggle }) {
     setDraft(null);
   };
   const opts = optionSummary(item.options);
+  const removed = withoutSummary(item);
   return (
     <div className="line-wrap">
       <button type="button" className="line pressable" aria-expanded={open} onClick={onToggle}>
@@ -59,6 +63,7 @@ function Line({ item, open, onToggle }) {
         <span>
           <span className="line-name">{item.name}</span>
           {opts && <span className="line-opts">{opts}</span>}
+          {removed && <span className="line-without">{removed}</span>}
           {notes.length > 0 && <span className="line-note">{notes.join(" · ")}</span>}
         </span>
         <span className="line-price">{formatTL(item.price * item.qty)}</span>
@@ -70,6 +75,7 @@ function Line({ item, open, onToggle }) {
             <span className="num">{item.qty}</span>
             <button type="button" aria-label="Artır" onClick={() => updateOrderItemQty(item.id, 1)}><Ic n="plus" className="ic-sm" /></button>
           </span>
+          {onEdit && <button type="button" className="btn btn-secondary" onClick={onEdit}><Ic n="sliders" className="ic-sm" />İçerik</button>}
           <button type="button" className="btn btn-danger btn-icon" aria-label="Satırı sil" onClick={() => updateOrderItemQty(item.id, -item.qty)}><Ic n="trash" className="ic-sm" /></button>
           <span className="line-notes">
             {NOTES.map((nt) => (
@@ -95,12 +101,14 @@ function Line({ item, open, onToggle }) {
 export function OrderView() {
   const {
     activeTable: table, activeTableId, products, categories, setActiveTableId, addProductToTable,
-    posSearch, setPosSearch, handleSearchEnter, optionPickerProduct, setOptionPickerProduct, confirmOptionPicker
+    posSearch, setPosSearch, handleSearchEnter, optionPickerProduct, setOptionPickerProduct, confirmOptionPicker,
+    ingredients, updateLineContent
   } = usePos();
   const sheet = useSheet();
   const [cat, setCat] = React.useState(null);
   const [expanded, setExpanded] = React.useState(null);
   const [ticketOpen, setTicketOpen] = React.useState(false);
+  const [editId, setEditId] = React.useState(null); // içeriği düzenlenen adisyon satırı
   const badgeRef = React.useRef(null);
   const productsRef = React.useRef(null);
   const flying = React.useRef(false);
@@ -121,7 +129,7 @@ export function OrderView() {
   const count = tableCount(table);
 
   React.useEffect(() => {
-    if (productsRef.current) productsRef.current.querySelectorAll(".product").forEach((el, i) => M.rise(el, Math.min(i * 22, 260), 6));
+    if (productsRef.current) productsRef.current.querySelectorAll(".product-cell").forEach((el, i) => M.rise(el, Math.min(i * 22, 260), 6));
   }, [activeCat, q]);
 
   // Sayaç sıçraması: ürün uçuşu yoksa (stepper, barkod) rozet doğrudan sıçrar.
@@ -143,15 +151,23 @@ export function OrderView() {
     );
   }
 
-  const add = (product, el) => {
-    M.flash(el);
-    if (hasOptions(product)) { addProductToTable(product); return; }
-    addProductToTable(product, undefined);
+  // İyimser arayüz: rakam hemen güncel; uçuş bitince rozet sıçrar.
+  const fly = (from) => {
     flying.current = true;
     const done = () => { flying.current = false; if (badgeRef.current) M.bump(badgeRef.current); };
-    M.fly(el, badgeRef.current, {}).then(done, done);
+    M.fly(from, badgeRef.current, {}).then(done, done);
     if (M.reduced()) done();
   };
+  const add = (product, el) => {
+    M.flash(el);
+    if (needsContentSheet(product)) { addProductToTable(product); return; }
+    addProductToTable(product, undefined);
+    fly(el);
+  };
+  const hasContent = (p) => hasOptions(p) || removableIngredients(p, ingredients).length > 0;
+  const editItem = editId ? table.items.find((i) => i.id === editId) : null;
+  const editProduct = editItem ? products.find((p) => p.id === editItem.productId) : null;
+  const openEdit = (item) => { setEditId(item.id); sheet.open("icerik"); };
 
   const onSearchKey = (e) => { if (e.key === "Enter" && handleSearchEnter()) e.preventDefault(); };
   const sub = tableSubtotal(table), rest = tableRemaining(table);
@@ -178,7 +194,7 @@ export function OrderView() {
 
       <div className="products" ref={productsRef}>
         {shown.length === 0 && <p className="label" style={{ gridColumn: "1 / -1", padding: 12 }}>Ürün bulunamadı.</p>}
-        {shown.map((p) => <ProductCard key={p.id} product={p} qty={qtyOf(p.id)} onAdd={add} />)}
+        {shown.map((p) => <ProductCard key={p.id} product={p} qty={qtyOf(p.id)} onAdd={add} onContent={hasContent(p) ? setOptionPickerProduct : null} />)}
       </div>
 
       <aside className={`ticket${ticketOpen ? " is-open" : ""}`} aria-label="Adisyon">
@@ -196,7 +212,8 @@ export function OrderView() {
           {empty ? (
             <div className="ticket-empty"><Ic n="receipt" /><div>Adisyon boş<br /><span className="label">Ürüne dokunun; çeşitli ürünlerde seçim penceresi açılır</span></div></div>
           ) : table.items.map((it) => (
-            <Line key={it.id} item={it} open={expanded === it.id} onToggle={() => setExpanded(expanded === it.id ? null : it.id)} />
+            <Line key={it.id} item={it} open={expanded === it.id} onToggle={() => setExpanded(expanded === it.id ? null : it.id)}
+              onEdit={products.some((p) => p.id === it.productId) ? () => openEdit(it) : null} />
           ))}
         </div>
         <div className="ticket-foot">
@@ -216,67 +233,17 @@ export function OrderView() {
       {sheet.current === "odeme" && <PaySheet table={table} onClose={sheet.close} />}
       {sheet.current === "islem" && <OpsSheet table={table} onClose={sheet.close} />}
       {sheet.current === "cesit" && optionPickerProduct && (
-        <PickerSheet product={optionPickerProduct} onClose={sheet.close} onConfirm={(sel, from) => {
-          confirmOptionPicker(sel);
-          flying.current = true;
-          const done = () => { flying.current = false; if (badgeRef.current) M.bump(badgeRef.current); };
-          M.fly(from, badgeRef.current, {}).then(done, done);
-          if (M.reduced()) done();
+        <ContentSheet product={optionPickerProduct} ingredients={ingredients} onClose={sheet.close} onConfirm={(content, from) => {
+          confirmOptionPicker(content);
+          fly(from);
+        }} />
+      )}
+      {sheet.current === "icerik" && editItem && editProduct && (
+        <ContentSheet product={editProduct} ingredients={ingredients} line={editItem} onClose={sheet.close} onConfirm={(content) => {
+          updateLineContent(editItem.id, content);
+          setExpanded(null);
         }} />
       )}
     </div>
-  );
-}
-
-/** Çeşit seçimi (prototip düzeni): zorunlu gruplar ön seçili, "Ekle" tek dokunuş. */
-function PickerSheet({ product, onClose, onConfirm }) {
-  const groups = React.useMemo(() => sanitizeOptionGroups(product.options), [product]);
-  const [selection, setSelection] = React.useState(() => defaultSelection(product));
-  const addRef = React.useRef(null);
-  const { ok, errors } = validateSelection(product, selection);
-  const total = unitPrice(product, resolveSelection(product, selection));
-
-  const toggle = (g, c, el) => {
-    const cur = selection[g.id] || [];
-    if (g.type === "multi" && !cur.includes(c.id) && cur.length >= g.max) { M.shake(el.parentElement); return; }
-    setSelection(toggleChoice(product, selection, g.id, c.id));
-    M.bump(el, 1.06);
-  };
-
-  const confirm = () => {
-    const r = addRef.current ? addRef.current.getBoundingClientRect() : null;
-    onConfirm(selection, r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null);
-    onClose();
-  };
-
-  return (
-    <Sheet
-      onClose={onClose}
-      label={`Çeşit seçimi · ${formatTL(product.price)}`}
-      title={product.name}
-      foot={<button type="button" className="btn btn-primary btn-lg" ref={addRef} disabled={!ok} onClick={confirm}>Ekle · <span className="num">{formatTL(total)}</span></button>}
-    >
-      <div>
-        {groups.map((g) => {
-          const cur = selection[g.id] || [];
-          return (
-            <div className="opt-group" key={g.id}>
-              <div className="opt-group-head">
-                <span className="opt-group-name">{g.name}</span>
-                {g.required ? <span className="tag tag-primary">Zorunlu</span> : g.type === "multi" ? <span className="tag">En fazla {g.max}</span> : <span className="tag">İsteğe bağlı</span>}
-              </div>
-              <div className="opt-choices">
-                {g.choices.map((c) => (
-                  <button key={c.id} type="button" className="chip" aria-pressed={cur.includes(c.id)} onClick={(e) => toggle(g, c, e.currentTarget)}>
-                    {c.name}{c.price !== 0 && <span className="chip-price">{c.price > 0 ? "+" : "−"}{formatTL(Math.abs(c.price))}</span>}
-                  </button>
-                ))}
-              </div>
-              {errors[g.id] && <p className="label" style={{ color: "var(--danger)", marginTop: 8 }}>{errors[g.id]}</p>}
-            </div>
-          );
-        })}
-      </div>
-    </Sheet>
   );
 }

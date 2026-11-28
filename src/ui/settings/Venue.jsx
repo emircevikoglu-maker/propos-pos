@@ -67,7 +67,7 @@ function ProductSheet({ onClose }) {
   const {
     handleSaveProduct, editingPrdId, newPrdName, setNewPrdName, newPrdPrice, setNewPrdPrice, newPrdEmoji, setNewPrdEmoji, newPrdBarcode, setNewPrdBarcode,
     newPrdCategory, setNewPrdCategory, categories, newPrdQuickFav, setNewPrdQuickFav, newPrdRecipe, setNewPrdRecipe, ingredients,
-    newPrdOptions, setNewPrdOptions, handleSaveIngredient
+    newPrdOptions, setNewPrdOptions, handleSaveIngredient, newPrdAskContent, setNewPrdAskContent
   } = usePos();
   return (
     <Sheet
@@ -81,6 +81,7 @@ function ProductSheet({ onClose }) {
         <Field label="Satış fiyatı (₺)"><input className="field-input" type="number" required min="1" inputMode="decimal" value={newPrdPrice} onChange={(e) => setNewPrdPrice(e.target.value)} placeholder="110" /></Field>
         <div className="field"><span className="ops-title">Kategori</span><Chips value={newPrdCategory} onChange={setNewPrdCategory} items={categories} /></div>
         <SwitchRow title="Favoriler kategorisinde göster" desc="Adisyon ekranında ilk kategori" checked={newPrdQuickFav} onChange={setNewPrdQuickFav} />
+        <SwitchRow title="Satışta içeriği sor" desc="Dokununca doğrudan eklenmez; içerik ve not penceresi açılır" checked={!!newPrdAskContent} onChange={setNewPrdAskContent} />
 
         <RecipeEditor value={newPrdRecipe} onChange={setNewPrdRecipe} ingredients={ingredients} price={newPrdPrice} onCreate={(value) => handleSaveIngredient(value)} />
 
@@ -95,11 +96,11 @@ function ProductSheet({ onClose }) {
 export function Menu() {
   const {
     products, categories, handleSaveCategory, newCategoryName, setNewCategoryName, editingCategoryOldName, setEditingCategoryOldName, handleDeleteCategory,
-    startEditProduct, handleDeleteProduct, setEditingPrdId, setNewPrdName, setNewPrdPrice, setNewPrdRecipe, setNewPrdBarcode, setNewPrdOptions, setNewPrdQuickFav, setNewPrdCategory
+    startEditProduct, handleDeleteProduct, setEditingPrdId, setNewPrdName, setNewPrdPrice, setNewPrdRecipe, setNewPrdBarcode, setNewPrdOptions, setNewPrdQuickFav, setNewPrdCategory, setNewPrdAskContent
   } = usePos();
   const sheet = useSheet();
   const startNew = () => {
-    setEditingPrdId(null); setNewPrdName(""); setNewPrdPrice(""); setNewPrdRecipe([]); setNewPrdBarcode(""); setNewPrdOptions([]); setNewPrdQuickFav(false);
+    setEditingPrdId(null); setNewPrdName(""); setNewPrdPrice(""); setNewPrdRecipe([]); setNewPrdBarcode(""); setNewPrdOptions([]); setNewPrdQuickFav(false); setNewPrdAskContent(false);
     if (categories[0]) setNewPrdCategory(categories[0]);
     sheet.open("urun");
   };

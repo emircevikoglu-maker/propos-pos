@@ -21,7 +21,7 @@ import { PPMotion } from "../design/motion";
 import {
   loadCelebrationSettings, saveCelebrationSettings, applyCelebrationSettings, celebrateSale, celebrateZReport, goalProgress, isBusyNow
 } from "../design/celebrations";
-import { sanitizeOptionGroups, buildOrderLine, mergeIntoItems, optionSummary, lineConsumption } from "../utils/productOptions";
+import { sanitizeOptionGroups, buildOrderLine, mergeIntoItems, lineDetails, lineConsumption, needsContentSheet, editLine } from "../utils/productOptions";
 import { applyStockAction, appendLog } from "../utils/stockLog";
 import { productStats, itemCount, closingTotals, paymentLine } from "../utils/ledger";
 import { removeIngredientFromProducts, cleanRecipe } from "../utils/ingredients";
@@ -164,6 +164,7 @@ export function PosProvider({ children }) {
   const [newPrdPrice, setNewPrdPrice] = useState("");
   const [newPrdEmoji, setNewPrdEmoji] = useState("☕");
   const [newPrdQuickFav, setNewPrdQuickFav] = useState(false);
+  const [newPrdAskContent, setNewPrdAskContent] = useState(false);
   const [newPrdRecipe, setNewPrdRecipe] = useState([]);
   const [newPrdOptions, setNewPrdOptions] = useState([]);
   const [optionPickerProduct, setOptionPickerProduct] = useState(null);
@@ -444,15 +445,14 @@ export function PosProvider({ children }) {
   }, [filteredSales, filteredExpenses, globalPeriod]);
 
   // POS Table & Order Operations
-  /** selection verilmezse ve ürünün çeşitleri varsa seçim penceresi açılır. */
-  const addProductToTable = (product, selection) => {
+  /** selection verilmezse ve ürün çeşitliyse (ya da "satışta içerik sor" açıksa) içerik penceresi açılır. */
+  const addProductToTable = (product, selection, extra) => {
     if (!activeTable || !product) return;
-    const groups = sanitizeOptionGroups(product.options);
-    if (groups.length > 0 && selection === undefined) {
+    if (needsContentSheet(product) && selection === undefined) {
       setOptionPickerProduct(product);
       return;
     }
-    const line = buildOrderLine({ ...product, options: groups }, selection || {});
+    const line = buildOrderLine({ ...product, options: sanitizeOptionGroups(product.options) }, selection || {}, undefined, extra);
     setTables((prev) => prev.map((t) => {
       if (t.id !== activeTable.id) return t;
       return { ...t, status: "occupied", openedAt: t.openedAt || new Date().toISOString(), items: mergeIntoItems(t.items, line) };
@@ -466,10 +466,21 @@ export function PosProvider({ children }) {
     return false;
   };
 
-  const confirmOptionPicker = (selection) => {
+  /** İçerik penceresinden gelen: {selection, without, note, qty}. */
+  const confirmOptionPicker = ({ selection, without, note, qty }) => {
     const prd = optionPickerProduct;
     setOptionPickerProduct(null);
-    if (prd) addProductToTable(prd, selection);
+    if (prd) addProductToTable(prd, selection, { without, note, qty });
+  };
+
+  /** Açık adisyondaki satırın içeriğini değiştirir (adet satırdan azsa satır bölünür). */
+  const updateLineContent = (itemId, content) => {
+    if (!activeTable) return;
+    const item = activeTable.items.find((i) => i.id === itemId);
+    const product = item && products.find((x) => x.id === item.productId);
+    if (!product) return;
+    const tid = activeTable.id;
+    setTables((prev) => prev.map((t) => (t.id === tid ? { ...t, items: editLine(t.items, itemId, product, content).items } : t)));
   };
 
   const updateOrderItemQty = (itemId, delta) => {
@@ -559,7 +570,7 @@ export function PosProvider({ children }) {
     }
     const txRecord = {
       id: `etr-${Date.now()}`, type: "charge", timestamp: new Date().toISOString(), staffId: activeTable.staffId || staffList[0]?.id, amount: chargeAmount,
-      items: esnafChargeMode === "partial" ? [{ name: `${activeTable.name} Kısmi Adisyon Aktarımı`, qty: 1, price: chargeAmount }] : activeTable.items.map((i) => ({ name: i.options && i.options.length ? `${i.name} (${optionSummary(i.options)})` : i.name, qty: i.qty, price: i.price, note: i.note })),
+      items: esnafChargeMode === "partial" ? [{ name: `${activeTable.name} Kısmi Adisyon Aktarımı`, qty: 1, price: chargeAmount }] : activeTable.items.map((i) => ({ name: lineDetails(i) ? `${i.name} (${lineDetails(i)})` : i.name, qty: i.qty, price: i.price, note: i.note })),
       note: esnafOrderNote.trim() || `${activeTable.name} adisyonu`
     };
     setEsnafList((prev) => prev.map((e) => (e.id === esnaf.id ? { ...e, balance: (e.balance || 0) + chargeAmount, transactions: [txRecord, ...(e.transactions || [])] } : e)));
@@ -634,7 +645,7 @@ export function PosProvider({ children }) {
         const mergedItems = t.items.map((m) => ({ ...m }));
         activeTable.items.forEach((src) => {
           const ex = mergedItems.find((m) => m.productId === src.productId && (m.note || "") === (src.note || "") && (m.optionKey || "") === (src.optionKey || "") && m.price === src.price);
-          if (ex) ex.qty += src.qty; else mergedItems.push({ ...src });
+          if (ex) { ex.qty += src.qty; if (src.sentQty) ex.sentQty = (ex.sentQty || 0) + src.sentQty; } else mergedItems.push({ ...src });
         });
         return { ...t, status: "occupied", openedAt: t.openedAt || activeTable.openedAt || new Date().toISOString(), discount: (t.discount || 0) + (activeTable.discount || 0), paidAmount: (t.paidAmount || 0) + (activeTable.paidAmount || 0), guests: normalizeGuests((t.guests || 0) + (activeTable.guests || 0)), items: mergedItems };
       }
@@ -710,7 +721,7 @@ export function PosProvider({ children }) {
     if (!newPrdName.trim() || !price || price <= 0) return;
     const barcode = cleanBarcode(newPrdBarcode);
     if (barcode && barcodeTaken(products, barcode, editingPrdId)) return showToast("Bu barkod başka bir üründe kayıtlı.");
-    const itemData = { name: newPrdName.trim(), category: newPrdCategory, price, image: newPrdEmoji || "☕", isQuickFav: newPrdQuickFav, recipe: cleanRecipe(newPrdRecipe), options: sanitizeOptionGroups(newPrdOptions), barcode };
+    const itemData = { name: newPrdName.trim(), category: newPrdCategory, price, image: newPrdEmoji || "☕", isQuickFav: newPrdQuickFav, askContent: newPrdAskContent, recipe: cleanRecipe(newPrdRecipe), options: sanitizeOptionGroups(newPrdOptions), barcode };
     if (editingPrdId) {
       setProducts((prev) => prev.map((p) => (p.id === editingPrdId ? { ...p, ...itemData } : p)));
       showToast(`${itemData.name} ürünü güncellendi!`); setEditingPrdId(null);
@@ -718,12 +729,12 @@ export function PosProvider({ children }) {
       setProducts((prev) => [...prev, { id: `prd-${Date.now()}`, ...itemData }]);
       showToast(`${itemData.name} menüye ve reçete sistemine eklendi!`);
     }
-    setNewPrdName(""); setNewPrdPrice(""); setNewPrdEmoji("☕"); setNewPrdQuickFav(false); setNewPrdRecipe([]); setNewPrdOptions([]); setNewPrdBarcode("");
+    setNewPrdName(""); setNewPrdPrice(""); setNewPrdEmoji("☕"); setNewPrdQuickFav(false); setNewPrdAskContent(false); setNewPrdRecipe([]); setNewPrdOptions([]); setNewPrdBarcode("");
   };
 
   const startEditProduct = (prd) => {
     setEditingPrdId(prd.id); setNewPrdName(prd.name); setNewPrdCategory(prd.category);
-    setNewPrdPrice(String(prd.price)); setNewPrdEmoji(prd.image || "☕"); setNewPrdQuickFav(Boolean(prd.isQuickFav)); setNewPrdRecipe(prd.recipe || []); setNewPrdOptions(sanitizeOptionGroups(prd.options)); setNewPrdBarcode(prd.barcode || "");
+    setNewPrdPrice(String(prd.price)); setNewPrdEmoji(prd.image || "☕"); setNewPrdQuickFav(Boolean(prd.isQuickFav)); setNewPrdAskContent(Boolean(prd.askContent)); setNewPrdRecipe(prd.recipe || []); setNewPrdOptions(sanitizeOptionGroups(prd.options)); setNewPrdBarcode(prd.barcode || "");
   };
 
   const handleDeleteProduct = (prdId) => {
@@ -926,11 +937,11 @@ export function PosProvider({ children }) {
     analyticsSubTab, setAnalyticsSubTab, reportProductSearch, setReportProductSearch, reportProductCategory, setReportProductCategory, reportProductSort, setReportProductSort,
     reportReceiptSearch, setReportReceiptSearch, reportReceiptMethod, setReportReceiptMethod, reportReceiptStaff, setReportReceiptStaff, reportExpenseSearch, setReportExpenseSearch, reportExpenseCategory, setReportExpenseCategory,
     settingsSubTab, setSettingsSubTab, editingTableId, setEditingTableId, newTableName, setNewTableName, newTableZone, setNewTableZone, newZoneName, setNewZoneName, editingZoneOldName, setEditingZoneOldName,
-    editingPrdId, setEditingPrdId, newPrdName, setNewPrdName, newPrdCategory, setNewPrdCategory, newPrdPrice, setNewPrdPrice, newPrdEmoji, setNewPrdEmoji, newPrdQuickFav, setNewPrdQuickFav, newPrdRecipe, setNewPrdRecipe,
+    editingPrdId, setEditingPrdId, newPrdName, setNewPrdName, newPrdCategory, setNewPrdCategory, newPrdPrice, setNewPrdPrice, newPrdEmoji, setNewPrdEmoji, newPrdQuickFav, setNewPrdQuickFav, newPrdAskContent, setNewPrdAskContent, newPrdRecipe, setNewPrdRecipe,
     newCategoryName, setNewCategoryName, editingCategoryOldName, setEditingCategoryOldName, editingStaffId, setEditingStaffId, newStaffName, setNewStaffName, newStaffRole, setNewStaffRole, newStaffColor, setNewStaffColor,
     editingEsnafId, setEditingEsnafId, editEsnafName, setEditEsnafName, editEsnafShopType, setEditEsnafShopType, editEsnafPhone, setEditEsnafPhone, editEsnafDiscount, setEditEsnafDiscount, editEsnafNote, setEditEsnafNote,
     resetConfirmOpen, setResetConfirmOpen, criticalIngredients, filteredSales, filteredExpenses, totalEsnafReceivable, kpiMetrics, topProducts, staffPerformance, trendChartData, activeOccupiedCount, openTablesTotalAmount,
-    addProductToTable, updateOrderItemQty, setTableStaff, setTableDiscount, saveItemNote, completeTableOrder, handlePartialPayment, handleConfirmEsnafCharge, handleQuickCreateEsnaf, handleCollectEsnafPayment, copyEsnafWhatsAppSummary, startFastEsnafOrder,
+    addProductToTable, updateLineContent, updateOrderItemQty, setTableStaff, setTableDiscount, saveItemNote, completeTableOrder, handlePartialPayment, handleConfirmEsnafCharge, handleQuickCreateEsnaf, handleCollectEsnafPayment, copyEsnafWhatsAppSummary, startFastEsnafOrder,
     requireAdmin, handleSaveIngredient, handleDeleteIngredient,
     handleTransferTable, handleStockAdjustment, handleAddExpense, handleSaveProduct, startEditProduct, handleDeleteProduct, handleSaveTable, handleDeleteTable, handleSaveZone, handleDeleteZone, handleSaveCategory, handleDeleteCategory,
     handleSaveStaff, handleDeleteStaff, handleSaveEsnafEdit, handleDeleteEsnaf, handleDeleteSaleReceipt, handleLogoFileUpload, handleManualForceSync, exportFullBackupFile, handleImportBackupFile, handleResetDemoData, exportExcelByCategory
