@@ -38,8 +38,8 @@ function PinChangeForm({ unlocked, nextValue, setNextValue, onChange }) {
 
 export function Security() {
   const {
-    ACTIVE_TENANT_ID, isAdminUnlocked, newPinValue, setNewPinValue, handleChangePin, exportExcelByCategory, exportFullBackupFile,
-    handleImportBackupFile, setResetConfirmOpen, isFounderUnlocked, setIsFounderUnlocked, setInstallModalOpen
+    isAdminUnlocked, newPinValue, setNewPinValue, handleChangePin, exportExcelByCategory, exportFullBackupFile,
+    handleImportBackupFile, setResetConfirmOpen
   } = usePos();
   return (
     <>
@@ -61,14 +61,6 @@ export function Security() {
             {REPORTS.map(([type, label]) => <button key={type} type="button" className="btn btn-secondary" onClick={() => exportExcelByCategory(type)}>{label}</button>)}
           </div>
         </Card>
-        {(ACTIVE_TENANT_ID === "DEFAULT" || isFounderUnlocked) && (
-          <Card span={12} title="Yazılım sahibi" aside={<span className="label">Müşterilerde gizli</span>}>
-            <div className="ops-row">
-              <span className="label" style={{ flex: 1 }}>Bayi lisans stüdyosu</span>
-              <button type="button" className="btn btn-secondary" onClick={() => { setIsFounderUnlocked(true); setInstallModalOpen(true); }}>Bayi panelini aç</button>
-            </div>
-          </Card>
-        )}
       </div>
     </>
   );

@@ -28,6 +28,7 @@ const NAV = [
 ];
 const hhmm = (d) => d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
 
+const APP_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "";
 const MOBILE_PRIMARY = 4; // dar ekranda alt gezinmede doğrudan görünen sekme sayısı; gerisi "Diğer"de
 
 function Rail() {
@@ -84,10 +85,7 @@ function Rail() {
 }
 
 function SystemMenu() {
-  const {
-    ACTIVE_TENANT_ID, brandSettings, isFounderUnlocked, setInstallModalOpen, setSyncModalOpen, setDealerStudioTab, dealerTenants, remoteUpdateInfo,
-    isApplyingUpdate, applyRemoteOneClickUpdate, isCheckingUpdate, checkRemoteUpdateFromGithub, appVersion, handleSwitchToTenant, storageInfo, handleUnpairDevice
-  } = usePos();
+  const { ACTIVE_TENANT_ID, brandSettings, setSyncModalOpen, storageInfo, handleUnpairDevice } = usePos();
   const session = getUserSession();
   const [open, setOpen] = React.useState(false);
   const [swUpdate, setSwUpdate] = React.useState(null);
@@ -108,7 +106,6 @@ function SystemMenu() {
     document.addEventListener("keydown", key);
     return () => { document.removeEventListener("pointerdown", down); document.removeEventListener("keydown", key); };
   }, [open]);
-  const locked = typeof window !== "undefined" && !!window.__PROPOS_LOCKED_TENANT__;
   const item = (fn, label) => <button type="button" onClick={() => { setOpen(false); fn(); }}>{label}</button>;
   const initial = (brandSettings.logoText || brandSettings.businessName?.[0] || "P").slice(0, 1).toUpperCase();
   return (
@@ -118,17 +115,13 @@ function SystemMenu() {
         <div className="menu-pop" role="menu">
           <div className="menu-note">İşletme kodu <span className="num" style={{ color: "var(--text-1)" }}>{ACTIVE_TENANT_ID === "DEFAULT" ? "MASTER" : ACTIVE_TENANT_ID}</span></div>
           {session && <div className="menu-note">Kullanıcı <span style={{ color: "var(--text-1)" }}>{session.displayName || session.username}</span></div>}
-          {item(() => (isFounderUnlocked ? setInstallModalOpen(true) : setSyncModalOpen(true)), "Senkron ve bağlantı")}
-          {item(() => checkRemoteUpdateFromGithub(false), isCheckingUpdate ? "Kontrol ediliyor…" : `Güncelleme kontrolü (v${appVersion})`)}
-          {remoteUpdateInfo && item(applyRemoteOneClickUpdate, isApplyingUpdate ? "Yükleniyor…" : `Yeni sürüm v${remoteUpdateInfo.version} — güncelle`)}
+          {item(() => setSyncModalOpen(true), "Senkron ve bağlantı")}
           {swUpdate && item(() => swUpdate.apply(), "Yeni sürümü uygula (sayfa yenilenir)")}
           {installEvt && item(() => { installEvt.prompt(); setInstallEvt(null); }, "Uygulamayı cihaza yükle")}
           {item(() => window.dispatchEvent(new CustomEvent("propos-open-feedback")), "Geri bildirim gönder")}
-          {isFounderUnlocked && item(() => { setDealerStudioTab("tenants"); setInstallModalOpen(true); }, `Bayi & Lisans Paneli (${dealerTenants.length})`)}
-          {ACTIVE_TENANT_ID !== "DEFAULT" && !locked && (<><hr />{item(() => handleSwitchToTenant("DEFAULT"), "Ana işletmeye dön")}</>)}
           <hr />
           {item(handleUnpairDevice, "Çıkış yap")}
-          {storageInfo && <div className="menu-note">Yerel depo: %{Math.round(storageInfo.ratio * 1000) / 10} kullanımda</div>}
+          <div className="menu-note">ProPos{APP_VERSION ? ` v${APP_VERSION}` : ""}{storageInfo ? ` · yerel depo %${Math.round(storageInfo.ratio * 1000) / 10} dolu` : ""}</div>
         </div>
       )}
     </div>

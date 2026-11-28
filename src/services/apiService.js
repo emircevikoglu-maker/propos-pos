@@ -6,7 +6,6 @@
 //  2) Yönetici kilidi: PIN sunucuda doğrulanır → 4 saatlik yönetici belirteci (sessionStorage).
 // Arka uç adresi: derlemede PROPOS_API_URL (Vercel ön yüz + Linux arka uç), yoksa aynı köken.
 
-const FOUNDER_TOKEN_KEY = "propos_founder_token";
 const tokenKey = (tid) => `propos_token_${tid}`;
 const managerKey = (tid) => `propos_mgr_token_${tid}`;
 const syncKeyKey = (tid) => `propos_sync_key_${tid}`;
@@ -38,8 +37,6 @@ export function getStoredSyncKey(tenantId) {
   return key && !rejectedKeys.has(key) ? key : null;
 }
 export function setStoredSyncKey(tenantId, key) { rejectedKeys.delete(key); safeSet(localStorage, syncKeyKey(tenantId), key); }
-export function hasFounderSession() { return !!safeGet(sessionStorage, FOUNDER_TOKEN_KEY); }
-export function clearFounderSession() { safeDel(sessionStorage, FOUNDER_TOKEN_KEY); }
 const SESSION_KEY = "propos_session";
 /** Kullanıcı oturumu: {token, tenantId, username, displayName, userRole} ya da null. */
 export function getUserSession() {
@@ -51,7 +48,7 @@ export function getUserSession() {
 function clearUserSession() { safeDel(localStorage, SESSION_KEY); }
 export function isDevicePaired(tenantId) {
   const s = getUserSession();
-  return (!!s && s.tenantId === tenantId) || !!getStoredSyncKey(tenantId) || hasFounderSession();
+  return (!!s && s.tenantId === tenantId) || !!getStoredSyncKey(tenantId);
 }
 export function hasManagerSession(tenantId) { return !!safeGet(sessionStorage, managerKey(tenantId)); }
 export function clearManagerSession(tenantId) { safeDel(sessionStorage, managerKey(tenantId)); }
@@ -62,7 +59,6 @@ export function unpairDevice(tenantId) {
   safeDel(localStorage, syncKeyKey(tenantId));
   safeDel(sessionStorage, tokenKey(tenantId));
   safeDel(sessionStorage, managerKey(tenantId));
-  clearFounderSession();
 }
 
 // ---- 429 / hız sınırı ------------------------------------------------------
@@ -112,7 +108,7 @@ export async function fetchServerInfo() {
   }
 }
 
-/** Anahtarla oturum açar. Kurucu anahtarı → kurucu oturumu; işletme anahtarı → işletme oturumu. */
+/** Eski cihaz eşleştirme anahtarıyla işletme oturumu açar (4.0'da kalkar). Kurucu girişi yalnızca kontrol panelindedir. */
 export async function loginWithKey(tenantId, key) {
   try {
     const res = await fetch(`${getLocalSyncBaseUrl()}/api/login`, {
@@ -130,7 +126,8 @@ export async function loginWithKey(tenantId, key) {
       return { ok: false, code: "RATE_LIMIT", retryAfter: sec, error: out.error || `Çok fazla deneme. ${sec} sn bekleyin.` };
     }
     if (!res.ok || !out.ok || typeof out.token !== "string") return { ok: false, code: out.code || "BAD_KEY", error: out.error || "Giriş başarısız." };
-    safeSet(sessionStorage, out.role === "founder" ? FOUNDER_TOKEN_KEY : tokenKey(tenantId), out.token);
+    if (out.role !== "tenant") return { ok: false, code: "BAD_KEY", error: "Bu anahtar cihaz girişi için geçerli değil." };
+    safeSet(sessionStorage, tokenKey(tenantId), out.token);
     return { ok: true, role: out.role };
   } catch (e) {
     return { ok: false, code: "NETWORK", error: "Sunucuya ulaşılamadı." };
@@ -180,8 +177,6 @@ function requestAuth(tenantId) {
 }
 
 async function getToken(tenantId, { preferManager = false } = {}) {
-  const founder = safeGet(sessionStorage, FOUNDER_TOKEN_KEY);
-  if (founder) return founder;
   if (preferManager) {
     const mgr = safeGet(sessionStorage, managerKey(tenantId));
     if (mgr) return mgr;
@@ -193,7 +188,7 @@ async function getToken(tenantId, { preferManager = false } = {}) {
   const key = getStoredSyncKey(tenantId);
   if (key) {
     const r = await loginWithKey(tenantId, key);
-    if (r.ok) return safeGet(sessionStorage, tokenKey(tenantId)) || safeGet(sessionStorage, FOUNDER_TOKEN_KEY);
+    if (r.ok) return safeGet(sessionStorage, tokenKey(tenantId));
     // Ağ yok: oturum alınamadı ama anahtar GEÇERSİZ değil → çevrimdışı say (eşleştirme ekranı açma, anahtarı silme).
     if (r.code === "NETWORK") throw new TypeError("offline");
     if (r.code === "BAD_KEY") {
@@ -234,7 +229,6 @@ async function authedFetch(tenantId, path, options = {}, { preferManager = false
     if (body.code && body.code !== "AUTH") return res;
     safeDel(sessionStorage, tokenKey(tenantId));
     safeDel(sessionStorage, managerKey(tenantId));
-    safeDel(sessionStorage, FOUNDER_TOKEN_KEY);
     clearUserSession();
   }
   requestAuth(tenantId);
@@ -353,13 +347,9 @@ export async function pullState(tenantId, since, deviceId = "") {
   const out = await res.json().catch(() => null);
   if (!res.ok || !out || !out.ok) return { kind: "error", status: res.status };
   noteConnectivity(true);
-  if (out.packetRegistry === undefined && Array.isArray(out.registry)) lastRegistry = out.registry;
   if (out.unchanged) return { kind: "unchanged" };
-  return { kind: "data", rev: Number(out.rev) || 0, data: out.data && typeof out.data === "object" ? out.data : {}, lanIp: out.lanIp, registry: out.registry };
+  return { kind: "data", rev: Number(out.rev) || 0, data: out.data && typeof out.data === "object" ? out.data : {}, lanIp: out.lanIp };
 }
-
-let lastRegistry = null;
-export const getLastRegistry = () => lastRegistry;
 
 // ---- Bağlantı durumu: ağ hatası = çevrimdışı; yanıt (4xx dahil) = sunucuya ulaşıldı ----
 let online = true;
@@ -444,43 +434,4 @@ export async function changeManagerPin(tenantId, current, next) {
   } catch (e) {
     return { ok: false, code: "NETWORK", error: "Sunucuya ulaşılamadı." };
   }
-}
-
-// ---- Kurucu (geçiş dönemi: uygulama içi bayi stüdyosu) ----------------------
-
-const founderCall = (path, options) => authedFetch("DEFAULT", path, options);
-
-export async function fetchRegistryAsFounder() {
-  const res = await founderCall("/api/tenants");
-  if (!res.ok) return null;
-  const out = await res.json().catch(() => null);
-  return out && out.tenants ? out.tenants : null;
-}
-
-/** Kaydı gönderir; sunucu syncKey üretip tam listeyi döner. */
-export async function postDealerTenants(tenantsJson) {
-  return founderCall("/api/tenants", { method: "POST", headers: { "Content-Type": "application/json" }, body: tenantsJson });
-}
-
-export async function postPrepareGithubRelease(manifestJson) {
-  return founderCall("/api/prepare-github", { method: "POST", headers: { "Content-Type": "application/json; charset=utf-8" }, body: manifestJson });
-}
-
-export async function postApplyHtmlUpdate(newHtml) {
-  return founderCall("/api/apply-update", { method: "POST", headers: { "Content-Type": "text/html; charset=utf-8" }, body: newHtml });
-}
-
-export async function downloadPackageZip(query, filename) {
-  const res = await founderCall(`/api/package?${query}`);
-  if (!res.ok) return false;
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-  return true;
 }

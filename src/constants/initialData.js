@@ -1,23 +1,6 @@
 // ProPos Kurumsal POS - Başlangıç Sabitleri ve Varsayılan Veri Şablonları
 
-export const DEALER_TENANTS_KEY = "propos_dealer_tenants_v1";
 export const PROTECTED_TABS = ["analytics", "staff", "finance", "settings"];
-
-export const DEFAULT_DEALER_TENANTS = [
-  {
-    tenantId: "DEFAULT",
-    displayCode: "MASTER",
-    businessName: "Ana İşletme",
-    ownerName: "Kurucu / Ana İşletme",
-    licenseKey: "PROPOS-MASTER-UNLIMITED",
-    planType: "lifetime",
-    status: "active",
-    createdAt: "2026-01-01T00:00:00.000Z",
-    expiresAt: "unlimited",
-    themeId: "emerald",
-    currency: "TRY"
-  }
-];
 
 export const INITIAL_ZONES = ["Bahçe", "İç Mekan", "Teras", "Paket / Gel-Al"];
 export const INITIAL_CATEGORIES = ["Kahveler", "Soğuk İçecekler", "Tatlılar", "Atıştırmalıklar", "Ekstralar"];

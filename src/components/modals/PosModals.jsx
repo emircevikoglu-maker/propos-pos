@@ -11,22 +11,6 @@ export function PosModals() {
     ACTIVE_TENANT_ID,
     clientDeviceId,
     brandSettings,
-    founderPromptOpen,
-    setFounderPromptOpen,
-    founderPromptInput,
-    setFounderPromptInput,
-    verifyFounderKey,
-    setIsAdminUnlocked,
-    setIsFounderUnlocked,
-    setInstallModalOpen,
-    showToast,
-    isCurrentTenantBlocked,
-    isCurrentTenantExpired,
-    currentTenantRecord,
-    licenseUnlockInput,
-    setLicenseUnlockInput,
-    handleToggleCustomerStatus,
-    handleSwitchToTenant,
     syncModalOpen,
     setSyncModalOpen,
     lastSyncedAt,
@@ -41,8 +25,6 @@ export function PosModals() {
     handleVerifyPin,
     handleSetupFirstPin,
     handleUnpairDevice,
-    switchTenantInput,
-    setSwitchTenantInput,
     setPendingProtectedTab,
     transferModalOpen,
     setTransferModalOpen,
@@ -113,127 +95,6 @@ export function PosModals() {
 
   return (
     <>
-      {/* Kurucu Master Girişi Modalı (Ctrl+Shift+K) */}
-      {founderPromptOpen && (
-        <div className="fixed inset-0 z-[95] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#181512] border border-amber-500/50 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-amber-400 flex items-center gap-2">👑 Kurucu Master Girişi</h3>
-              <button onClick={() => setFounderPromptOpen(false)} className="text-stone-400 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-xs text-stone-300">
-              Bayi ve Lisans Yönetim Stüdyosunu açmak için gizli Kurucu Master Şifrenizi girin:
-            </p>
-            <input
-              type="password"
-              value={founderPromptInput}
-              onChange={(e) => setFounderPromptInput(e.target.value)}
-              placeholder="Kurucu Master Şifresi..."
-              className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3.5 py-2.5 text-white font-mono text-xs"
-            />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={async () => {
-                  if (await verifyFounderKey(founderPromptInput)) {
-                    setIsAdminUnlocked(true);
-                    setIsFounderUnlocked(true);
-                    setFounderPromptOpen(false);
-                    setFounderPromptInput("");
-                    setInstallModalOpen(true);
-                    showToast("👑 Kurucu Master yetkisi doğrulandı!");
-                  } else {
-                    showToast("❌ Hatalı Kurucu Master Şifresi!");
-                  }
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-medium text-xs"
-              >
-                Doğrula ve Aç
-              </button>
-              <button
-                type="button"
-                onClick={() => setFounderPromptOpen(false)}
-                className="px-4 py-2.5 rounded-xl bg-stone-800 text-stone-300 text-xs font-medium"
-              >
-                İptal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Lisans Askıda / Süresi Doldu Ekranı */}
-      {isCurrentTenantBlocked && !isFounderUnlocked && (
-        <div className="fixed inset-0 z-[90] bg-[#080706]/95 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#161311] border-2 border-rose-500/60 rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl text-center">
-            <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center mx-auto text-rose-400 text-3xl">
-              🔒
-            </div>
-            <div className="space-y-2">
-              <span className="px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-medium uppercase tracking-widest border border-rose-500/30">
-                {isCurrentTenantExpired ? "LİSANS SÜRESİ DOLDU" : "LİSANS ASKIYA ALINDI"}
-              </span>
-              <h3 className="text-xl font-semibold text-white mt-2">
-                {currentTenantRecord?.businessName || brandSettings.businessName}
-              </h3>
-              <p className="text-xs text-stone-300 leading-relaxed">
-                Bu işletme hesabının (<span className="text-amber-400 font-mono font-semibold">{ACTIVE_TENANT_ID}</span>) kullanım lisansı{" "}
-                {isCurrentTenantExpired
-                  ? "sona ermiştir."
-                  : "yazılım yöneticisi tarafından geçici olarak durdurulmuştur."}{" "}
-                Hizmete devam etmek için lütfen yazılım sağlayıcınızla iletişime geçin.
-              </p>
-            </div>
-            <div className="p-3.5 rounded-2xl bg-stone-900 border border-stone-800 space-y-2.5 text-left text-xs">
-              <label className="text-stone-400 font-medium block">🔑 Lisans Aktivasyon Anahtarı:</label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={licenseUnlockInput}
-                  onChange={(e) => setLicenseUnlockInput(e.target.value)}
-                  placeholder="PROPOS-... Lisans Anahtarınızı girin"
-                  className="flex-1 bg-stone-950 border border-stone-800 rounded-xl px-3 py-2.5 text-white font-mono text-xs"
-                />
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const isFounderKey = await verifyFounderKey(licenseUnlockInput);
-                    if (
-                      isFounderKey ||
-                      (currentTenantRecord &&
-                        licenseUnlockInput.trim().toUpperCase() === currentTenantRecord.licenseKey)
-                    ) {
-                      if (currentTenantRecord) handleToggleCustomerStatus(currentTenantRecord.tenantId);
-                      setIsAdminUnlocked(true);
-                      if (isFounderKey) setIsFounderUnlocked(true);
-                      setLicenseUnlockInput("");
-                    } else {
-                      showToast("❌ Geçersiz Lisans Aktivasyon Anahtarı!");
-                    }
-                  }}
-                  className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-medium text-xs"
-                >
-                  Etkinleştir
-                </button>
-              </div>
-            </div>
-            {!(typeof window !== "undefined" && window.__PROPOS_LOCKED_TENANT__) && (
-              <div className="pt-2 border-t border-stone-800 flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleSwitchToTenant("DEFAULT")}
-                  className="w-full py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 text-xs font-medium"
-                >
-                  🏢 Ana işletmeye dön
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Canlı Bulut & QR Senkronizasyon Modalı */}
       {syncModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">

@@ -1,7 +1,6 @@
 import React from "react";
 import { PosProvider, usePos } from "./context/PosContext";
 import { hexToRgbTuple } from "./utils/formatters";
-import { DealerStudioModal } from "./components/modals/DealerStudioModal";
 import { PosModals } from "./components/modals/PosModals";
 import { Shell } from "./ui/Shell";
 import { DeviceGate } from "./components/auth/DeviceGate";
@@ -82,7 +81,6 @@ function PosShell() {
 
       <Shell />
 
-      <DealerStudioModal />
       <PosModals />
       <FeedbackSheet tenantId={ACTIVE_TENANT_ID} screen={activeTab} />
     </>

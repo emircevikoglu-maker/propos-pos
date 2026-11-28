@@ -77,7 +77,6 @@ describe("oturum ve eşleştirme", () => {
     localStorage.setItem("propos_sync_key_A", "k");
     sessionStorage.setItem("propos_token_A", "t");
     sessionStorage.setItem("propos_mgr_token_A", "m");
-    sessionStorage.setItem("propos_founder_token", "f");
     api.unpairDevice("A");
     expect(localStorage.length + sessionStorage.length).toBe(0);
   });

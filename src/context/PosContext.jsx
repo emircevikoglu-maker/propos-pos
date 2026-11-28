@@ -2,20 +2,17 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { TAB_PATHS, tabFromPath, tableIdFromPath, tablePath } from "../ui/routes";
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from "react";
 import {
-  DEALER_TENANTS_KEY, PROTECTED_TABS, THEME_PRESETS, INITIAL_BRAND_SETTINGS,
+  PROTECTED_TABS, INITIAL_BRAND_SETTINGS,
   INITIAL_ZONES, INITIAL_CATEGORIES, INITIAL_STAFF, INITIAL_INGREDIENTS,
   INITIAL_PRODUCTS, INITIAL_TABLES, INITIAL_ESNAF, generateInitialSales, generateInitialExpenses
 } from "../constants/initialData";
 import {
   formatTL, formatDateShort, toDateInputValue, isWithinPeriod, setActiveCurrencyCode,
-  getActiveCurrencyObj, resolveActiveTenantId, getProPosStorageKey, loadInitialDealerTenants,
-  loadInitialProPosDb, resolveGithubBaseRawUrl
+  getActiveCurrencyObj, resolveActiveTenantId, loadInitialProPosDb
 } from "../utils/formatters";
 import {
-  pushTenantSync, pushState, pullState, postDealerTenants, postPrepareGithubRelease, postApplyHtmlUpdate,
-  loginWithKey, clearFounderSession, hasFounderSession,
-  verifyManagerPin, changeManagerPin, clearManagerSession, unpairDevice,
-  fetchRealtimeConfig, isNetworkOnline
+  pushState, pullState, verifyManagerPin, changeManagerPin, clearManagerSession, unpairDevice,
+  fetchRealtimeConfig
 } from "../services/apiService";
 import { createSyncEngine } from "../services/syncEngine";
 import { saveState as saveLocalState, saveBase as saveLocalBase, saveMeta as saveLocalMeta, requestPersistence, storageEstimate } from "../services/localDb";
@@ -28,10 +25,6 @@ import { sanitizeOptionGroups, buildOrderLine, mergeIntoItems, optionSummary, li
 import { applyStockAction, appendLog } from "../utils/stockLog";
 import { findByBarcode, cleanBarcode, barcodeTaken, normalizeGuests } from "../utils/posHelpers";
 import { exportExcelByCategory as runExcelExport } from "../utils/excelExport";
-import {
-  copyCustomerDeliveryMessage as copyDeliveryMsg, downloadCustomerZipPackage as dlZipPkg,
-  downloadOneClickWindowsInstaller as dlHtaPkg, downloadStandaloneAppHtml as dlHtmlPkg
-} from "../utils/packageBuilder";
 
 const ACTIVE_TENANT_ID = resolveActiveTenantId();
 const PosContext = createContext(null);
@@ -66,7 +59,6 @@ export function PosProvider({ children }) {
   const [storageInfo, setStorageInfo] = useState(null);
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
-  const [installModalOpen, setInstallModalOpen] = useState(false);
 
   const isRemoteUpdateRef = useRef(false);
   const isInitialMountRef = useRef(true);
@@ -81,33 +73,6 @@ export function PosProvider({ children }) {
   const [pinError, setPinError] = useState(false);
   const [pendingProtectedTab, setPendingProtectedTab] = useState(null);
   const [newPinValue, setNewPinValue] = useState("");
-
-  // Dealer & Multi-Tenant Studio State
-  const [dealerTenants, setDealerTenants] = useState(loadInitialDealerTenants);
-  const [dealerStudioTab, setDealerStudioTab] = useState("tenants");
-  const [newCustName, setNewCustName] = useState("");
-  const [newCustOwner, setNewCustOwner] = useState("");
-  const [newCustCode, setNewCustCode] = useState("");
-  const [newCustPin, setNewCustPin] = useState("1234");
-  const [newCustPlan, setNewCustPlan] = useState("yearly");
-  const [newCustTheme, setNewCustTheme] = useState("emerald");
-  const [newCustCurrency, setNewCustCurrency] = useState("TRY");
-  const [newCustTemplate, setNewCustTemplate] = useState("clean");
-  const [switchTenantInput, setSwitchTenantInput] = useState(ACTIVE_TENANT_ID === "DEFAULT" ? "MASTER" : ACTIVE_TENANT_ID);
-  const [licenseUnlockInput, setLicenseUnlockInput] = useState("");
-  const [selectedPackageTenantId, setSelectedPackageTenantId] = useState(ACTIVE_TENANT_ID);
-  const [isFounderUnlocked, setIsFounderUnlocked] = useState(false);
-  const [founderPromptOpen, setFounderPromptOpen] = useState(false);
-  const [founderPromptInput, setFounderPromptInput] = useState("");
-
-  // Remote GitHub Update State
-  const [appVersion, setAppVersion] = useState(() => window.__PROPOS_APP_VERSION__ || localStorage.getItem("propos_app_version") || "2.4.0");
-  const [githubRepo, setGithubRepo] = useState(() => window.__PROPOS_GITHUB_REPO__ || localStorage.getItem("propos_github_repo") || "");
-  const [nextVersionInput, setNextVersionInput] = useState("2.5.0");
-  const [releaseNotesInput, setReleaseNotesInput] = useState("Yeni özellikler, performans iyileştirmeleri ve canlı lisans senkronizasyonu eklendi.");
-  const [remoteUpdateInfo, setRemoteUpdateInfo] = useState(null);
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
-  const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
 
   // Core POS Database Entities
   const [brandSettings, setBrandSettings] = useState(() => INITIAL_DB_SNAPSHOT?.brandSettings || INITIAL_BRAND_SETTINGS);
@@ -230,134 +195,6 @@ export function PosProvider({ children }) {
     setActiveTab(tabId);
   };
 
-  // Remote GitHub Update Functions
-  const checkRemoteUpdateFromGithub = async (silent = true) => {
-    const baseUrl = resolveGithubBaseRawUrl(githubRepo);
-    if (!baseUrl) {
-      if (!silent) showToast("ℹ️ Önce Bayi Panelinden GitHub Depo Adresinizi (kullaniciadi/repo) tanımlayın.");
-      return;
-    }
-    if (!silent) setIsCheckingUpdate(true);
-    try {
-      const res = await fetch(`${baseUrl}/version.json?t=${Date.now()}`, { cache: "no-store" });
-      if (!res.ok) {
-        if (!silent) showToast("⚠️ GitHub üzerinde henüz version.json bulunamadı veya depo gizli (Public olmalı).");
-        return;
-      }
-      const manifest = await res.json();
-      if (Array.isArray(manifest?.tenants) && manifest.tenants.length > 0) {
-        setDealerTenants((prev) => {
-          const merged = prev.map((loc) => {
-            const rem = manifest.tenants.find((r) => r.tenantId === loc.tenantId);
-            return rem ? { ...loc, status: rem.status || loc.status, expiresAt: rem.expiresAt || loc.expiresAt, planType: rem.planType || loc.planType } : loc;
-          });
-          localStorage.setItem(DEALER_TENANTS_KEY, JSON.stringify(merged));
-          return merged;
-        });
-      }
-      if (manifest?.version && String(manifest.version).trim() !== String(appVersion).trim()) {
-        setRemoteUpdateInfo({ version: String(manifest.version).trim(), notes: manifest.notes || "Yeni sistem güncellemesi hazır.", publishedAt: manifest.publishedAt || new Date().toISOString(), baseUrl });
-        if (!silent) showToast(`✨ Yeni sürüm bulundu: v${manifest.version}! Tek tıkla güncelleyebilirsiniz.`);
-      } else {
-        setRemoteUpdateInfo(null);
-        if (!silent) showToast(`✅ Sisteminiz güncel! (Sürüm: v${appVersion})`);
-      }
-    } catch (err) {
-      if (!silent) showToast("⚠️ Güncelleme kontrolü sırasında internet/bağlantı hatası oluştu.");
-    } finally {
-      if (!silent) setIsCheckingUpdate(false);
-    }
-  };
-
-  const applyRemoteOneClickUpdate = async () => {
-    if (!remoteUpdateInfo?.baseUrl) return;
-    setIsApplyingUpdate(true);
-    try {
-      const res = await fetch(`${remoteUpdateInfo.baseUrl}/index.html?t=${Date.now()}`, { cache: "no-store" });
-      if (!res.ok) throw new Error("Güncel uygulama dosyası indirilemedi.");
-      let newHtml = await res.text();
-      if (!newHtml?.includes("<html")) throw new Error("Geçersiz güncelleme paketi.");
-      const lockedTenant = window.__PROPOS_LOCKED_TENANT__ || (ACTIVE_TENANT_ID !== "DEFAULT" ? ACTIVE_TENANT_ID : "");
-      const lockScript = `<script>\nwindow.__PROPOS_APP_VERSION__ = ${JSON.stringify(remoteUpdateInfo.version)};\nwindow.__PROPOS_GITHUB_REPO__ = ${JSON.stringify(githubRepo)};\n${lockedTenant ? `window.__PROPOS_LOCKED_TENANT__ = ${JSON.stringify(lockedTenant)};` : ""}\n<\/script>\n</head>`;
-      newHtml = newHtml.replace("</head>", lockScript);
-
-      let updatedOnDisk = false;
-      try {
-        const localRes = await postApplyHtmlUpdate(newHtml);
-        if (localRes.ok) updatedOnDisk = true;
-      } catch (e) {}
-
-      localStorage.setItem("propos_app_version", remoteUpdateInfo.version);
-      setAppVersion(remoteUpdateInfo.version);
-      setRemoteUpdateInfo(null);
-
-      if (updatedOnDisk || window.location.protocol.startsWith("http")) {
-        showToast(`🎉 Sistem v${remoteUpdateInfo.version} sürümüne güncellendi! Yeniden başlatılıyor...`);
-        setTimeout(() => window.location.reload(), 1200);
-      } else {
-        const url = URL.createObjectURL(new Blob(["\uFEFF", newHtml], { type: "text/html;charset=utf-8" }));
-        const a = Object.assign(document.createElement("a"), { href: url, download: `ProPos_Guncel_v${remoteUpdateInfo.version}.html` });
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast(`🎉 Güncel v${remoteUpdateInfo.version} indirildi! Hiçbir veriniz silinmeden açabilirsiniz.`);
-      }
-    } catch (err) {
-      showToast("❌ Güncelleme uygulanırken hata oluştu: " + (err.message || "Bağlantı hatası"));
-    } finally {
-      setIsApplyingUpdate(false);
-    }
-  };
-
-  const publishGithubReleaseFiles = async () => {
-    const cleanVer = (nextVersionInput || "2.5.0").trim();
-    const cleanRepo = (githubRepo || "").trim();
-    setAppVersion(cleanVer);
-    localStorage.setItem("propos_app_version", cleanVer);
-    localStorage.setItem("propos_github_repo", cleanRepo);
-
-    const manifestJson = JSON.stringify({
-      version: cleanVer,
-      notes: releaseNotesInput.trim() || "Yeni sürüm güncellemesi",
-      publishedAt: new Date().toISOString(),
-      githubRepo: cleanRepo,
-      tenants: dealerTenants.map((t) => ({
-        tenantId: t.tenantId, displayCode: t.displayCode || t.tenantId, businessName: t.businessName,
-        status: t.status || "active", expiresAt: t.expiresAt || "unlimited", planType: t.planType || "yearly", licenseKey: t.licenseKey || ""
-      }))
-    }, null, 2);
-
-    let savedLocally = false;
-    try {
-      const res = await postPrepareGithubRelease(manifestJson);
-      if (res.ok) savedLocally = true;
-    } catch (e) {}
-
-    const vUrl = URL.createObjectURL(new Blob([manifestJson], { type: "application/json;charset=utf-8" }));
-    Object.assign(document.createElement("a"), { href: vUrl, download: "version.json" }).click();
-    URL.revokeObjectURL(vUrl);
-
-    showToast(savedLocally ? `🚀 v${cleanVer} yayın dosyaları (index.html ve version.json) hazırlandı ve klasöre kaydedildi!` : `🚀 v${cleanVer} için version.json indirildi! GitHub'a yükleyebilirsiniz.`);
-  };
-
-  useEffect(() => {
-    if (!githubRepo) return;
-    checkRemoteUpdateFromGithub(true);
-    const timer = setInterval(() => checkRemoteUpdateFromGithub(true), 60000);
-    return () => clearInterval(timer);
-  }, [githubRepo, appVersion]);
-
-  useEffect(() => {
-    const onKeyDown = (ev) => {
-      if (ev.ctrlKey && ev.shiftKey && ev.key.toLowerCase() === "k") {
-        ev.preventDefault();
-        setFounderPromptInput("");
-        setFounderPromptOpen(true);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
   // ---- Eşitleme: IndexedDB'de kalıcı yerel durum + sunucuyla üç yönlü birleştirme (services/syncEngine.js) ----
   const stateRef = useRef(null);
   stateRef.current = { brandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, esnafList, stockLog };
@@ -389,13 +226,7 @@ export function PosProvider({ children }) {
       push: (rev, json) => pushState(ACTIVE_TENANT_ID, clientDeviceIdRef.current, rev, json),
       pull: async (since) => {
         const r = await pullState(ACTIVE_TENANT_ID, since, clientDeviceIdRef.current);
-        if (r.kind === "data" || r.kind === "unchanged") {
-          if (r.lanIp) window.__PROPOS_LAN_IP__ = r.lanIp;
-          if (Array.isArray(r.registry) && r.registry.length > 0) {
-            setDealerTenants(r.registry);
-            try { localStorage.setItem(DEALER_TENANTS_KEY, JSON.stringify(r.registry)); } catch (e) {}
-          }
-        }
+        if (r.lanIp) window.__PROPOS_LAN_IP__ = r.lanIp;
         return r;
       },
       store: {
@@ -492,139 +323,12 @@ export function PosProvider({ children }) {
     return () => { window.removeEventListener("online", onOnline); window.removeEventListener("offline", onOffline); };
   }, []);
 
-  // Dealer & Tenant Management Actions
-  const saveDealerRegistry = (nextList) => {
-    setDealerTenants(nextList);
-    const str = JSON.stringify(nextList);
-    localStorage.setItem(DEALER_TENANTS_KEY, str);
-    return postDealerTenants(str)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((out) => {
-        if (out && Array.isArray(out.tenants)) {
-          setDealerTenants(out.tenants);
-          localStorage.setItem(DEALER_TENANTS_KEY, JSON.stringify(out.tenants));
-        }
-        return !!out;
-      })
-      .catch(() => false);
-  };
-
-  // Kurucu anahtarı sunucuda doğrulanır (tarayıcıda saklanmaz / karşılaştırılmaz).
-  const verifyFounderKey = async (key) => {
-    const clean = String(key || "").trim();
-    if (clean.length < 8) return false;
-    const r = await loginWithKey("DEFAULT", clean);
-    return !!(r.ok && r.role === "founder");
-  };
-
-  const currentTenantRecord = dealerTenants.find((t) => t.tenantId === ACTIVE_TENANT_ID) || null;
-  const isCurrentTenantExpired = Boolean(currentTenantRecord && currentTenantRecord.tenantId !== "DEFAULT" && currentTenantRecord.expiresAt && currentTenantRecord.expiresAt !== "unlimited" && new Date(currentTenantRecord.expiresAt).getTime() < Date.now());
-  const isCurrentTenantBlocked = Boolean(currentTenantRecord && currentTenantRecord.tenantId !== "DEFAULT" && (currentTenantRecord.status === "suspended" || isCurrentTenantExpired));
-
-  const handleSwitchToTenant = (targetTenantId) => {
-    const raw = String(targetTenantId || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
-    const norm = !raw || ["PICKYS-MASTER", "MASTER", "DEFAULT"].includes(raw) ? "DEFAULT" : raw;
-    localStorage.setItem("propos_active_tenant_id", norm);
-    const url = new URL(window.location.href);
-    if (norm === "DEFAULT") url.searchParams.delete("tenant");
-    else url.searchParams.set("tenant", norm);
-    window.location.href = url.toString();
-  };
-
-  const handleCreateCustomerTenant = (e) => {
-    e?.preventDefault?.();
-    const bizTitle = newCustName.trim();
-    if (!bizTitle) return showToast("Lütfen müşteri işletme / kafe adını girin.");
-    const autoSlug = bizTitle.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "KAFE";
-    const cleanCode = newCustCode.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "") || `${autoSlug}-${Math.floor(100 + Math.random() * 900)}`;
-    if (dealerTenants.some((t) => t.tenantId === cleanCode || t.displayCode === cleanCode)) {
-      return showToast("Bu İşletme Kodu zaten kullanımda! Lütfen farklı bir kod girin.");
-    }
-    const now = new Date();
-    const planDays = { trial_14: 14, monthly: 30, yearly: 365 }[newCustPlan];
-    const expiresAt = planDays ? new Date(now.getTime() + planDays * 86400000).toISOString() : "unlimited";
-    const licenseKey = `PROPOS-${now.getFullYear()}-${cleanCode.slice(0, 5)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-    const preset = THEME_PRESETS.find((p) => p.id === newCustTheme) || THEME_PRESETS[1];
-
-    const initialCustomerDb = {
-      version: "1.0", rev: Date.now(), exportedAt: now.toISOString(),
-      adminPin: newCustPin?.trim().length >= 4 ? newCustPin.trim() : "1234",
-      brandSettings: {
-        businessName: bizTitle, subtitle: "Kurumsal POS & Bulut ERP Sistemi", badgeText: "PRO", logoType: "text",
-        logoText: bizTitle.slice(0, 2).toUpperCase(), logoEmoji: "☕", logoImageUrl: "", currency: newCustCurrency || "TRY",
-        themeId: preset.id, customPrimary: preset.primary, customSecondary: preset.secondary, customBg: preset.bg, customPanel: preset.panel
-      },
-      zones: newCustTemplate === "clone" ? zones : INITIAL_ZONES,
-      categories: newCustTemplate === "clone" ? categories : INITIAL_CATEGORIES,
-      staffList: [{ id: "st-1", name: newCustOwner.trim().split(" ")[0] || "Kasa Yönetici", role: "İşletme Sahibi & Kasa", color: preset.primary, avatar: (newCustOwner.trim()[0] || "Y").toUpperCase() }],
-      ingredients: newCustTemplate === "clone" ? ingredients : INITIAL_INGREDIENTS,
-      products: newCustTemplate === "clone" ? products : INITIAL_PRODUCTS,
-      tables: INITIAL_TABLES.map((t) => ({ ...t, status: "empty", openedAt: null, staffId: "st-1", discount: 0, paidAmount: 0, items: [] })),
-      sales: [], expenses: [], esnafList: []
-    };
-
-    const dbStr = JSON.stringify(initialCustomerDb);
-    localStorage.setItem(`propos_enterprise_db_tenant_${cleanCode}`, dbStr);
-
-    saveDealerRegistry([...dealerTenants, {
-      tenantId: cleanCode, displayCode: cleanCode, businessName: bizTitle, ownerName: newCustOwner.trim() || "Yetkili",
-      adminPin: initialCustomerDb.adminPin, licenseKey, planType: newCustPlan, status: "active",
-      createdAt: now.toISOString(), expiresAt, themeId: preset.id, currency: newCustCurrency || "TRY"
-    }]).then((saved) => {
-      if (saved) pushTenantSync(cleanCode, "dealer-init", initialCustomerDb.rev, dbStr).catch(() => {});
-      else showToast("⚠️ Müşteri kaydı sunucuya yazılamadı (kurucu oturumu gerekli).");
-    });
-    setSelectedPackageTenantId(cleanCode);
-    setNewCustName(""); setNewCustOwner(""); setNewCustCode("");
-    showToast(`🎉 "${bizTitle}" (${cleanCode}) müşterisi ve izole veritabanı oluşturuldu!`);
-  };
-
-  const handleToggleCustomerStatus = (tenantId) => {
-    if (tenantId === "DEFAULT") return;
-    saveDealerRegistry(dealerTenants.map((t) => {
-      if (t.tenantId !== tenantId) return t;
-      const nextStatus = t.status === "suspended" ? "active" : "suspended";
-      showToast(nextStatus === "active" ? `✅ ${t.businessName} lisansı tekrar AKTİF edildi.` : `⏸️ ${t.businessName} lisansı ASKIYA alındı (Erişim durduruldu).`);
-      return { ...t, status: nextStatus };
-    }));
-  };
-
-  const handleExtendCustomerLicense = (tenantId, mode) => {
-    saveDealerRegistry(dealerTenants.map((t) => {
-      if (t.tenantId !== tenantId) return t;
-      let nextExp = "unlimited";
-      if (mode !== "unlimited") {
-        const baseTime = t.expiresAt && t.expiresAt !== "unlimited" && new Date(t.expiresAt).getTime() > Date.now() ? new Date(t.expiresAt).getTime() : Date.now();
-        nextExp = new Date(baseTime + (Number(mode) || 30) * 86400000).toISOString();
-      }
-      showToast(`📅 ${t.businessName} lisans süresi güncellendi!`);
-      return { ...t, status: "active", expiresAt: nextExp, planType: mode === "unlimited" ? "lifetime" : mode === 365 ? "yearly" : "monthly" };
-    }));
-  };
-
-  const handleDeleteCustomerTenant = (tenantId) => {
-    if (tenantId === "DEFAULT") return;
-    const target = dealerTenants.find((t) => t.tenantId === tenantId);
-    saveDealerRegistry(dealerTenants.filter((t) => t.tenantId !== tenantId));
-    localStorage.removeItem(`propos_enterprise_db_tenant_${tenantId}`);
-    if (target) showToast(`🗑️ ${target.businessName} müşteri kaydı silindi.`);
-  };
-
-  /** PIN sunucuda doğrulanır. Ana işletmede 12 karakterden uzun giriş kurucu anahtarı sayılır (geçiş dönemi). */
+  /** PIN sunucuda doğrulanır. */
   const handleVerifyPin = async (attemptPin) => {
     const code = String(attemptPin !== undefined ? attemptPin : pinInput).trim();
     if (!code || pinBusy) return { ok: false, error: "PIN girin." };
     setPinBusy(true);
     try {
-      if (ACTIVE_TENANT_ID === "DEFAULT" && code.length > 12) {
-        if (await verifyFounderKey(code)) {
-          setIsAdminUnlocked(true); setIsFounderUnlocked(true); setPinModalOpen(false); setPinInput(""); setPinError(false); setInstallModalOpen(true);
-          showToast("👑 Süper Yönetici (Bayi & Lisans Stüdyosu) açıldı!");
-          return { ok: true };
-        }
-        setPinError(true);
-        return { ok: false, error: "Anahtar hatalı." };
-      }
       const r = await verifyManagerPin(ACTIVE_TENANT_ID, code);
       if (r.ok) {
         setIsAdminUnlocked(true);
@@ -670,7 +374,7 @@ export function PosProvider({ children }) {
   };
 
   const handleLockAdmin = () => {
-    setIsAdminUnlocked(false); setIsFounderUnlocked(false); clearFounderSession(); clearManagerSession(ACTIVE_TENANT_ID);
+    setIsAdminUnlocked(false); clearManagerSession(ACTIVE_TENANT_ID);
     if (PROTECTED_TABS.includes(activeTab)) setActiveTab("pos");
     showToast("🔒 Yönetici oturumu kilitlendi.");
   };
@@ -1192,28 +896,17 @@ export function PosProvider({ children }) {
   const exportExcelByCategory = (reportType = "overview") =>
     runExcelExport({ reportType, brandSettings, globalPeriod, customStartDate, customEndDate, filteredSales, filteredExpenses, kpiMetrics, topProducts, staffList, staffPerformance, esnafList, totalEsnafReceivable, showToast });
 
-  const copyCustomerDeliveryMessage = (tObj) => copyDeliveryMsg(tObj, showToast);
-  const downloadCustomerZipPackage = (targetTenantId) => dlZipPkg({ targetTenantId, dealerTenants, brandSettings, githubRepo, appVersion, showToast });
-  const downloadOneClickWindowsInstaller = (targetTenantId) => dlHtaPkg({ targetTenantId: targetTenantId || selectedPackageTenantId, dealerTenants, currentTenantRecord, activeTenantId: ACTIVE_TENANT_ID, appVersion, githubRepo, showToast });
-  const downloadStandaloneAppHtml = (targetTenantId) => dlHtmlPkg({ targetTenantId: targetTenantId || selectedPackageTenantId, dealerTenants, currentTenantRecord, activeTenantId: ACTIVE_TENANT_ID, appVersion, githubRepo, showToast });
-
   const activeOccupiedCount = tables.filter((t) => t.status === "occupied").length;
   const openTablesTotalAmount = tables.reduce((acc, t) => acc + Math.max(0, t.items.reduce((s, i) => s + i.price * i.qty, 0) - (t.discount || 0) - (t.paidAmount || 0)), 0);
 
   const value = {
     ACTIVE_TENANT_ID, activeCurrencyObj, clientDeviceId: clientDeviceIdRef.current,
     activeTab, setActiveTab, handleTabNavigation, globalPeriod, setGlobalPeriod, customStartDate, setCustomStartDate, customEndDate, setCustomEndDate,
-    cloudStatus, lastSyncedAt, syncModalOpen, setSyncModalOpen, installModalOpen, setInstallModalOpen,
+    cloudStatus, lastSyncedAt, syncModalOpen, setSyncModalOpen,
     syncPending, storageInfo, stockLog, stockReason, setStockReason, newPrdBarcode, setNewPrdBarcode, changeTableGuests, handleSearchEnter,
     celebration, updateCelebration, goalProgressToday: goalProgress(sales, celebration.goal), celebrateZReport,
     isAdminUnlocked, pinBusy, handleChangePin, handleSetupFirstPin, handleUnpairDevice,
     optionPickerProduct, setOptionPickerProduct, confirmOptionPicker, newPrdOptions, setNewPrdOptions, setIsAdminUnlocked, pinModalOpen, setPinModalOpen, pinInput, setPinInput, pinError, setPinError, pendingProtectedTab, setPendingProtectedTab, newPinValue, setNewPinValue, handleVerifyPin, handleLockAdmin,
-    dealerTenants, dealerStudioTab, setDealerStudioTab, newCustName, setNewCustName, newCustOwner, setNewCustOwner, newCustCode, setNewCustCode, newCustPin, setNewCustPin, newCustPlan, setNewCustPlan, newCustTheme, setNewCustTheme, newCustCurrency, setNewCustCurrency, newCustTemplate, setNewCustTemplate,
-    switchTenantInput, setSwitchTenantInput, licenseUnlockInput, setLicenseUnlockInput, selectedPackageTenantId, setSelectedPackageTenantId,
-    isFounderUnlocked, setIsFounderUnlocked, verifyFounderKey, founderPromptOpen, setFounderPromptOpen, founderPromptInput, setFounderPromptInput,
-    appVersion, githubRepo, setGithubRepo, nextVersionInput, setNextVersionInput, releaseNotesInput, setReleaseNotesInput, remoteUpdateInfo, isCheckingUpdate, isApplyingUpdate, checkRemoteUpdateFromGithub, applyRemoteOneClickUpdate, publishGithubReleaseFiles,
-    currentTenantRecord, isCurrentTenantExpired, isCurrentTenantBlocked, handleSwitchToTenant, handleCreateCustomerTenant, handleToggleCustomerStatus, handleExtendCustomerLicense, handleDeleteCustomerTenant,
-    copyCustomerDeliveryMessage, downloadCustomerZipPackage, downloadOneClickWindowsInstaller, downloadStandaloneAppHtml,
     brandSettings, setBrandSettings, zones, categories, staffList, ingredients, products, tables, sales, expenses, setExpenses, esnafList, toast, showToast,
     selectedZone, setSelectedZone, activeTableId, setActiveTableId, activeTable, mobilePosPanel, setMobilePosPanel, posCategory, setPosCategory, posSearch, setPosSearch,
     transferModalOpen, setTransferModalOpen, partialPayModalOpen, setPartialPayModalOpen, partialPayAmount, setPartialPayAmount, noteModalItem, setNoteModalItem, inspectedSale, setInspectedSale,

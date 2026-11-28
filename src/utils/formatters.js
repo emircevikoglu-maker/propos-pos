@@ -1,4 +1,4 @@
-import { CURRENCY_OPTIONS, DEALER_TENANTS_KEY, DEFAULT_DEALER_TENANTS } from "../constants/initialData";
+import { CURRENCY_OPTIONS } from "../constants/initialData";
 
 let activeCurrencyCode = "TRY";
 
@@ -123,17 +123,6 @@ export function getProPosStorageKey(tenantId) {
   return tenantId === "DEFAULT" ? "propos_enterprise_db_v1" : `propos_enterprise_db_tenant_${tenantId}`;
 }
 
-export function loadInitialDealerTenants() {
-  try {
-    const raw = localStorage.getItem(DEALER_TENANTS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (e) {}
-  return DEFAULT_DEALER_TENANTS;
-}
-
 export function loadInitialProPosDb(tenantId) {
   const storageKey = getProPosStorageKey(tenantId);
   // IndexedDB'den DeviceGate'in önceden yüklediği son yerel durum (çevrimdışı açılışta da çalışır).
@@ -152,21 +141,4 @@ export function loadInitialProPosDb(tenantId) {
     return typeof window !== "undefined" && window.__PROPOS_BACKUP_SEED__ ? window.__PROPOS_BACKUP_SEED__ : null;
   }
   return typeof window !== "undefined" && window.__PROPOS_TENANT_SEED__ ? window.__PROPOS_TENANT_SEED__ : null;
-}
-
-export function resolveGithubBaseRawUrl(repoInput, fallbackRepo = "") {
-  const raw = String(repoInput || fallbackRepo || "").trim().replace(/\/+$/, "");
-  if (!raw) return "";
-  if (raw.startsWith("http://") || raw.startsWith("https://")) {
-    if (raw.includes("github.com/") && !raw.includes("raw.githubusercontent.com")) {
-      const m = raw.match(/github\.com\/([^/]+\/[^/]+)/i);
-      if (m && m[1]) return `https://raw.githubusercontent.com/${m[1].replace(/\.git$/i, "")}/main`;
-    }
-    return raw;
-  }
-  const cleanSlug = raw.replace(/^@/, "").replace(/\.git$/i, "");
-  if (cleanSlug.includes("/")) {
-    return `https://raw.githubusercontent.com/${cleanSlug}/main`;
-  }
-  return "";
 }
