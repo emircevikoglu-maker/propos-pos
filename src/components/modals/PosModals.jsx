@@ -104,11 +104,12 @@ export function PosModals() {
     handleResetDemoData
   } = usePos();
 
-  const lanUrl =
-    "http://" +
-    (window.__PROPOS_LAN_IP__ || "192.168.1.8") +
-    ":8586" +
-    (ACTIVE_TENANT_ID === "DEFAULT" ? "" : "/?tenant=" + ACTIVE_TENANT_ID);
+  // 3.9.0: telefon kendi kullanıcısıyla giriş yapar; adres yalnızca uygulamanın kendisi (işletme kodu/anahtar yok).
+  // Yerelde (localhost) açıksa LAN adresi, yayındaysa (Vercel vb.) mevcut köken.
+  const isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+  const lanUrl = isLocalHost
+    ? `http://${window.__PROPOS_LAN_IP__ || "192.168.1.8"}:${window.location.port || "8586"}/`
+    : `${window.location.origin}/`;
 
   return (
     <>
@@ -264,10 +265,10 @@ export function PosModals() {
                 />
                 <div className="space-y-1.5 text-center sm:text-left min-w-0 flex-1">
                   <div className="text-xs font-medium text-amber-400 uppercase tracking-wider">
-                    📱 Telefondan Anlık Bağlan (Wi-Fi)
+                    📱 Telefondan aç
                   </div>
                   <p className="text-[11px] text-stone-300 leading-snug">
-                    Telefonunuzun kamerasıyla QR kodu okutun veya tarayıcıya aşağıdaki adresi yazın:
+                    QR'ı okutun ya da adresi yazın; telefonda kendi kullanıcı adınızla giriş yapın:
                   </p>
                   <div
                     onClick={() => {
@@ -866,7 +867,7 @@ function UnpairButton({ onConfirm }) {
       onClick={() => (armed ? onConfirm() : setArmed(true))}
       className={`w-full min-h-[40px] rounded-xl border text-xs font-medium ${armed ? "border-rose-500 bg-rose-500/10 text-rose-300" : "border-stone-800 text-stone-400 hover:text-white"}`}
     >
-      {armed ? "Emin misiniz? Bu cihazın bağlantısı kaldırılacak" : "Bu cihazın işletme bağlantısını kaldır"}
+      {armed ? "Emin misiniz? Bu cihazdan çıkış yapılacak" : "Bu cihazdan çıkış yap"}
     </button>
   );
 }

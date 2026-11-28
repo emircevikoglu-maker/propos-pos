@@ -172,7 +172,8 @@ def stage_build() -> list[dict]:
         adm = (ROOT / "dist-admin" / "index.html").read_text(encoding="utf-8")
         checks = [
             ("POS paketinde kontrol paneli kodu yok", "rotate-key" not in pos and "Kontrol Paneli" not in pos),
-            ("Panel paketi panel kodunu içeriyor", "rotate-key" in adm),
+            ("Panel paketi panel kodunu içeriyor", "/api/users/save" in adm),
+            ("Kullanıcı yönetimi (panel uçları) POS paketinde yok", "/api/users/save" not in pos and "/api/users/delete" not in pos),
             ("Panel paketinde POS kodu yok", "propos-rate-limited" not in adm),
             ("Paketlerde sabit kurucu/senkron anahtarı yok", not any(s in pos + adm for s in ["PICKYS9999", "SYNC-6CMY"])),
             # Paket içindeki "</script" dizeleri kaçışlı olmalı; yalnızca gerçek etiketler kapanır.

@@ -161,18 +161,60 @@ function ConfirmButton({ label, confirmLabel, onConfirm, className = btnDanger }
     : <button type="button" className={btnGhost} onClick={() => setArmed(true)}>{label}</button>;
 }
 
-function KeyCell({ tenant, onRotate, onCopied }) {
-  const [shown, setShown] = React.useState(false);
-  const key = tenant.syncKey || "";
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(key); onCopied("Anahtar kopyalandı."); } catch (e) { onCopied("Kopyalanamadı; elle seçin."); }
+const ROLES = { owner: "Sahip", staff: "Çalışan" };
+
+/** 3.9.0: işletmenin kullanıcıları (kullanıcı adı + parola ile POS girişi). Parola hiç gösterilmez/geri okunmaz. */
+export function UsersCell({ tenant, run }) {
+  const empty = { username: "", password: "", displayName: "", role: "staff" };
+  const [form, setForm] = React.useState(null); // null: kapalı; {mode:"new"|"reset", ...}
+  const users = tenant.users || [];
+  const save = (payload, msg) => run(api.saveUser({ tenantId: tenant.tenantId, ...payload }), msg).then(() => setForm(null)).catch(() => {});
+  const submit = (e) => {
+    e.preventDefault();
+    const { mode, ...u } = form;
+    save(u, mode === "new" ? `${u.username} eklendi.` : `${u.username}: parola değişti, açık oturumları düştü.`);
   };
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <code className="rounded bg-stone-950 px-2 py-1 text-xs text-stone-200">{shown ? key : `${key.slice(0, 5)}••••-••••-${key.slice(-4)}`}</code>
-      <button type="button" className={btnGhost} onClick={() => setShown((s) => !s)}>{shown ? "Gizle" : "Göster"}</button>
-      <button type="button" className={btnGhost} onClick={copy}>Kopyala</button>
-      <ConfirmButton label="Yenile" confirmLabel="Eski cihazlar düşer — onayla" onConfirm={onRotate} />
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-stone-300">Kullanıcılar ({users.length})</span>
+        <button type="button" className={btnGhost} onClick={() => setForm({ mode: "new", ...empty })}>+ Kullanıcı</button>
+      </div>
+      {users.length === 0 && <p className="text-xs text-stone-500">Kullanıcı yok: bu işletmeye kimse giriş yapamaz.</p>}
+      {users.map((u) => (
+        <div key={u.username} className="flex flex-wrap items-center gap-2 rounded-lg border border-stone-800 px-3 py-2" data-testid={`user-${u.username}`}>
+          <span className="font-mono text-xs text-stone-200">{u.username}</span>
+          {u.displayName && <span className="text-xs text-stone-400">{u.displayName}</span>}
+          <span className="rounded-full border border-stone-700 px-2 py-0.5 text-xs text-stone-300">{ROLES[u.role] || u.role}</span>
+          {!u.active && <span className={`rounded-full border px-2 py-0.5 text-xs ${TONE.danger}`}>Kapalı</span>}
+          <span className="text-xs text-stone-500">{u.lastLoginAt ? `Son giriş ${new Date(u.lastLoginAt).toLocaleString("tr-TR")}` : "Hiç giriş yok"}</span>
+          <span className="ml-auto flex flex-wrap gap-2">
+            <button type="button" className={btnGhost} onClick={() => setForm({ mode: "reset", username: u.username, displayName: u.displayName, role: u.role, active: u.active, password: "" })}>Parola</button>
+            <button type="button" className={btnGhost} onClick={() => save({ username: u.username, displayName: u.displayName, role: u.role, active: !u.active }, u.active ? `${u.username} kapatıldı.` : `${u.username} açıldı.`)}>{u.active ? "Kapat" : "Aç"}</button>
+            <ConfirmButton label="Sil" confirmLabel="Kullanıcıyı sil" onConfirm={() => run(api.deleteUser(u.username), `${u.username} silindi.`).catch(() => {})} />
+          </span>
+        </div>
+      ))}
+      {form && (
+        <form onSubmit={submit} className="grid gap-2 rounded-lg border border-stone-700 p-3 sm:grid-cols-2" aria-label={form.mode === "new" ? "Yeni kullanıcı" : "Parola değiştir"}>
+          <input className={inputCls} placeholder="kullanici.adi" aria-label="Kullanıcı adı" value={form.username} disabled={form.mode !== "new"} autoCapitalize="none"
+            onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })} />
+          <input className={inputCls} type="password" autoComplete="new-password" placeholder="Parola (en az 8)" aria-label="Parola" value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          {form.mode === "new" && (
+            <>
+              <input className={inputCls} placeholder="Görünen ad (isteğe bağlı)" aria-label="Görünen ad" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
+              <select className={inputCls} aria-label="Rol" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </>
+          )}
+          <div className="flex gap-2 sm:col-span-2">
+            <button type="submit" className={btnPrimary} disabled={form.password.length < 8 || (form.mode === "new" && form.username.trim().length < 3)}>Kaydet</button>
+            <button type="button" className={btnGhost} onClick={() => setForm(null)}>Vazgeç</button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
@@ -219,7 +261,7 @@ function TenantsView({ notify }) {
                 <span className="rounded-full border border-stone-700 px-2.5 py-1 text-xs text-stone-300">{PLANS[t.planType] || t.planType}</span>
               </div>
               <p className="text-xs text-stone-400">Son senkron: {formatRev(t.stats && t.stats.rev)} · Veri: {formatBytes(t.stats && t.stats.bytes)}{t.note ? ` · ${t.note}` : ""}</p>
-              <KeyCell tenant={t} onCopied={notify} onRotate={() => run(api.rotateKey(t.tenantId), `${t.tenantId}: yeni anahtar üretildi.`).catch(() => {})} />
+              <UsersCell tenant={t} run={run} />
               <div className="flex flex-wrap gap-2">
                 <button type="button" className={btnGhost} onClick={() => setEditing(t)}>Düzenle</button>
                 {t.expiresAt !== "unlimited" && (

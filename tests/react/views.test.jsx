@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // Yeni rapor/yönetim ekranları (P12-6): bağlamı sahte vererek ekranın bağlandığı kancaları ve görünür davranışı doğrular.
@@ -44,10 +44,12 @@ describe("StockView", () => {
     expect(ctx.setStockAdjustType).toHaveBeenCalledWith("add");
   });
 
-  it("reçete sekmesi maliyet ve brüt kârı hesaplar; atık sekmesi boş durumu gösterir", () => {
+  it("reçete sekmesi maliyet ve brüt kârı hesaplar; atık sekmesi boş durumu gösterir", async () => {
     wrap(<StockView />);
     fireEvent.click(screen.getByRole("button", { name: /Reçeteler/ }));
     const row = screen.getByText("Latte").closest("tr");
+    // Dar ekran kartı için her hücre sütun başlığını taşır (useTableLabels).
+    await waitFor(() => expect([...row.children].map((td) => td.getAttribute("data-label"))).toEqual(["Ürün", "Satış", "Maliyet", "Brüt kâr", "Düşen malzemeler"]));
     expect(within(row).getByText(/Süt −200 ml/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Atık ve sayım/ }));
     expect(screen.getByText(/Henüz kayıt yok/)).toBeTruthy();

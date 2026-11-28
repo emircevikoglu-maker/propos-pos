@@ -12,7 +12,8 @@ use ProPos\Services\Storage\StorageFactory;
 
 class TenantService
 {
-    private const SECRET_FIELDS = ['syncKey', 'adminPin'];
+    private const SECRET_FIELDS = ['syncKey', 'adminPin', 'users'];
+    public const USER_ROLES = ['owner', 'staff'];
     /** Tenant verisinde istemciye asla gönderilmeyen / istemciden asla alınmayan alanlar. */
     public const DATA_SECRET_FIELDS = ['adminPin', 'adminPinHash'];
     public const STATUSES = ['active', 'suspended'];
@@ -293,6 +294,8 @@ class TenantService
             $seen[$id] = true;
             $entry['tenantId'] = $id;
             $entry['syncKey'] = $existing[$id]['syncKey'] ?? AuthService::generateKey('SYNC', 3);
+            // Kullanıcılar (parola hash'leri) yalnızca kullanıcı uçlarıyla değişir; toplu kayıttan alınmaz.
+            $entry['users'] = $existing[$id]['users'] ?? [];
             $next[] = $entry;
         }
         if (!isset($seen['DEFAULT']) && isset($existing['DEFAULT'])) {
@@ -423,6 +426,157 @@ class TenantService
         }
         audit('tenant.delete', $id);
         return true;
+    }
+
+    /* ───────── Kullanıcılar (3.9.0): kurucu ekler; giriş kullanıcı adı + parola ───────── */
+
+    public static function normalizeUsername($v): string
+    {
+        return is_string($v) ? strtolower(trim($v)) : '';
+    }
+
+    /** @return array{tenantId:string, user:array}|null */
+    public function findUser(string $username): ?array
+    {
+        $u = self::normalizeUsername($username);
+        if ($u === '') {
+            return null;
+        }
+        foreach ($this->loadRegistry() as $entry) {
+            foreach (($entry['users'] ?? []) as $user) {
+                if (is_array($user) && ($user['username'] ?? '') === $u) {
+                    return ['tenantId' => $entry['tenantId'], 'user' => $user];
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Panel görünümü: parola hash'i asla dışarı çıkmaz. */
+    public static function publicUsers(array $entry): array
+    {
+        return array_values(array_map(static function ($u): array {
+            return [
+                'username' => (string)($u['username'] ?? ''),
+                'displayName' => (string)($u['displayName'] ?? ''),
+                'role' => (string)($u['role'] ?? 'staff'),
+                'active' => (bool)($u['active'] ?? true),
+                'createdAt' => (string)($u['createdAt'] ?? ''),
+                'lastLoginAt' => (string)($u['lastLoginAt'] ?? ''),
+            ];
+        }, array_filter($entry['users'] ?? [], 'is_array')));
+    }
+
+    /**
+     * Kullanıcı ekler/günceller. Kullanıcı adı tüm işletmelerde tekildir. Parola yeni kullanıcıda zorunlu,
+     * güncellemede isteğe bağlı (verilirse değişir ve tüm oturumlar düşer).
+     *
+     * @return array{ok:bool, error?:string}
+     */
+    public function saveUser(array $input): array
+    {
+        $tenantId = normalizeTenantId(is_string($input['tenantId'] ?? null) ? $input['tenantId'] : '');
+        $username = self::normalizeUsername($input['username'] ?? '');
+        if (!preg_match('/^[a-z0-9][a-z0-9._@-]{2,39}$/', $username)) {
+            return ['ok' => false, 'error' => 'Kullanıcı adı 3-40 karakter olmalı (a-z, 0-9, . _ @ -).'];
+        }
+        $password = is_string($input['password'] ?? null) ? $input['password'] : '';
+        if ($password !== '' && (strlen($password) < 8 || strlen($password) > 200)) {
+            return ['ok' => false, 'error' => 'Parola en az 8 karakter olmalı.'];
+        }
+        $role = is_string($input['role'] ?? null) ? $input['role'] : 'staff';
+        if (!in_array($role, self::USER_ROLES, true)) {
+            return ['ok' => false, 'error' => 'Geçersiz rol.'];
+        }
+        $display = substr(trim((string)(preg_replace('/[\x00-\x1F\x7F]/', '', is_scalar($input['displayName'] ?? null) ? (string)$input['displayName'] : '') ?? '')), 0, 80);
+        $active = !array_key_exists('active', $input) || $input['active'] === true || $input['active'] === 1 || $input['active'] === '1';
+
+        $list = $this->loadRegistry();
+        $tIdx = null;
+        foreach ($list as $i => $e) {
+            if ($e['tenantId'] === $tenantId) {
+                $tIdx = $i;
+            }
+            foreach (($e['users'] ?? []) as $u) {
+                if (is_array($u) && ($u['username'] ?? '') === $username && $e['tenantId'] !== $tenantId) {
+                    return ['ok' => false, 'error' => 'Bu kullanıcı adı başka bir işletmede kayıtlı.'];
+                }
+            }
+        }
+        if ($tIdx === null) {
+            return ['ok' => false, 'error' => 'İşletme bulunamadı.'];
+        }
+        $users = array_values(array_filter($list[$tIdx]['users'] ?? [], 'is_array'));
+        $uIdx = null;
+        foreach ($users as $i => $u) {
+            if (($u['username'] ?? '') === $username) {
+                $uIdx = $i;
+            }
+        }
+        if ($uIdx === null && $password === '') {
+            return ['ok' => false, 'error' => 'Yeni kullanıcı için parola gerekli.'];
+        }
+        if ($uIdx === null && count($users) >= 500) {
+            return ['ok' => false, 'error' => 'Kullanıcı sınırı aşıldı.'];
+        }
+        $user = $uIdx === null ? ['username' => $username, 'createdAt' => gmdate('c')] : $users[$uIdx];
+        $user['displayName'] = $display;
+        $user['role'] = $role;
+        $user['active'] = $active;
+        if ($password !== '') {
+            $user['hash'] = password_hash($password, PASSWORD_DEFAULT);
+            $user['passwordChangedAt'] = gmdate('c');
+        }
+        if ($uIdx === null) {
+            $users[] = $user;
+        } else {
+            $users[$uIdx] = $user;
+        }
+        $list[$tIdx]['users'] = $users;
+        if (!$this->writeRegistry($list)) {
+            return ['ok' => false, 'error' => 'Kayıt yazılamadı.'];
+        }
+        audit($uIdx === null ? 'user.create' : 'user.update', $tenantId . '/' . $username);
+        return ['ok' => true];
+    }
+
+    public function deleteUser(string $username): bool
+    {
+        $u = self::normalizeUsername($username);
+        $list = $this->loadRegistry();
+        $found = false;
+        foreach ($list as &$e) {
+            $before = count($e['users'] ?? []);
+            $e['users'] = array_values(array_filter($e['users'] ?? [], static fn($x) => is_array($x) && ($x['username'] ?? '') !== $u));
+            if (count($e['users']) !== $before) {
+                $found = true;
+                audit('user.delete', $e['tenantId'] . '/' . $u);
+            }
+        }
+        unset($e);
+        return $found && $this->writeRegistry($list);
+    }
+
+    /** Başarılı girişte son giriş zamanı (en fazla 10 dakikada bir yazılır; her girişte kayıt defteri yazılmasın). */
+    public function touchUserLogin(string $username): void
+    {
+        $u = self::normalizeUsername($username);
+        $list = $this->loadRegistry();
+        foreach ($list as &$e) {
+            foreach (($e['users'] ?? []) as $i => $x) {
+                if (is_array($x) && ($x['username'] ?? '') === $u) {
+                    $last = strtotime((string)($x['lastLoginAt'] ?? '')) ?: 0;
+                    if (time() - $last < 600) {
+                        return;
+                    }
+                    $e['users'][$i]['lastLoginAt'] = gmdate('c');
+                    unset($e);
+                    $this->writeRegistry($list);
+                    return;
+                }
+            }
+        }
+        unset($e);
     }
 
     /** Panel için: son senkron (rev), cihaz ve veri boyutu. */

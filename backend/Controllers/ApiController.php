@@ -111,6 +111,18 @@ class ApiController
                 sendJson(['ok' => true, 'role' => $result['role'], 'token' => $result['token']]);
                 break;
 
+            case '/api/auth/login': // 3.9.0: kullanıcı adı + parola
+                if ($method !== 'POST') {
+                    sendJson(['ok' => false, 'error' => 'POST gerekli'], 405);
+                }
+                $body = self::jsonBody($rawBody);
+                $r = $this->auth->loginUser(
+                    is_string($body['username'] ?? null) ? $body['username'] : '',
+                    is_string($body['password'] ?? null) ? $body['password'] : ''
+                );
+                sendJson(['ok' => true] + $r);
+                break;
+
             case '/api/sync':
                 $this->sync($method, $rawBody);
                 break;
@@ -271,12 +283,14 @@ class ApiController
             sendJson(['ok' => false, 'error' => 'POST gerekli'], 405);
         }
         $tenantId = normalizeTenantId(qs('tenantId', 'DEFAULT'));
-        $this->auth->requireTenant($tenantId);
+        $session = $this->auth->requireTenant($tenantId);
         $body = self::jsonBody($rawBody);
         $pin = is_string($body['pin'] ?? null) ? $body['pin'] : '';
         $r = $this->pins->verify($tenantId, $pin);
         if ($r['ok']) {
-            sendJson(['ok' => true, 'role' => 'manager', 'token' => $this->auth->issueToken('manager', $tenantId)]);
+            // Kullanıcı oturumundan açılan yönetici kilidi aynı kullanıcıya bağlı kalır (kullanıcı kapatılınca o da düşer).
+            $user = is_string($session['u'] ?? null) ? $session['u'] : null;
+            sendJson(['ok' => true, 'role' => 'manager', 'token' => $this->auth->issueToken('manager', $tenantId, null, $user)]);
         }
         if (($r['code'] ?? '') === 'RATE_LIMIT') {
             sendJson(['ok' => false, 'code' => 'RATE_LIMIT', 'retryAfter' => $r['retryAfter'],

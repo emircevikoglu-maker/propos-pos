@@ -18,6 +18,7 @@ class AuthService
 {
     private const TOKEN_TTL = 43200; // 12 saat
     private const MANAGER_TTL = 14400; // yönetici kilidi 4 saat
+    private const USER_TTL = 2592000; // kullanıcı oturumu 30 gün (parola değişince/kapatılınca düşer)
     private const MAX_FAILS = 8;
     private const FAIL_WINDOW = 600;
 
@@ -94,11 +95,21 @@ class AuthService
         return substr(hash('sha256', (string)($entry['syncKey'] ?? '')), 0, 12);
     }
 
-    public function issueToken(string $role, string $tenantId, ?int $ttl = null): string
+    /** Kullanıcı parmak izi: parola değişince ya da kullanıcı kapatılınca eski oturumlar geçersizleşir. */
+    public static function userFingerprint(array $user): string
     {
-        $ttl = $ttl ?? ($role === 'manager' ? self::MANAGER_TTL : self::TOKEN_TTL);
+        return substr(hash('sha256', 'u|' . ($user['username'] ?? '') . '|' . ($user['hash'] ?? '') . '|' . (!empty($user['active']) ? '1' : '0')), 0, 12);
+    }
+
+    public function issueToken(string $role, string $tenantId, ?int $ttl = null, ?string $username = null): string
+    {
+        $ttl = $ttl ?? ($role === 'manager' ? self::MANAGER_TTL : ($username !== null ? self::USER_TTL : self::TOKEN_TTL));
         $payload = ['r' => $role, 't' => $tenantId, 'e' => time() + $ttl];
-        if ($role !== 'founder') {
+        if ($username !== null) {
+            $found = $this->tenants->findUser($username);
+            $payload['u'] = $found['user']['username'] ?? '';
+            $payload['k'] = $found ? self::userFingerprint($found['user']) : '';
+        } elseif ($role !== 'founder') {
             $payload['k'] = self::keyFingerprint($this->tenants->findRegistryEntry($tenantId));
         }
         $body = self::b64((string)json_encode($payload));
@@ -146,9 +157,18 @@ class AuthService
             sendJson(['ok' => false, 'error' => 'Oturum gerekli.', 'code' => 'AUTH'], 401);
         }
         if ($s['r'] !== 'founder') {
-            $fp = self::keyFingerprint($this->tenants->findRegistryEntry($tenantId));
-            if (!is_string($s['k'] ?? null) || !hash_equals($fp, $s['k'])) {
-                sendJson(['ok' => false, 'error' => 'Oturum geçersiz (anahtar yenilenmiş).', 'code' => 'AUTH'], 401);
+            if (isset($s['u'])) {
+                $found = is_string($s['u']) ? $this->tenants->findUser($s['u']) : null;
+                $ok = $found && $found['tenantId'] === $tenantId && !empty($found['user']['active'])
+                    && is_string($s['k'] ?? null) && hash_equals(self::userFingerprint($found['user']), $s['k']);
+                if (!$ok) {
+                    sendJson(['ok' => false, 'error' => 'Oturum geçersiz (kullanıcı kapatılmış ya da parola değişmiş).', 'code' => 'AUTH'], 401);
+                }
+            } else {
+                $fp = self::keyFingerprint($this->tenants->findRegistryEntry($tenantId));
+                if (!is_string($s['k'] ?? null) || !hash_equals($fp, $s['k'])) {
+                    sendJson(['ok' => false, 'error' => 'Oturum geçersiz (anahtar yenilenmiş).', 'code' => 'AUTH'], 401);
+                }
             }
         }
         return $s;
@@ -217,6 +237,50 @@ class AuthService
         }
         audit($founderOnly ? 'control.login.fail' : 'login.fail', $tenantId);
         sendJson(['ok' => false, 'error' => 'Anahtar hatalı.', 'code' => 'BAD_KEY'], 401);
+    }
+
+    /**
+     * Kullanıcı adı + parola ile POS girişi (3.9.0). Hata mesajı kullanıcı adının var olup olmadığını söylemez.
+     *
+     * @return array{role:string, token:string, tenantId:string, username:string, displayName:string, userRole:string}
+     */
+    public function loginUser(string $username, string $password): array
+    {
+        $this->failScope = 'pos';
+        $this->throttle();
+        $found = strlen($password) <= 200 ? $this->tenants->findUser($username) : null;
+        // Kullanıcı yoksa da aynı maliyette hash doğrulaması (zamanlama ile kullanıcı adı tahmini olmasın).
+        static $dummy = null;
+        $dummy = $dummy ?? password_hash('propos-dummy', PASSWORD_DEFAULT);
+        $hash = $found['user']['hash'] ?? $dummy;
+        $okPass = password_verify($password, (string)$hash);
+        if (!$found || !$okPass || empty($found['user']['active'])) {
+            $this->registerFail();
+            $delay = envInt('PROPOS_LOGIN_DELAY_MS', 400);
+            if ($delay > 0) {
+                usleep($delay * 1000);
+            }
+            audit('login.user.fail', substr(TenantService::normalizeUsername($username), 0, 40));
+            sendJson(['ok' => false, 'error' => 'Kullanıcı adı ya da parola hatalı.', 'code' => 'BAD_LOGIN'], 401);
+        }
+        $this->clearFails();
+        $tenantId = $found['tenantId'];
+        $problem = self::licenseProblem($this->tenants->findRegistryEntry($tenantId));
+        if ($problem !== null) {
+            audit('login.license', $tenantId);
+            sendJson(['ok' => false, 'error' => $problem, 'code' => 'LICENSE'], 403);
+        }
+        $user = $found['user'];
+        $this->tenants->touchUserLogin($user['username']);
+        audit('login.user', $tenantId . '/' . $user['username']);
+        return [
+            'role' => 'tenant',
+            'token' => $this->issueToken('tenant', $tenantId, null, $user['username']),
+            'tenantId' => $tenantId,
+            'username' => $user['username'],
+            'displayName' => (string)($user['displayName'] ?? ''),
+            'userRole' => (string)($user['role'] ?? 'staff'),
+        ];
     }
 
     /** POS girişleri ile kontrol paneli girişi ayrı sayılır: bozuk anahtarlı bir tablet kurucuyu kilitlemez. */

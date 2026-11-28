@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { LoginScreen, TenantEditor } from "../../src/admin/AdminApp";
+import { LoginScreen, TenantEditor, UsersCell } from "../../src/admin/AdminApp";
 import * as adminApi from "../../src/admin/adminApi";
 import { validateTenantForm, extendExpiry, daysLeft, licenseBadge, normalizeCode } from "../../src/admin/validation";
 
@@ -103,5 +103,31 @@ describe("kontrol paneli arayüzü", () => {
     expect(sessionStorage.getItem("propos_control_token")).toBe(null);
     expect(out).toHaveBeenCalled();
     window.removeEventListener("propos-control-logout", out);
+  });
+});
+
+describe("kontrol paneli kullanıcıları (3.9.0)", () => {
+  const tenant = { tenantId: "KAFE-1", users: [{ username: "kasa.ali", displayName: "Ali", role: "staff", active: true, lastLoginAt: "" }] };
+
+  it("yeni kullanıcı formu işletme koduyla kaydeder; kısa parolada kaydet kapalı", async () => {
+    const spy = vi.spyOn(adminApi, "saveUser").mockResolvedValue({ ok: true, tenants: [] });
+    const run = vi.fn((p) => p);
+    render(<UsersCell tenant={tenant} run={run} />);
+    fireEvent.click(screen.getByRole("button", { name: "+ Kullanıcı" }));
+    fireEvent.change(screen.getByLabelText("Kullanıcı adı"), { target: { value: "Garson.Can" } });
+    fireEvent.change(screen.getByLabelText("Parola"), { target: { value: "kisa" } });
+    expect(screen.getByRole("button", { name: "Kaydet" }).disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Parola"), { target: { value: "parola-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "KAFE-1", username: "garson.can", password: "parola-123", role: "staff" })));
+    spy.mockRestore();
+  });
+
+  it("kapat düğmesi kullanıcıyı parolasız günceller (aktif=false)", async () => {
+    const spy = vi.spyOn(adminApi, "saveUser").mockResolvedValue({ ok: true, tenants: [] });
+    render(<UsersCell tenant={tenant} run={(p) => p} />);
+    fireEvent.click(screen.getByRole("button", { name: "Kapat" }));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ tenantId: "KAFE-1", username: "kasa.ali", displayName: "Ali", role: "staff", active: false }));
+    spy.mockRestore();
   });
 });

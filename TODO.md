@@ -4,6 +4,8 @@ Biçim: her plan bir hedef + adımlar. `[ ]` yapılacak, `[x]` bitti, `[~]` kıs
 Boyut: S (< 1 saat), M (yarım gün), L (1-2 gün), XL (daha fazla). Ayrıntı ve gerekçe: `docs/NOTES.md`. Fikir havuzu: `docs/IDEAS.md` (İ-n). Bitenler: `CHANGELOG.md`.
 Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 
+## GÜNCEL SÜRÜM: 3.9.0 — ayrıntılı iş kaydı `docs/plans/3.9.0.md` (giriş kullanıcı tabanlı, Vercel + Linux dağıtım, kırık/eksik özellikler, responsive)
+
 ## ÖNCELİK DEĞİŞİKLİĞİ (25 Kasım, kullanıcı geri bildirimi) — P12, P13, P14 diğer her şeyin önünde
 Kullanıcı 3.5.x'i inceledi: (1) giydirilen tasarım prototip değil, ekran sıkışık ve animasyonlar yok; (2) gezinme (geri tuşu) yok; (3) API kapanınca sistem kullanılamaz oluyor, aynı anda lisans çevrimdışıyken zorlanamıyor. Kod ve tarayıcıyla doğrulandı (docs/NOTES.md "3.5.x geri bildirim analizi"). HTTPS rehberi ve kampanya motoru bu üçünün arkasına alındı.
 
@@ -34,10 +36,10 @@ Durum: `react-router-dom` YOK; sekme ve açık masa `useState`; geri tuşu uygul
 - [ ] Prototipin `#masa=S2` kısayolları test için korunur.
 
 ## P12 — yeni iş kalemleri (3.6.0 sonrası)
-- [ ] Dar ekranda `.dt` tabloları kart listesine çevir (Finans, Analiz, Stok reçete); satır başına tek kart — S
+- [x] (3.9.0) Dar ekranda `.dt` tabloları kart listesine çevir (tüm tablolar, `useTableLabels`)
 - [ ] `ProductOptionsEditor`'ı prototip diliyle yeniden çiz (ürün penceresinde hâlâ eski görünüm) — M
 - [ ] Stok/tahsilat/fiş incele/sıfırlama onayı/bayi paneli modallarını `Sheet` ile yeniden yaz — M
-- [ ] Giriş/eşleştirme/lisans ekranlarını prototip diline taşı — S
+- [x] (3.9.0) Giriş/lisans ekranları prototip dilinde (eşleştirme kalktı: kullanıcı girişi)
 - [ ] Arama ikonu (şu an "eye" yer tutucu), "Gönder" düğmesi (P1 ile), mobil alt çubuk ürün sayısı hizası — S
 - [ ] Yoğun saat çipi demo verisinde sürekli görünüyor (tohum satışlar son 10 dk'da): demo verisini zamana yay — S
 - [ ] Shell/OrderView için bileşen testleri (MemoryRouter + sahte bağlam): ürün ekle, çeşit penceresi, ödeme, geri tuşu — M
@@ -51,7 +53,7 @@ Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını
 - [~] P12-4 Kutlamalar: mevcut `celebrateSale/Z` kancaları yeni ödeme akışında çalışıyor; kademe 0-3 görsel doğrulaması, "kutlamalar" sayfası, hatasız sipariş serisi göstergesi TODO — `PPCelebrate` kademe 0-3 gerçek kancalara bağlı; Z raporu basılı tut; yoğun saat/azaltılmış hareket kuralları; kutlamalar sayfası.
 - [ ] P12-5 Patron görünümü (KPI, yoğunluk, menü mühendisliği, günün hikâyesi, hedef serisi).
 - [~] P12-6 Kalan ekranlar prototip diliyle. (3.7.0) TAMAM: Stok/Reçete/Atık-Sayım, Personel, Finans + Z raporu/Kasa/Kuver, Esnaf. (3.7.1) Analiz da TAMAM (prototipin patron kartları — yoğunluk tahmini, menü matrisi, günün hikâyesi — P12-5'te ayrı eklenecek). (3.8.0) Yönetim da TAMAM. KALDI: giriş/eşleştirme/lisans ekranları ve modallar (stok, tahsilat, fiş incele, sıfırlama onayı, bayi paneli) + `ProductOptionsEditor` + `OptionPicker` (yalnızca testte). Bunlar bitince P12-7 (Tailwind/skin.css kaldır).
-- [ ] P12-7 Tailwind + `skin.css` + eski ekran sınıfları tamamen kaldırılır; derleme boyutu ve `font-black` yasağı testleri.
+- [ ] P12-7 (karar 28 Kasım: Tailwind KALIR) `tailwind.config.js` teması `ui.css` tokenlarına bağlanır; `skin.css` ve ham Tailwind renkleri (stone/amber…) eski ekranlar bitince kaldırılır; `font-black` ve ham renk yasağı testleri.
 - Kabul ölçütleri (sıkışıklık YASAK): ≥ 44 px hedef, birincil eylem 56 px; panel başına en çok 1 birincil + 2 ikincil eylem, gerisi "Daha fazla" sheet'inde; ekranın yarısından fazlası boş olmasın ama yoğun da olmasın: boşluk ölçeği 8/12/16/24; metin kırpma ("Demleme...") yok (2 satıra sarma); 1024×768, 1280×800, 1920×1080, 390×844'te ekran görüntüsü kontrolü (tarayıcı panelinde elle + `design-prototype` ile yan yana); animasyon süresi ≤ 600 ms, yalnızca transform/opacity.
 - [ ] P12-8 UX denetimi (ayrı liste): görülen sorunlar — adisyon paneli aşırı yüklü; "Hızlı tek tık ekle" şeridi ve katalog üst üste; ürün adları kırpılıyor; garson seçici ve ödeme yöntemleri aynı kaydırmada; yönetici kilitli menülere tıklayınca geri bildirim yok (çevrimdışıyken özellikle); sekme geçişinde bağlam kaybı. Yeni bulunanlar buraya eklenir.
 
@@ -139,6 +141,7 @@ Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını
 - [ ] j. `saveTenant`: tam durum yerine yalnızca `rev` okuma (kayıt başına 1 uzak okuma tasarrufu) — S
 
 ## P5 — Roller ve sunucuda yetki — L
+- [~] (3.9.0) Kullanıcı rolü alanı (`owner|staff`) kullanıcı kaydında var; henüz izinlere bağlı değil
 - [ ] Personel PIN'i (hash), hızlı kullanıcı değiştirme ekranı
 - [ ] Rol/izin matrisi (garson, kasiyer, müdür, sahip; `sale:void`, `discount:>10`, `report:view`)
 - [ ] Müdür onayı (iptal, büyük indirim) + denetim kaydı
@@ -185,7 +188,9 @@ Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını
 - [ ] POS'a CSP; QR'ı yerel üret (api.qrserver.com'a LAN adresi gidiyor) — S
 - [ ] Kontrol paneline TOTP + IP kısıtı — M
 - [ ] Uygulama içi bayi stüdyosunu ve GitHub güncelleme yolunu kaldır (`apply-update`, `prepare-github`, raw GitHub fetch) — M
-- [ ] Oturumu httpOnly çereze taşı / token TTL 15 dk + refresh — M
+- [ ] Oturumu httpOnly çereze taşı / token TTL 15 dk + refresh — M (3.9.0 notu: Vercel ↔ Linux çapraz köken; çerez yerine başlık seçildi, NOTES)
+- [ ] 4.0: tenant bağlantı anahtarı (`syncKey`, `/api/login {tenantId,key}`, `rotate-key`) tamamen kaldırılır; yalnızca kullanıcı girişi + kurucu anahtarı — S
+- [ ] QR'ı yerelde üret (api.qrserver.com'a adres gidiyor) — S
 - [ ] Yedeği geri yüklemeyi bir kez gerçekten dene — S
 - [ ] Panoda: son senkron, hata oranı, tenant DB boyutu (kısmen var) — S
 

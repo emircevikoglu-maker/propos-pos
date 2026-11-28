@@ -3,6 +3,29 @@
 Biçim: [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/). Sürüm numarası `package.json` ile birlikte artar.
 Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 
+## [3.9.0] — 2026-11-28
+Temeli oturt: kullanıcı tabanlı giriş, Vercel + Linux dağıtımı, tarayıcı taramasında bulunan kırık/eksik özellikler, responsive geçişi. İş kaydı: `docs/plans/3.9.0.md`.
+### Eklendi
+- Kullanıcı adı + parola ile giriş (`POST /api/auth/login`). Kullanıcıları kurucu kontrol panelinden ekler/kapatır/parolasını değiştirir/siler (`/api/users/save|delete`); kayıt defterinde işletmenin altında `users[]`, parola `password_hash`. Kullanıcı adı tüm işletmelerde tekil. Oturum 30 gün; parola değişince ya da kullanıcı kapatılınca o kullanıcının tüm oturumları (yönetici kilidi dahil) anında düşer. Yanlış parola ile olmayan kullanıcı aynı yanıtı alır (kullanıcı adı sızmaz).
+- Yeni giriş ekranı (prototip dili) ve sistem menüsünde kullanıcı adı + "Çıkış yap".
+- Dağıtım: `PROPOS_API_URL` derleme değişkeni (ön yüz başka kökende), `vercel.json`, `docs/DEPLOY.md` (Apache/nginx, CORS, kontrol paneli erişimi, kontrol listesi).
+- Adisyon satırına serbest not ("+ Not yaz"; özel notlar çip olarak görünür, dokununca kalkar).
+- Masalar araç çubuğunda "açık masalardaki tutar" ve "bugün kasa" özetleri.
+- Dar ekranda (≤ 700 px) tüm `.dt` tabloları kart listesine döner; hücreler sütun başlığını etiket olarak taşır (`useTableLabels`).
+- Testler: kullanıcı girişi 9 PHP testi (yanlış/olmayan kullanıcı, çapraz işletme, hash sızıntısı, tekillik, zayıf parola, parola değişimi/kapatma/silme ile oturum düşmesi, lisans, uç yetkisi, toplu kayıtla hash enjeksiyonu), giriş ekranı/kapısı ve panel kullanıcıları React testleri.
+### Değişti
+- Cihaz eşleştirme (işletme kodu + bağlantı anahtarı) arayüzden kalktı; panelde anahtar gösterimi/yenileme yerine Kullanıcılar. Arka uçta eski anahtar girişi yalnızca geçiş için duruyor (4.0'da kalkar).
+- Mobil alt gezinme ≤ 600 px'te 4 sekme + "Diğer" menüsü (8 öğe 390 px'e sığmıyordu).
+- Mobil adisyon: üstte geri + arama, altında kayan kategori şeridi; adisyon ızgarası artık yatay taşmıyor.
+- Senkron penceresindeki QR/adres: yerelde LAN adresi, yayında mevcut köken; işletme kodu adreste yok.
+- Açık kalma süresi her yerde aynı biçimde (45 dk · 2 sa 5 dk · 3 gün); adisyon başlığı "13965 dk" yazmıyor.
+- Karar: Tailwind kalır; tek tasarım kaynağı `ui.css` tokenları (P12-7 güncellendi, gerekçe NOTES).
+### Düzeltildi
+- Adisyon satır araçları dar panelde taşıyordu (yatay kaydırma, "Az buzlu" kırılıyor, sil düğmesi görünmüyordu).
+- Bölüm segmentleri dar ekranda sayfayı yatay kaydırıyordu.
+### Kaldırıldı
+- `PairingScreen` (yerine `LoginScreen`).
+
 ## [3.8.0] — 2026-11-25
 Yönetim (Ayarlar) prototip diline taşındı; böylece ana sekmelerin hepsi yeni tasarım sisteminde. Eski sekme sarmalayıcısı (`Legacy`) kalktı.
 ### Eklendi

@@ -12,6 +12,7 @@ export function Page({ label, title, actions, children }) {
     const cards = ref.current ? ref.current.querySelectorAll(".card") : [];
     cards.forEach((c, i) => M.rise(c, Math.min(i * 30, 240), 8));
   }, []);
+  useTableLabels(ref);
   return (
     <div className="view-pad">
       <div className="boss" ref={ref}>
@@ -26,6 +27,29 @@ export function Page({ label, title, actions, children }) {
       </div>
     </div>
   );
+}
+
+/**
+ * Dar ekranda `.dt` tablosu kart listesine döner (CSS); her hücre sütun başlığını `data-label` ile taşır.
+ * Başlıklar tek yerde (thead) kalsın diye etiketler DOM'dan kopyalanır; tablo değişince yeniden.
+ */
+export function useTableLabels(ref) {
+  React.useEffect(() => {
+    const root = ref.current;
+    if (!root) return undefined;
+    const label = () => root.querySelectorAll("table.dt").forEach((t) => {
+      const heads = [...t.querySelectorAll("thead th")].map((th) => th.textContent.trim());
+      t.querySelectorAll("tbody tr").forEach((tr) => [...tr.children].forEach((td, i) => {
+        if (heads[i]) { if (td.getAttribute("data-label") !== heads[i]) td.setAttribute("data-label", heads[i]); } else td.removeAttribute("data-label");
+      }));
+    });
+    label();
+    if (typeof MutationObserver === "undefined") return undefined;
+    let raf = 0;
+    const mo = new MutationObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(label); });
+    mo.observe(root, { childList: true, subtree: true });
+    return () => { mo.disconnect(); cancelAnimationFrame(raf); };
+  }, [ref]);
 }
 
 export function Card({ span = 12, title, aside, className = "", children }) {

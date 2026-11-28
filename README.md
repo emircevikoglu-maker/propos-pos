@@ -40,10 +40,13 @@ npx vitest run                        # React testleri tek başına
 PHP testleri bağımlılıksızdır (composer gerekmez); HTTP suite'leri için koşucu geçici veriyle iki sunucu (POS + panel) açar,
 kaba kuvvet / hız sınırı testleri sıkı limitli ayrı sunucuda koşar. Gerçek `data/` ve `dist/` klasörlerine dokunulmaz.
 
-## Giriş akışı
-1. Cihaz bir kez işletmeye bağlanır (işletme kodu + bağlantı anahtarı).
-2. Yönetici ekranları PIN ister; PIN sunucuda hash olarak durur, 6 hatalı denemede 5 dk kilitlenir.
-3. Anahtar panelden yenilenirse o anahtarla bağlı tüm cihazlar anında düşer (kayıp/çalıntı cihaz).
+## Giriş akışı (3.9.0)
+1. Kullanıcı adı + parola. Kullanıcıları kurucu kontrol panelinden ekler (işletme kartı → Kullanıcılar). Oturum 30 gün.
+2. Parola değişince ya da kullanıcı kapatılınca o kullanıcının açık oturumları anında düşer (kayıp/çalıntı cihaz).
+3. Yönetici ekranları ayrıca işletme PIN'i ister; PIN sunucuda hash olarak durur, 6 hatalı denemede 5 dk kilitlenir.
+
+## Dağıtım
+Ön yüz Vercel (`vercel.json`, `PROPOS_API_URL`), arka uç Linux PHP (Apache `.htaccess` / nginx). Ayrıntı: `docs/DEPLOY.md`. Sürüm iş kaydı: `docs/plans/`.
 
 ## Güvenlik modeli
 - Tüm veri `data/` altındadır (web'e kapalı). Eski kök dizin dosyaları ilk çalıştırmada oraya taşınır.

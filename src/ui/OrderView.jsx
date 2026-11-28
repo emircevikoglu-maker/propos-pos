@@ -7,7 +7,7 @@ import {
 import { PPMotion as M } from "../design/motion";
 import { Ic } from "./Ic";
 import { useSheet, Sheet } from "./Sheet";
-import { tableSubtotal, tableRemaining, tableCount } from "./hooks";
+import { tableSubtotal, tableRemaining, tableCount, fmtMin } from "./hooks";
 import { PaySheet } from "./PaySheet";
 import { OpsSheet } from "./OpsSheet";
 
@@ -44,6 +44,13 @@ function Line({ item, open, onToggle }) {
     const next = notes.includes(nt) ? notes.filter((x) => x !== nt) : [...notes, nt];
     saveItemNote(item.id, next.join(" · "));
   };
+  const [draft, setDraft] = React.useState(null); // serbest not (eski "not yaz" penceresinin karşılığı)
+  const addFree = (e) => {
+    e.preventDefault();
+    const t = String(draft || "").replace(/·/g, " ").trim().slice(0, 80);
+    if (t && !notes.includes(t)) saveItemNote(item.id, [...notes, t].join(" · "));
+    setDraft(null);
+  };
   const opts = optionSummary(item.options);
   return (
     <div className="line-wrap">
@@ -63,10 +70,22 @@ function Line({ item, open, onToggle }) {
             <span className="num">{item.qty}</span>
             <button type="button" aria-label="Artır" onClick={() => updateOrderItemQty(item.id, 1)}><Ic n="plus" className="ic-sm" /></button>
           </span>
-          {NOTES.map((nt) => (
-            <button key={nt} type="button" className="chip" aria-pressed={notes.includes(nt)} onClick={() => toggleNote(nt)}>{nt}</button>
-          ))}
           <button type="button" className="btn btn-danger btn-icon" aria-label="Satırı sil" onClick={() => updateOrderItemQty(item.id, -item.qty)}><Ic n="trash" className="ic-sm" /></button>
+          <span className="line-notes">
+            {NOTES.map((nt) => (
+              <button key={nt} type="button" className="chip" aria-pressed={notes.includes(nt)} onClick={() => toggleNote(nt)}>{nt}</button>
+            ))}
+            {notes.filter((nt) => !NOTES.includes(nt)).map((nt) => (
+              <button key={nt} type="button" className="chip" aria-pressed="true" aria-label={`${nt} notunu kaldır`} onClick={() => toggleNote(nt)}>{nt} ×</button>
+            ))}
+            {draft === null && <button type="button" className="chip" onClick={() => setDraft("")}>+ Not yaz</button>}
+          </span>
+          {draft !== null && (
+            <form className="line-free" onSubmit={addFree}>
+              <input className="field-input" autoFocus maxLength={80} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Örn. şekersiz, yanında su" aria-label="Satır notu" />
+              <button type="submit" className="btn btn-secondary">Ekle</button>
+            </form>
+          )}
         </div>
       )}
     </div>
@@ -147,12 +166,14 @@ export function OrderView() {
           <Ic n="eye" className="ic-sm" />
           <input value={posSearch} onChange={(e) => setPosSearch(e.target.value)} onKeyDown={onSearchKey} placeholder="Ürün ara" aria-label="Ürün ara" />
         </label>
+        <div className="cat-list">
         {catList.map((c) => (
           <button key={c.id} type="button" className="cat pressable" aria-pressed={!q && activeCat === c.id} onClick={() => { setPosSearch(""); setCat(c.id); }}>
             {c.id === FAV ? <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Ic n="star" className="ic-sm" />{c.name}</span> : c.name}
             <span className="cat-n num">{c.n}</span>
           </button>
         ))}
+        </div>
       </nav>
 
       <div className="products" ref={productsRef}>
@@ -163,7 +184,7 @@ export function OrderView() {
       <aside className={`ticket${ticketOpen ? " is-open" : ""}`} aria-label="Adisyon">
         <div className="ticket-head">
           <div>
-            <div className="ticket-sub">{empty ? "Yeni adisyon" : `Açık · ${min} dk`}{table.guests ? ` · ${table.guests} kişi` : ""}</div>
+            <div className="ticket-sub">{empty ? "Yeni adisyon" : `Açık · ${fmtMin(min)}`}{table.guests ? ` · ${table.guests} kişi` : ""}</div>
             <h2 className="ticket-title">{table.name}</h2>
           </div>
           <span style={{ display: "flex", gap: 8, alignItems: "center" }}>

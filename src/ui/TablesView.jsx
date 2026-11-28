@@ -3,9 +3,8 @@ import { usePos } from "../context/PosContext";
 import { formatTL, getElapsedMinutes } from "../utils/formatters";
 import { PPMotion as M } from "../design/motion";
 import { Ic } from "./Ic";
-import { useNow, tableRemaining, tableCount } from "./hooks";
+import { useNow, tableRemaining, tableCount, fmtMin } from "./hooks";
 
-const fmtMin = (m) => (m < 60 ? `${m} dk` : m < 1440 ? `${Math.floor(m / 60)} sa ${m % 60} dk` : "1 g+");
 
 function TableCard({ table, onOpen }) {
   const busy = table.status === "occupied" && table.items.length > 0;
@@ -24,7 +23,7 @@ function TableCard({ table, onOpen }) {
     <button type="button" className={`pp-table is-busy pressable${long ? " is-long" : ""}`} onClick={(e) => onOpen(table, e.currentTarget)}>
       <div className="pp-table-top">
         <div><div className="pp-table-name">{table.name}</div><div className="pp-table-seats">{sub}</div></div>
-        <span className="pp-ring" style={{ "--p": Math.min(100, Math.round((min / 90) * 100)) }} title={`${min} dk açık`} />
+        <span className="pp-ring" style={{ "--p": Math.min(100, Math.round((min / 90) * 100)) }} title={`${fmtMin(min)} açık`} />
       </div>
       <div className="pp-table-amount">{formatTL(tableRemaining(table))}</div>
       <div className="pp-table-meta">
@@ -36,7 +35,12 @@ function TableCard({ table, onOpen }) {
 }
 
 export function TablesView() {
-  const { tables, zones, selectedZone, setSelectedZone, setActiveTableId, startFastEsnafOrder } = usePos();
+  const { tables, zones, selectedZone, setSelectedZone, setActiveTableId, startFastEsnafOrder, sales, activeOccupiedCount, openTablesTotalAmount } = usePos();
+  // Eski kenar çubuğundaki "bugünkü kasa / açık masalardaki tutar" özetleri (3.9.0'da geri geldi).
+  const todayTotal = React.useMemo(() => {
+    const d = new Date().toDateString();
+    return (sales || []).reduce((sum, x) => (x.paymentMethod !== "İkram / İptal" && new Date(x.timestamp).toDateString() === d ? sum + (Number(x.total) || 0) : sum), 0);
+  }, [sales]);
   useNow(30000);
   const boxRef = React.useRef(null);
   const zone = selectedZone && (selectedZone === "Tümü" || zones.includes(selectedZone)) ? selectedZone : "Tümü";
@@ -69,6 +73,10 @@ export function TablesView() {
           <span><i style={{ background: "var(--surface-4)" }} />Boş</span>
         </div>
         <div className="toolbar-spacer" />
+        <div className="table-sums" aria-label="Özet">
+          <span><span className="label">Açık masalarda</span><b className="num">{formatTL(openTablesTotalAmount)}</b><span className="label">{activeOccupiedCount} masa</span></span>
+          <span><span className="label">Bugün kasa</span><b className="num">{formatTL(todayTotal)}</b></span>
+        </div>
         <button type="button" className="btn btn-secondary" onClick={() => startFastEsnafOrder()}><Ic n="bag" />Hızlı satış</button>
       </div>
       <div className="tables" ref={boxRef}>

@@ -7,6 +7,7 @@ import { isBusyNow } from "../design/celebrations";
 import { PPMotion as M } from "../design/motion";
 import { Ic } from "./Ic";
 import { TAB_PATHS } from "./routes";
+import { getUserSession } from "../services/apiService";
 import { TablesView } from "./TablesView";
 import { OrderView } from "./OrderView";
 import { EsnafView } from "./EsnafView";
@@ -27,19 +28,29 @@ const NAV = [
 ];
 const hhmm = (d) => d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
 
+const MOBILE_PRIMARY = 4; // dar ekranda alt gezinmede doğrudan görünen sekme sayısı; gerisi "Diğer"de
+
 function Rail() {
   const { activeTab, handleTabNavigation, activeOccupiedCount, criticalIngredients, isAdminUnlocked, handleLockAdmin, setPendingProtectedTab, setPinInput, setPinError, setPinModalOpen, brandSettings } = usePos();
+  const [more, setMore] = React.useState(false);
   const openPin = () => { setPendingProtectedTab(null); setPinInput(""); setPinError(false); setPinModalOpen(true); };
   const logo = (brandSettings.logoText || brandSettings.businessName?.[0] || "P").slice(0, 2).toUpperCase();
+  const go = (id) => { setMore(false); handleTabNavigation(id); };
+  const lockBtn = (cls) => (
+    <button type="button" className={`rail-btn ${cls}`} onClick={() => { setMore(false); (isAdminUnlocked ? handleLockAdmin : openPin)(); }}>
+      <Ic n={isAdminUnlocked ? "lock" : "eye"} />{isAdminUnlocked ? "Kilitle" : "Yönetici"}
+    </button>
+  );
+  const moreActive = NAV.slice(MOBILE_PRIMARY).some((n) => n.id === activeTab);
   return (
     <nav className="rail" aria-label="Ana gezinme">
       <div className="rail-logo" aria-label="ProPos">{logo}</div>
-      {NAV.map((n) => {
+      {NAV.map((n, i) => {
         const locked = PROTECTED_TABS.includes(n.id) && !isAdminUnlocked;
         const badge = n.id === "pos" ? activeOccupiedCount : 0;
         const alert = n.id === "inventory" ? criticalIngredients.length : 0;
         return (
-          <button key={n.id} type="button" className="rail-btn" aria-current={activeTab === n.id ? "page" : "false"} onClick={() => handleTabNavigation(n.id)}>
+          <button key={n.id} type="button" className={`rail-btn${i >= MOBILE_PRIMARY ? " rail-secondary" : ""}`} aria-current={activeTab === n.id ? "page" : "false"} onClick={() => go(n.id)}>
             <Ic n={n.icon} />{n.label}
             {badge > 0 && <span className="rail-badge num">{badge}</span>}
             {alert > 0 && <span className="rail-badge is-warn num">{alert}</span>}
@@ -48,9 +59,26 @@ function Rail() {
         );
       })}
       <div className="rail-spacer" />
-      <button type="button" className="rail-btn" onClick={isAdminUnlocked ? handleLockAdmin : openPin}>
-        <Ic n={isAdminUnlocked ? "lock" : "eye"} />{isAdminUnlocked ? "Kilitle" : "Yönetici"}
+      {lockBtn("rail-secondary")}
+      <button type="button" className="rail-btn rail-more" aria-haspopup="menu" aria-expanded={more} aria-current={moreActive ? "page" : "false"} onClick={() => setMore((o) => !o)}>
+        <Ic n="grid" />Diğer
       </button>
+      {more && (
+        <>
+          <div className="rail-more-back" onClick={() => setMore(false)} />
+          <div className="menu-pop rail-more-pop" role="menu">
+            {NAV.slice(MOBILE_PRIMARY).map((n) => (
+              <button key={n.id} type="button" role="menuitem" aria-current={activeTab === n.id ? "page" : "false"} onClick={() => go(n.id)}>
+                <Ic n={n.icon} /> {n.label}{PROTECTED_TABS.includes(n.id) && !isAdminUnlocked ? " (PIN)" : ""}
+              </button>
+            ))}
+            <hr />
+            <button type="button" role="menuitem" onClick={() => { setMore(false); (isAdminUnlocked ? handleLockAdmin : openPin)(); }}>
+              <Ic n={isAdminUnlocked ? "lock" : "eye"} /> {isAdminUnlocked ? "Yönetici kilidini kapat" : "Yönetici girişi"}
+            </button>
+          </div>
+        </>
+      )}
     </nav>
   );
 }
@@ -58,8 +86,9 @@ function Rail() {
 function SystemMenu() {
   const {
     ACTIVE_TENANT_ID, brandSettings, isFounderUnlocked, setInstallModalOpen, setSyncModalOpen, setDealerStudioTab, dealerTenants, remoteUpdateInfo,
-    isApplyingUpdate, applyRemoteOneClickUpdate, isCheckingUpdate, checkRemoteUpdateFromGithub, appVersion, handleSwitchToTenant, storageInfo
+    isApplyingUpdate, applyRemoteOneClickUpdate, isCheckingUpdate, checkRemoteUpdateFromGithub, appVersion, handleSwitchToTenant, storageInfo, handleUnpairDevice
   } = usePos();
+  const session = getUserSession();
   const [open, setOpen] = React.useState(false);
   const [swUpdate, setSwUpdate] = React.useState(null);
   const [installEvt, setInstallEvt] = React.useState(null);
@@ -88,7 +117,8 @@ function SystemMenu() {
       {open && (
         <div className="menu-pop" role="menu">
           <div className="menu-note">İşletme kodu <span className="num" style={{ color: "var(--text-1)" }}>{ACTIVE_TENANT_ID === "DEFAULT" ? "MASTER" : ACTIVE_TENANT_ID}</span></div>
-          {item(() => (isFounderUnlocked ? setInstallModalOpen(true) : setSyncModalOpen(true)), "Cihaz bağlama / QR")}
+          {session && <div className="menu-note">Kullanıcı <span style={{ color: "var(--text-1)" }}>{session.displayName || session.username}</span></div>}
+          {item(() => (isFounderUnlocked ? setInstallModalOpen(true) : setSyncModalOpen(true)), "Senkron ve bağlantı")}
           {item(() => checkRemoteUpdateFromGithub(false), isCheckingUpdate ? "Kontrol ediliyor…" : `Güncelleme kontrolü (v${appVersion})`)}
           {remoteUpdateInfo && item(applyRemoteOneClickUpdate, isApplyingUpdate ? "Yükleniyor…" : `Yeni sürüm v${remoteUpdateInfo.version} — güncelle`)}
           {swUpdate && item(() => swUpdate.apply(), "Yeni sürümü uygula (sayfa yenilenir)")}
@@ -96,6 +126,8 @@ function SystemMenu() {
           {item(() => window.dispatchEvent(new CustomEvent("propos-open-feedback")), "Geri bildirim gönder")}
           {isFounderUnlocked && item(() => { setDealerStudioTab("tenants"); setInstallModalOpen(true); }, `Bayi & Lisans Paneli (${dealerTenants.length})`)}
           {ACTIVE_TENANT_ID !== "DEFAULT" && !locked && (<><hr />{item(() => handleSwitchToTenant("DEFAULT"), "Ana işletmeye dön")}</>)}
+          <hr />
+          {item(handleUnpairDevice, "Çıkış yap")}
           {storageInfo && <div className="menu-note">Yerel depo: %{Math.round(storageInfo.ratio * 1000) / 10} kullanımda</div>}
         </div>
       )}

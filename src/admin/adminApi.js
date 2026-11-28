@@ -47,6 +47,8 @@ export async function login(key) {
 export const listTenants = () => call("/api/tenants").then((o) => o.tenants);
 export const saveTenant = (tenant) => call("/api/tenants/save", { method: "POST", body: tenant });
 export const rotateKey = (tenantId) => call("/api/tenants/rotate-key", { method: "POST", body: { tenantId } });
+export const saveUser = (user) => call("/api/users/save", { method: "POST", body: user });
+export const deleteUser = (username) => call("/api/users/delete", { method: "POST", body: { username } });
 export const deleteTenant = (tenantId) => call("/api/tenants/delete", { method: "POST", body: { tenantId } });
 export const fetchAudit = () => call("/api/audit").then((o) => o.lines || []);
 

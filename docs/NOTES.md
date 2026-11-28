@@ -100,6 +100,17 @@ Nüanslar / riskler
 - HTTPS kısıtı: service worker ve "uygulamayı yükle" yalnızca güvenli bağlamda. LAN'daki `http://192.168.x.x` tabletlerinde çevrimdışı ÇALIŞMA vardır (sayfa açıkken, IndexedDB), ama kapatıp çevrimdışı yeniden açma yoktur. Çözüm: yerelde bile HTTPS (örn. Caddy ile yerel sertifika) ya da VDS'te HTTPS + tablet bulut adresinden açar.
 - Tarayıcı veri silme riski: `storage.persist()` istenir; kurulu PWA'da genellikle verilir. Safari kurulu olmayan sitenin verisini 7 gün kullanılmazsa silebilir → iOS'ta PWA olarak kurmak önerilir; ayrıca sunucuda zaten kopya var (son güvence).
 
+## ÇOK ÖNEMLİ — Çevrimdışıyken birden fazla çalışan (28 Kasım)
+- IndexedDB cihaza ve tarayıcıya özeldir (çerez gibi, köken başına). İki telefon aynı veritabanını PAYLAŞAMAZ; veri bir cihazdan diğerine yalnızca sunucu üzerinden gider. İnternet yokken cihazlar birbirini görmez.
+- Kural (kullanıcıya söylenecek): internet gidince tek cihaz (kasa PC'si) kullanılır. Mobil veriyle bağlanan telefon zaten çevrimiçidir; tek telefonla da sipariş alınabilir.
+- Risk: kesintide ikinci cihaz da sipariş alırsa bağlantı gelince birleşir (satışlar kimlikle, masa alanları alan alan), ama AYNI MASAYI iki cihaz kapatırsa çift satış olabilir (P2-d). Çevrimdışı uyarısı bu kuralı ekranda söylemeli; ileride: aynı LAN'daki cihazları yerel sunucu üzerinden eşitlemek (topoloji A) ya da kapanışta çakışma uyarısı.
+
+## Tailwind kalır (28 Kasım)
+- Kullanıcı sorusu: "Tailwind'i niye kaldırıyorsun, tasarım için iyi değil mi?" Cevap: iyi; sorun Tailwind değil iki ayrı tasarım dilinin (eski Tailwind renkleri + prototip tokenları) yan yana yaşamasıydı. Karar: Tailwind kalır, teması `ui.css` CSS değişkenlerine bağlanır; kaldırılacak olan yalnızca `skin.css` (eski sınıfları zorla yeniden boyayan geçici katman).
+
+## Kullanıcı tabanlı giriş (28 Kasım)
+- Kullanıcı: "token üretme olayı çok garip, olmaz; genel veritabanından ben kullanıcı ekleyeceğim." Cihaza bağlantı anahtarı yazdırmak (eşleştirme) kalkıyor; kurucu panelden kullanıcı adı + parola tanımlar. İçeride yine imzalı oturum belirteci var ama kullanıcı görmez/üretmez (her web uygulamasındaki oturum çerezi gibi). Çapraz köken (Vercel ↔ Linux arka uç) olduğu için çerez yerine başlık + localStorage: üçüncü taraf çerez engelleri (Safari ITP) oturumu bozmasın.
+
 ## Açık sorular (kullanıcıya)
 1. Yazıcı: marka/model, 58 mm mi 80 mm mi, bağlantı (USB/ağ/Bluetooth), mutfak ve bar ayrı yazıcı mı?
 2. Altyapı: Supabase denemesi yapılsın mı, yoksa PHP VDS'te kalıp PDO (SQLite/MySQL) mı?

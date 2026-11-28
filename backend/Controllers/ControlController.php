@@ -49,6 +49,7 @@ class ControlController
         $stats = $this->tenants->stats();
         return array_map(static function (array $e) use ($stats): array {
             unset($e['adminPin']);
+            $e['users'] = TenantService::publicUsers($e);
             $e['stats'] = $stats[$e['tenantId']] ?? null;
             $e['licenseProblem'] = AuthService::licenseProblem($e);
             return $e;
@@ -111,6 +112,24 @@ class ControlController
                 self::requirePost($method);
                 if (!$this->tenants->deleteEntry((is_string(self::body($raw)['tenantId'] ?? null) ? self::body($raw)['tenantId'] : ''))) {
                     sendJson(['ok' => false, 'error' => 'Silinemedi (ana işletme silinemez).'], 400);
+                }
+                sendJson(['ok' => true, 'tenants' => $this->tenantList()]);
+                break;
+
+            case '/api/users/save':
+                self::requirePost($method);
+                $r = $this->tenants->saveUser(self::body($raw));
+                if (!$r['ok']) {
+                    sendJson(['ok' => false, 'error' => $r['error']], 400);
+                }
+                sendJson(['ok' => true, 'tenants' => $this->tenantList()]);
+                break;
+
+            case '/api/users/delete':
+                self::requirePost($method);
+                $b = self::body($raw);
+                if (!$this->tenants->deleteUser(is_string($b['username'] ?? null) ? $b['username'] : '')) {
+                    sendJson(['ok' => false, 'error' => 'Kullanıcı bulunamadı.'], 404);
                 }
                 sendJson(['ok' => true, 'tenants' => $this->tenantList()]);
                 break;

@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
-import { PairingScreen, LicenseBlockedScreen } from "../../src/components/auth/PairingScreen";
+import { LoginScreen, LicenseBlockedScreen } from "../../src/components/auth/LoginScreen";
 import { PinPad } from "../../src/components/auth/PinPad";
 import { DeviceGate } from "../../src/components/auth/DeviceGate";
 import { normalizeTenantCode, resolveActiveTenantId } from "../../src/utils/formatters";
@@ -28,52 +28,42 @@ describe("işletme kodu normalleştirme", () => {
   });
 });
 
-describe("PairingScreen", () => {
-  it("ürün adı ProPos görünür; anahtar alanı gizli; anahtarsız gönderilemez", () => {
-    render(<PairingScreen onPair={vi.fn()} />);
+describe("LoginScreen", () => {
+  const fill = (u, p) => {
+    fireEvent.change(screen.getByLabelText("Kullanıcı adı"), { target: { value: u } });
+    fireEvent.change(screen.getByLabelText("Parola"), { target: { value: p } });
+  };
+
+  it("ürün adı görünür; parola alanı gizli; boş alanlarla gönderilemez", () => {
+    render(<LoginScreen onLogin={vi.fn()} />);
     expect(screen.getByText("ProPos")).toBeTruthy();
-    const key = screen.getByPlaceholderText("SYNC-XXXX-XXXX-XXXX");
-    expect(key.getAttribute("type")).toBe("password");
-    expect(screen.getByRole("button", { name: "Bağlan" }).disabled).toBe(true);
+    expect(screen.getByLabelText("Parola").getAttribute("type")).toBe("password");
+    expect(screen.getByRole("button", { name: "Giriş yap" }).disabled).toBe(true);
   });
 
-  it("kodu normalleştirip onPair'e verir; hata mesajını gösterir", async () => {
-    const onPair = vi.fn(async () => ({ ok: false, error: "Anahtar hatalı." }));
-    render(<PairingScreen onPair={onPair} />);
-    fireEvent.change(screen.getByPlaceholderText(/KAFE-101/), { target: { value: "kafe-1!" } });
-    fireEvent.change(screen.getByPlaceholderText("SYNC-XXXX-XXXX-XXXX"), { target: { value: " SYNC-A " } });
-    fireEvent.click(screen.getByRole("button", { name: "Bağlan" }));
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("Anahtar hatalı."));
-    expect(onPair).toHaveBeenCalledWith("KAFE-1", "SYNC-A");
+  it("kullanıcı adını küçük harfe indirip onLogin'e verir; hata mesajını gösterir", async () => {
+    const onLogin = vi.fn(async () => ({ ok: false, error: "Kullanıcı adı ya da parola hatalı." }));
+    render(<LoginScreen onLogin={onLogin} />);
+    fill(" Kasa.Ali ", "parola-123");
+    fireEvent.click(screen.getByRole("button", { name: "Giriş yap" }));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("Kullanıcı adı ya da parola hatalı."));
+    expect(onLogin).toHaveBeenCalledWith("kasa.ali", "parola-123");
   });
 
-  it("boş kod ana işletmeye (DEFAULT) bağlanır", async () => {
-    const onPair = vi.fn(async () => ({ ok: true }));
-    render(<PairingScreen onPair={onPair} />);
-    fireEvent.change(screen.getByPlaceholderText("SYNC-XXXX-XXXX-XXXX"), { target: { value: "K" } });
-    fireEvent.click(screen.getByRole("button", { name: "Bağlan" }));
-    await waitFor(() => expect(onPair).toHaveBeenCalledWith("DEFAULT", "K"));
-  });
-
-  it("çift tıklama iki istek göndermez", async () => {
+  it("çift gönderim iki istek göndermez", async () => {
     let resolve;
-    const onPair = vi.fn(() => new Promise((r) => { resolve = r; }));
-    render(<PairingScreen onPair={onPair} />);
-    fireEvent.change(screen.getByPlaceholderText("SYNC-XXXX-XXXX-XXXX"), { target: { value: "K" } });
-    const form = screen.getByRole("form", { name: "İşletmeye bağlan" });
+    const onLogin = vi.fn(() => new Promise((r) => { resolve = r; }));
+    render(<LoginScreen onLogin={onLogin} />);
+    fill("a.b", "parola-123");
+    const form = screen.getByRole("form", { name: "Giriş yap" });
     fireEvent.submit(form);
     fireEvent.submit(form);
-    expect(onPair).toHaveBeenCalledTimes(1);
+    expect(onLogin).toHaveBeenCalledTimes(1);
     await act(async () => resolve({ ok: true }));
   });
 
-  it("kilitli kurulumda kod değiştirilemez", () => {
-    render(<PairingScreen onPair={vi.fn()} initialTenantId="KAFE-1" locked />);
-    expect(screen.getByDisplayValue("KAFE-1").disabled).toBe(true);
-  });
-
   it("XSS: neden/mesaj metni HTML olarak yorumlanmaz", () => {
-    const { container } = render(<PairingScreen onPair={vi.fn()} reason={'<img src=x onerror="alert(1)">'} />);
+    const { container } = render(<LoginScreen onLogin={vi.fn()} reason={'<img src=x onerror="alert(1)">'} />);
     expect(container.querySelector("img")).toBe(null);
     expect(screen.getByText('<img src=x onerror="alert(1)">')).toBeTruthy();
     const lic = render(<LicenseBlockedScreen message={"<script>alert(1)</script>"} onRetry={vi.fn()} />);
@@ -117,10 +107,10 @@ describe("PinPad", () => {
 describe("DeviceGate (giriş akışı)", () => {
   const json = (s, b) => new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } });
 
-  it("eşleşmemiş cihazda POS hiç gösterilmez, eşleştirme ekranı gelir", async () => {
+  it("oturumsuz cihazda POS hiç gösterilmez, giriş ekranı gelir", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => json(200, { ok: true, app: "ProPos" })));
     render(<DeviceGate><div>POS-ICERIK</div></DeviceGate>);
-    await waitFor(() => expect(screen.getByText("Bu cihazı işletmenize bağlayın")).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("form", { name: "Giriş yap" })).toBeTruthy());
     expect(screen.queryByText("POS-ICERIK")).toBe(null);
   });
 
@@ -131,17 +121,30 @@ describe("DeviceGate (giriş akışı)", () => {
     expect(screen.queryByText("Çevrimdışı devam et")).toBe(null);
   });
 
-  it("eşleşmiş cihazda uygulama açılır; anahtar geçersizleşince eşleştirme ekranı üstte açılır", async () => {
-    localStorage.setItem("propos_sync_key_DEFAULT", "SYNC-K");
+  it("oturumlu cihazda uygulama açılır; oturum düşünce giriş ekranı üstte açılır (iş kaybolmaz)", async () => {
+    localStorage.setItem("propos_session", JSON.stringify({ token: "t", tenantId: "DEFAULT", username: "kasa" }));
     render(<DeviceGate><div>POS-ICERIK</div></DeviceGate>);
     expect(await screen.findByText("POS-ICERIK")).toBeTruthy();
     act(() => { window.dispatchEvent(new CustomEvent("propos-auth-required", { detail: { tenantId: "DEFAULT" } })); });
-    expect(screen.getByText(/anahtarı geçersiz ya da yenilendi/)).toBeTruthy();
+    expect(screen.getByText(/Oturum sona erdi/)).toBeTruthy();
     expect(screen.getByText("POS-ICERIK")).toBeTruthy();
   });
 
+  it("başarılı giriş oturumu kaydeder ve uygulamayı açar", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url) => (String(url).includes("/api/auth/login")
+      ? json(200, { ok: true, token: "tok", tenantId: "DEFAULT", username: "kasa.ali", userRole: "staff" })
+      : json(200, { ok: true, app: "ProPos" }))));
+    render(<DeviceGate><div>POS-ICERIK</div></DeviceGate>);
+    await screen.findByRole("form", { name: "Giriş yap" });
+    fireEvent.change(screen.getByLabelText("Kullanıcı adı"), { target: { value: "kasa.ali" } });
+    fireEvent.change(screen.getByLabelText("Parola"), { target: { value: "parola-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Giriş yap" }));
+    expect(await screen.findByText("POS-ICERIK")).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem("propos_session")).token).toBe("tok");
+  });
+
   it("lisans olayı lisans ekranını açar", async () => {
-    localStorage.setItem("propos_sync_key_DEFAULT", "SYNC-K");
+    localStorage.setItem("propos_session", JSON.stringify({ token: "t", tenantId: "DEFAULT", username: "kasa" }));
     render(<DeviceGate><div>POS-ICERIK</div></DeviceGate>);
     await screen.findByText("POS-ICERIK");
     act(() => { window.dispatchEvent(new CustomEvent("propos-license-blocked", { detail: { message: "Lisans süresi dolmuş." } })); });

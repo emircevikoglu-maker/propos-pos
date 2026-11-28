@@ -1,9 +1,10 @@
 // ProPos PHP Backend API iletişim servisi (imzalı oturum belirteci ile)
 //
-// Giriş katmanları:
-//  1) Cihaz eşleştirme: işletme kodu + bağlantı anahtarı (localStorage'da, cihaz güveni). Bir kez yapılır.
-//  2) Oturum belirteci: anahtarla alınır, sessionStorage'da (sekme kapanınca biter), 12 saat.
-//  3) Yönetici kilidi: PIN sunucuda doğrulanır → 4 saatlik yönetici belirteci (sessionStorage).
+// Giriş katmanları (3.9.0):
+//  1) Kullanıcı girişi: kullanıcı adı + parola → 30 günlük oturum (localStorage, `propos_session`). Kullanıcıyı kurucu ekler.
+//     Eski cihaz eşleştirme (bağlantı anahtarı) yalnızca geriye uyumluluk için okunur; arayüzde yok, 4.0'da kalkar.
+//  2) Yönetici kilidi: PIN sunucuda doğrulanır → 4 saatlik yönetici belirteci (sessionStorage).
+// Arka uç adresi: derlemede PROPOS_API_URL (Vercel ön yüz + Linux arka uç), yoksa aynı köken.
 
 const FOUNDER_TOKEN_KEY = "propos_founder_token";
 const tokenKey = (tid) => `propos_token_${tid}`;
@@ -11,6 +12,8 @@ const managerKey = (tid) => `propos_mgr_token_${tid}`;
 const syncKeyKey = (tid) => `propos_sync_key_${tid}`;
 
 export function getLocalSyncBaseUrl() {
+  const configured = typeof __API_URL__ !== "undefined" ? String(__API_URL__ || "") : "";
+  if (configured) return configured.replace(/\/+$/, "");
   if (typeof window !== "undefined" && (window.location.protocol === "http:" || window.location.protocol === "https:")) {
     return window.location.origin;
   }
@@ -37,12 +40,25 @@ export function getStoredSyncKey(tenantId) {
 export function setStoredSyncKey(tenantId, key) { rejectedKeys.delete(key); safeSet(localStorage, syncKeyKey(tenantId), key); }
 export function hasFounderSession() { return !!safeGet(sessionStorage, FOUNDER_TOKEN_KEY); }
 export function clearFounderSession() { safeDel(sessionStorage, FOUNDER_TOKEN_KEY); }
-export function isDevicePaired(tenantId) { return !!getStoredSyncKey(tenantId) || hasFounderSession(); }
+const SESSION_KEY = "propos_session";
+/** Kullanıcı oturumu: {token, tenantId, username, displayName, userRole} ya da null. */
+export function getUserSession() {
+  try {
+    const s = JSON.parse(safeGet(localStorage, SESSION_KEY) || "null");
+    return s && typeof s.token === "string" && typeof s.tenantId === "string" ? s : null;
+  } catch (e) { return null; }
+}
+function clearUserSession() { safeDel(localStorage, SESSION_KEY); }
+export function isDevicePaired(tenantId) {
+  const s = getUserSession();
+  return (!!s && s.tenantId === tenantId) || !!getStoredSyncKey(tenantId) || hasFounderSession();
+}
 export function hasManagerSession(tenantId) { return !!safeGet(sessionStorage, managerKey(tenantId)); }
 export function clearManagerSession(tenantId) { safeDel(sessionStorage, managerKey(tenantId)); }
 
-/** Cihaz eşleşmesini kaldırır: anahtar ve tüm oturumlar silinir. */
+/** Çıkış: kullanıcı oturumu, (eski) cihaz anahtarı ve tüm oturumlar silinir. Yerel veri (IndexedDB) kalır. */
 export function unpairDevice(tenantId) {
+  clearUserSession();
   safeDel(localStorage, syncKeyKey(tenantId));
   safeDel(sessionStorage, tokenKey(tenantId));
   safeDel(sessionStorage, managerKey(tenantId));
@@ -130,6 +146,32 @@ export async function pairDevice(tenantId, key) {
   return r;
 }
 
+/** Kullanıcı adı + parola ile giriş (3.9.0). Başarılıysa oturum ve etkin işletme kaydedilir. */
+export async function loginUser(username, password) {
+  try {
+    const res = await fetch(`${getLocalSyncBaseUrl()}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+    const out = await res.json().catch(() => ({}));
+    if (res.status === 403 && out.code === "LICENSE") return { ok: false, code: "LICENSE", error: out.error || "Lisans geçersiz." };
+    if (res.status === 429) {
+      const sec = Number(res.headers.get("Retry-After")) || out.retryAfter || 30;
+      return { ok: false, code: "RATE_LIMIT", error: out.error || `Çok fazla deneme. ${sec} sn bekleyin.` };
+    }
+    if (!res.ok || !out.ok || typeof out.token !== "string" || typeof out.tenantId !== "string") {
+      return { ok: false, code: out.code || "BAD_LOGIN", error: out.error || "Giriş başarısız." };
+    }
+    const session = { token: out.token, tenantId: out.tenantId, username: out.username || "", displayName: out.displayName || "", userRole: out.userRole || "staff" };
+    safeSet(localStorage, SESSION_KEY, JSON.stringify(session));
+    safeSet(localStorage, "propos_active_tenant_id", out.tenantId);
+    return { ok: true, ...session };
+  } catch (e) {
+    return { ok: false, code: "NETWORK", error: "Sunucuya ulaşılamadı." };
+  }
+}
+
 function requestAuth(tenantId) {
   const now = Date.now();
   if (now - lastAuthEventAt < 3000) return;
@@ -144,6 +186,8 @@ async function getToken(tenantId, { preferManager = false } = {}) {
     const mgr = safeGet(sessionStorage, managerKey(tenantId));
     if (mgr) return mgr;
   }
+  const user = getUserSession();
+  if (user && user.tenantId === tenantId) return user.token;
   const cached = safeGet(sessionStorage, tokenKey(tenantId));
   if (cached) return cached;
   const key = getStoredSyncKey(tenantId);
@@ -191,6 +235,7 @@ async function authedFetch(tenantId, path, options = {}, { preferManager = false
     safeDel(sessionStorage, tokenKey(tenantId));
     safeDel(sessionStorage, managerKey(tenantId));
     safeDel(sessionStorage, FOUNDER_TOKEN_KEY);
+    clearUserSession();
   }
   requestAuth(tenantId);
   return new Response(null, { status: 401 });

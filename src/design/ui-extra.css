@@ -37,7 +37,6 @@
 .offline-banner { margin: 12px 24px 0; padding: 12px 16px; border-radius: var(--r-md); background: var(--warning-soft); color: var(--warning); font-size: var(--fs-sm); display: flex; gap: 10px; align-items: center; }
 @media (max-width: 900px) { .pay-methods.is-4 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 900px) {
-  .cats .search { flex: 0 0 150px; }
   .cats .order-back { flex: none; }
   .busy-chip { display: none; }
   .mobile-ticket-bar span { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
@@ -118,3 +117,70 @@
   .boss > .kpi-hero .kpi-v { font-size: 32px; }
   .boss-head h1 { font-size: var(--fs-xl); }
 }
+
+/* Giriş / lisans ekranı (3.9.0) */
+.auth-wrap { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 16px; background: var(--bg); color: var(--text-1); }
+.auth-wrap.is-overlay, .auth-overlay > .auth-wrap { position: fixed; inset: 0; z-index: 200; background: rgba(8, 7, 6, .92); }
+.auth-card { width: min(420px, 100%); display: grid; gap: 16px; padding: 28px; }
+.auth-brand { font-size: var(--fs-sm); font-weight: var(--fw-head); color: var(--primary); letter-spacing: .04em; }
+.auth-title { font-size: var(--fs-2xl); font-weight: var(--fw-head); }
+.auth-note { padding: 12px 14px; border-radius: var(--r-md); background: var(--surface-2); color: var(--text-2); font-size: var(--fs-sm); display: grid; gap: 8px; }
+.auth-note.is-warn { background: var(--warning-soft); color: var(--warning); }
+.auth-error { color: var(--danger); font-size: var(--fs-sm); }
+@media (max-width: 480px) { .auth-card { padding: 20px; } }
+
+/* Adisyon satırı araçları: dar adisyon panelinde taşmasın (3.9.0) — adet + sil üstte, not çipleri altta sarar. */
+.line-tools { flex-wrap: wrap; align-items: center; padding-left: 10px; }
+.line-tools .btn-danger { margin-left: auto; }
+.line-notes { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+.line-notes .chip { white-space: nowrap; }
+.line-free { flex-basis: 100%; display: flex; gap: 8px; }
+.line-free .field-input { flex: 1; min-width: 0; }
+.table-sums { display: flex; gap: 18px; align-items: center; }
+.table-sums > span { display: grid; line-height: 1.2; }
+.table-sums b { font-size: var(--fs-lg); font-weight: var(--fw-head); }
+@media (max-width: 900px) { .table-sums { order: 5; flex-basis: 100%; justify-content: space-between; } }
+
+/* Responsive (3.9.0): dar ekranda tablo → kart listesi. Etiketler useTableLabels ile thead'den gelir. */
+@media (max-width: 700px) {
+  .dt-wrap { overflow: visible; margin: 0; }
+  .dt thead { display: none; }
+  .dt, .dt tbody { display: block; width: 100%; }
+  .dt tr { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; padding: 12px 14px; margin-bottom: 10px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface-2); }
+  .dt td { display: block; padding: 0; border: 0; text-align: left !important; min-width: 0; }
+  .dt td:first-child { grid-column: 1 / -1; font-weight: var(--fw-head); font-size: var(--fs-md); }
+  .dt td[data-label]::before { content: attr(data-label); display: block; font-size: var(--fs-xs); color: var(--text-3); font-weight: var(--fw-label); margin-bottom: 2px; }
+  .dt td:first-child::before { display: none; }
+  .dt td:not([data-label]) { grid-column: 1 / -1; text-align: right !important; }
+  .dt td:empty { display: none; }
+  .dt .cell-clip { max-width: none; white-space: normal; }
+  .dt tr:last-child td { border: 0; }
+}
+
+/* Mobil alt gezinme: ≤600 px'te 4 sekme + "Diğer" (Hick: az seçenek; 8 öğe 390 px'e sığmıyordu). */
+.rail-more { display: none; }
+.rail-more-back { position: fixed; inset: 0; z-index: 59; }
+.rail-more-pop { position: fixed; right: 8px; left: auto; top: auto; bottom: 76px; min-width: 220px; }
+.rail-more-pop button { display: flex; align-items: center; gap: 10px; width: 100%; }
+.rail-more-pop button[aria-current="page"] { color: var(--primary); }
+@media (max-width: 600px) {
+  .rail .rail-secondary { display: none; }
+  .rail-more { display: flex; }
+  .rail-btn { font-size: 11px; min-width: 0; }
+}
+.toolbar > .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.toolbar > .seg::-webkit-scrollbar { display: none; }
+
+/* Adisyon kategorileri: masaüstünde sütun (prototip), dar ekranda üstte geri + arama, altında kayan kategori şeridi. */
+.cat-list { display: contents; }
+@media (max-width: 900px) {
+  .cats { flex-wrap: wrap; gap: 8px; overflow: visible; }
+  .cats .search { flex: 1 1 160px; margin-bottom: 0 !important; }
+  .cat-list { display: flex; gap: 6px; flex-basis: 100%; overflow-x: auto; scrollbar-width: none; }
+  .cat-list::-webkit-scrollbar { display: none; }
+}
+@media (max-width: 900px) {
+  .order { grid-template-columns: minmax(0, 1fr); }
+  .cats, .products, .mobile-ticket-bar { min-width: 0; }
+}
+@media (max-width: 900px) { .cat-list .cat { flex: none; } }

@@ -19,7 +19,7 @@ const bundle = (entry) => esbuild.buildSync({
   target: "es2019",
   jsx: "automatic",
   loader: { ".js": "jsx" },
-  define: { "process.env.NODE_ENV": '"production"', __APP_VERSION__: JSON.stringify(pkg.version) },
+  define: { "process.env.NODE_ENV": '"production"', __APP_VERSION__: JSON.stringify(pkg.version), __API_URL__: JSON.stringify(process.env.PROPOS_API_URL || "") },
   legalComments: "none"
 }).outputFiles[0].text;
 

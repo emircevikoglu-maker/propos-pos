@@ -8,6 +8,7 @@ Restoran/kafe POS + bayi/lisans yönetimi. Türkçe arayüz. Ürün olarak satı
 - Eski tek dosya `ProPos_Hazir_Uygulama.html` (1,6 MB derlenmiş paket) okunmaz; gerekirse sadece `grep`/satır aralığı.
 
 ## Kayıt dosyaları (her iş sonunda güncelle)
+- `docs/plans/<sürüm>.md`: SÜRÜM PLANI — o sürümün tek iş kaydı. Sürüme başlarken yazılır; her adım yapıldıkça işaretlenir, karar/bulgu kısa not düşülür. Kısa ve eksiksiz; megabaytlık döküm değil. Güncel: `docs/plans/3.9.0.md`.
 - `TODO.md`: planlar (P0…P10), `[ ] [x] [~] [?]`, boyut S/M/L/XL. Yeni iş önce buraya plan olarak yazılır.
 - `CHANGELOG.md`: her değişiklik satırı (Eklendi/Değişti/Düzeltildi/Güvenlik/Kaldırıldı); sürüm `package.json` ile birlikte.
 - `docs/IDEAS.md`: fikir havuzu (İ-n); fikir iş sırasında araya sokulmaz, buraya yazılır.
@@ -28,16 +29,21 @@ Restoran/kafe POS + bayi/lisans yönetimi. Türkçe arayüz. Ürün olarak satı
 
 ## Mevcut yapı
 - `src/` React 18: `ui/` (YENİ arayüz: Shell, TablesView, OrderView, PaySheet, OpsSheet, Sheet, routes — `design-prototype/` düzeninin birebir karşılığı), `design/ui.css` (prototipten üretilir, elle düzenleme), `design/ui-extra.css`, `context/PosContext.jsx` (tek büyük context — bölünecek; sekme/masa URL'den türetilir), `components/views/*`, `components/modals/*`,
-  `components/auth/` (DeviceGate, PairingScreen, PinPad), `components/pos/OptionPicker`, `components/settings/ProductOptionsEditor`,
+  `components/auth/` (DeviceGate = giriş kapısı, LoginScreen, PinPad), `ui/page.jsx` (sayfa kalıbı: Page/Card/Kpi/Seg/ItemRow/SwitchRow, dar ekranda tablo→kart), `ui/settings/*`, `components/pos/OptionPicker`, `components/settings/ProductOptionsEditor`,
   `services/{apiService,realtime,merge,syncEngine,localDb}.js` (eşitleme/çevrimdışı), `pwa/` (service worker, kayıt, ikonlar), `design/` (tokenlar, skin.css, kutlamalar), `utils/productOptions.js` (çeşit/fiyat saf mantığı), `admin/` (kontrol paneli: AdminApp, adminApi, validation — POS paketine girmez).
 - `backend/`: `bootstrap.php` (ortak yükleyici; müşteri paketine giren dosyaları ister), `router.php` (POS), `control.php` (panel, ayrı giriş),
   `static.php`, `config.php` (`qs()` güvenli sorgu okuyucu, env ayarları), `Controllers/{Api,Control}Controller.php`,
-  `Services/{Auth,Tenant,Pin,Package,Throttle,Realtime,ZipBuilder}.php`, `Services/Storage/{Storage,FileStorage,SupabaseStorage,CachedStorage,StorageFactory,StorageUnavailable}.php`, `env.php` (.env), `cron/keepalive.php`. Depo: `PROPOS_STORAGE=file|supabase`; tenant yazımında `withTenantLock` + `baseRev`.
+  `Services/{Auth,Tenant,Pin,Package,Throttle,Realtime,ZipBuilder}.php` (kullanıcılar: `TenantService::saveUser/findUser/deleteUser`, giriş: `AuthService::loginUser`), `Services/Storage/{Storage,FileStorage,SupabaseStorage,CachedStorage,StorageFactory,StorageUnavailable}.php`, `env.php` (.env), `cron/keepalive.php`. Depo: `PROPOS_STORAGE=file|supabase`; tenant yazımında `withTenantLock` + `baseRev`.
 - `tests/`: `run.py` (koşucu), `php/index.php` + `php/lib.php` (bağımlılıksız çatı, ham soket HTTP), `php/suites/*`, `react/*.test.js(x)`.
 - Veri: `data/` (web'e kapalı): `default.json`, `tenants/<ID>.json`, `registry.json`, `config.json`, `audit.log`, `backups/`, `ratelimit/`.
 - Ortam: `PROPOS_DATA_DIR`, `PROPOS_DIST_DIR`, `PROPOS_FOUNDER_KEY`, `PROPOS_MAX_DB_BYTES`, `PROPOS_RL_POLL|ACTION|IP|CONTROL` ("kapasite:dolum/sn"), `PROPOS_RL_PENALTY`, `PROPOS_LOGIN_DELAY_MS`, `PROPOS_DEBUG` (yoksa hata çıktısı kapalı), `PROPOS_CORS_ORIGIN` (virgüllü liste/`*`), `PROPOS_STORAGE`, `PROPOS_CACHE[_TTL]`, `PROPOS_REALTIME`, `SUPABASE_*`. Tam liste: `docs/API.md`.
 
-## Giriş modeli (3 katman)
+## Giriş modeli (3.9.0'dan itibaren — kullanıcı kararı 28 Kasım)
+- Kullanıcı adı + parola. Kullanıcıları kurucu kontrol panelinden ekler (kayıt defterinde işletmenin altında `users[]`, parola `password_hash`). Cihaz eşleştirme / bağlantı anahtarı arayüzden kalktı; arka uçta tenant anahtarı yalnızca geçiş için duruyor (4.0'da silinir).
+- Oturum belirteci kullanıcıya görünmez, 30 gün, `localStorage`; parola değişince/kullanıcı kapatılınca düşer. Yönetici PIN'i aynen (aşağıda 3.).
+- Dağıtım: ön yüz Vercel (`PROPOS_API_URL` ile arka uca bağlanır), arka uç Linux PHP (`docs/DEPLOY.md`).
+
+## Giriş modeli (3.1-3.8, eski)
 1. Cihaz eşleştirme (bir kez): işletme kodu + bağlantı anahtarı → `localStorage`. Eşleşmemiş cihazda POS hiç açılmaz (DeviceGate). Anahtar yenilenince (panel) eski anahtar VE onunla alınmış tüm oturumlar anında düşer (token'da anahtar parmak izi `k`).
 2. Oturum: `/api/login` → 12 saat, `sessionStorage`. Lisans (askı/süre) hem girişte hem her senkronda sunucuda kontrol edilir → 403 `LICENSE` → lisans ekranı.
 3. Yönetici kilidi: PIN yalnızca sunucuda hash (`adminPinHash`, tenant verisinde). `/api/pin/verify` → 4 saatlik `manager` token. 6 hatada 5 dk kilit. İstemci PIN'i/uzunluğunu bilmez; senkron PIN'i taşımaz, istemciden gelen PIN/hash yok sayılır; eski düz PIN ilk erişimde hash'e çevrilir.
@@ -90,8 +96,11 @@ Güncel plan `TODO.md`, fikirler `docs/IDEAS.md`. Sıradaki: HTTPS rehberi (PWA 
 - Görsel iş bitmeden kabul edilmez: prototiple yan yana ekran görüntüsü, 1024×768 / 1280×800 / 1920×1080 / 390×844.
 - Sıkışıklık yok: panel başına tek birincil eylem, ikincil işlemler sheet'te; metin kırpma yok; hedefler ≥ 44 px.
 - Büyük/bekletilemez değişiklik → doğrudan commit + push (main); önemli ama acil değilse onay bekle. Git yoksa değişen dosyalar paylaşılır.
+- (28 Kasım) Gereksiz soru yok: yapı ve özellikler belli (KardoPOS kıyası + silinen her şey hedef). Testler geçince push et, "işimi bitirdim" yaz, dur. Tek istisna: tehlikeli iş (veri silme, güvenlik zayıflatma, geri alınamaz dış etki) → dur, sor; tehlikesizse NOTES'a not düş, devam.
 
 ## Arayüz kuralları
+- Tailwind KALIR (karar 28 Kasım): tek tasarım kaynağı `src/design/ui.css` tokenları; Tailwind teması bu CSS değişkenlerine bağlanır. Eski renkleri zorla boyayan `skin.css` eski ekranlar bitince silinir. Yeni ekranlarda prototip sınıfları + gerekirse token'a bağlı Tailwind yardımcıları; ham Tailwind renkleri (`stone-900`, `amber-500`) YASAK.
+- Responsive zorunlu: her ekran 390 / 768 / 1024 / 1280 / 1920'de denenir; dar ekranda tablo yerine kart, pencere alt sayfa.
 - Ağırlık: 400 gövde, 500 etiket, 600 başlık, 700 yalnızca toplam tutar. `font-black`/`font-extrabold` YASAK. `<b>`/`<strong>` yerine `font-semibold`.
 - Min. yazı 11-12 px; dokunma hedefi ≥ 44 px. Tek birincil renk (amber) + başarı/uyarı/tehlike + nötr.
 - POS ekranında pop-up/satış teklifi YOK; yükseltme önerileri yalnızca patron/arka ofis panelinde, sıklık sınırlı, kapatılabilir.
