@@ -27,7 +27,7 @@ Token ve verim:
 - Kayıp önleme (3.6-3.8 dersi): bir ekranı/bileşeni yeniden yazarken önce eski davranış listesi plana yazılır; yenisi listeyi karşılamadan eski silinmez.
 
 ## Kayıt dosyaları (her iş sonunda güncelle)
-- `docs/plans/<sürüm>.md`: SÜRÜM PLANI — o sürümün tek iş kaydı. Sürüme başlarken yazılır; her adım yapıldıkça işaretlenir, karar/bulgu kısa not düşülür. Kısa ve eksiksiz; megabaytlık döküm değil. Güncel: `docs/plans/3.10.0.md` (önceki: 3.9.0).
+- `docs/plans/<sürüm>.md`: SÜRÜM PLANI — o sürümün tek iş kaydı. Sürüme başlarken yazılır; her adım yapıldıkça işaretlenir, karar/bulgu kısa not düşülür. Kısa ve eksiksiz; megabaytlık döküm değil. Güncel: `docs/plans/3.10.0.md` (tamamlandı; iş günlüğü `docs/logs/3.10.0-is-gunlugu.md`; önceki: 3.9.0).
 - `TODO.md`: planlar (P0…P10), `[ ] [x] [~] [?]`, boyut S/M/L/XL. Yeni iş önce buraya plan olarak yazılır.
 - `CHANGELOG.md`: her değişiklik satırı (Eklendi/Değişti/Düzeltildi/Güvenlik/Kaldırıldı); sürüm `package.json` ile birlikte.
 - `docs/IDEAS.md`: fikir havuzu (İ-n); fikir iş sırasında araya sokulmaz, buraya yazılır.
@@ -47,12 +47,12 @@ Token ve verim:
 - Test sunucusu için ayrı port kullan (örn. 8599); kapatırken `Get-NetTCPConnection -LocalPort 8599 -State Listen` ile PID bul (State filtresi olmadan PID 0 döner, hata yağar).
 
 ## Mevcut yapı
-- `src/` React 18: `ui/` (YENİ arayüz: Shell, TablesView, OrderView, PaySheet, OpsSheet, Sheet, routes — `design-prototype/` düzeninin birebir karşılığı), `design/ui.css` (prototipten üretilir, elle düzenleme), `design/ui-extra.css`, `context/PosContext.jsx` (tek büyük context — bölünecek; sekme/masa URL'den türetilir), `components/views/*`, `components/modals/*`,
-  `components/auth/` (DeviceGate = giriş kapısı, LoginScreen, PinPad), `ui/page.jsx` (sayfa kalıbı: Page/Card/Kpi/Seg/ItemRow/SwitchRow, dar ekranda tablo→kart), `ui/settings/*`, `components/pos/OptionPicker`, `components/settings/ProductOptionsEditor`,
+- `src/` React 18: `ui/` (arayüz: Shell, TablesView, OrderView, ContentSheet, PaySheet, OpsSheet, GlobalSheets, BossView, IngredientSheet, Sheet, routes — `design-prototype/` düzeni), `design/ui.css` (prototipten üretilir, elle düzenleme), `design/ui-extra.css`, `design/skin.css` (yalnızca kontrol paneli paketi), `context/PosContext.jsx` (tek büyük context — bölünecek; sekme/masa URL'den türetilir), `print/` (fiş modeli + şablon + cihaz ayarı), `utils/{ledger,ingredients,voids,campaigns,boss}.js` (saf iş kuralları), `components/views/ZReportCard.jsx`,
+  `components/auth/` (DeviceGate = giriş kapısı, LoginScreen, PinPad), `ui/page.jsx` (sayfa kalıbı: Page/Card/Kpi/Seg/ItemRow/SwitchRow/HoldButton, dar ekranda tablo→kart), `ui/settings/*`, `components/settings/ProductOptionsEditor`,
   `services/{apiService,realtime,merge,syncEngine,localDb}.js` (eşitleme/çevrimdışı), `pwa/` (service worker, kayıt, ikonlar), `design/` (tokenlar, skin.css, kutlamalar), `utils/productOptions.js` (çeşit/fiyat saf mantığı), `admin/` (kontrol paneli: AdminApp, adminApi, validation — POS paketine girmez).
 - `backend/`: `bootstrap.php` (ortak yükleyici; müşteri paketine giren dosyaları ister), `router.php` (POS), `control.php` (panel, ayrı giriş),
   `static.php`, `config.php` (`qs()` güvenli sorgu okuyucu, env ayarları), `Controllers/{Api,Control}Controller.php`,
-  `Services/{Auth,Tenant,Pin,Package,Throttle,Realtime,ZipBuilder}.php` (kullanıcılar: `TenantService::saveUser/findUser/deleteUser`, giriş: `AuthService::loginUser`), `Services/Storage/{Storage,FileStorage,SupabaseStorage,CachedStorage,StorageFactory,StorageUnavailable}.php`, `env.php` (.env), `cron/keepalive.php`. Depo: `PROPOS_STORAGE=file|supabase`; tenant yazımında `withTenantLock` + `baseRev`.
+  `Services/{Auth,Tenant,Pin,Package,Throttle,Realtime,ZipBuilder}.php` (Package ve ZipBuilder yalnızca `control.php` tarafından yüklenir) (kullanıcılar: `TenantService::saveUser/findUser/deleteUser`, giriş: `AuthService::loginUser`), `Services/Storage/{Storage,FileStorage,SupabaseStorage,CachedStorage,StorageFactory,StorageUnavailable}.php`, `env.php` (.env), `cron/keepalive.php`. Depo: `PROPOS_STORAGE=file|supabase`; tenant yazımında `withTenantLock` + `baseRev`.
 - `tests/`: `run.py` (koşucu), `php/index.php` + `php/lib.php` (bağımlılıksız çatı, ham soket HTTP), `php/suites/*`, `react/*.test.js(x)`.
 - Veri: `data/` (web'e kapalı): `default.json`, `tenants/<ID>.json`, `registry.json`, `config.json`, `audit.log`, `backups/`, `ratelimit/`.
 - Ortam: `PROPOS_DATA_DIR`, `PROPOS_DIST_DIR`, `PROPOS_FOUNDER_KEY`, `PROPOS_MAX_DB_BYTES`, `PROPOS_RL_POLL|ACTION|IP|CONTROL` ("kapasite:dolum/sn"), `PROPOS_RL_PENALTY`, `PROPOS_LOGIN_DELAY_MS`, `PROPOS_DEBUG` (yoksa hata çıktısı kapalı), `PROPOS_CORS_ORIGIN` (virgüllü liste/`*`), `PROPOS_STORAGE`, `PROPOS_CACHE[_TTL]`, `PROPOS_REALTIME`, `SUPABASE_*`. Tam liste: `docs/API.md`.
@@ -66,7 +66,7 @@ Token ve verim:
 1. Cihaz eşleştirme (bir kez): işletme kodu + bağlantı anahtarı → `localStorage`. Eşleşmemiş cihazda POS hiç açılmaz (DeviceGate). Anahtar yenilenince (panel) eski anahtar VE onunla alınmış tüm oturumlar anında düşer (token'da anahtar parmak izi `k`).
 2. Oturum: `/api/login` → 12 saat, `sessionStorage`. Lisans (askı/süre) hem girişte hem her senkronda sunucuda kontrol edilir → 403 `LICENSE` → lisans ekranı.
 3. Yönetici kilidi: PIN yalnızca sunucuda hash (`adminPinHash`, tenant verisinde). `/api/pin/verify` → 4 saatlik `manager` token. 6 hatada 5 dk kilit. İstemci PIN'i/uzunluğunu bilmez; senkron PIN'i taşımaz, istemciden gelen PIN/hash yok sayılır; eski düz PIN ilk erişimde hash'e çevrilir.
-- Kurucu: ayrı kontrol paneli (yalnızca kurucu anahtarı). Uygulama içi bayi stüdyosu geçiş için duruyor, ileride kaldırılacak.
+- Kurucu: ayrı kontrol paneli (yalnızca kurucu anahtarı). Uygulama içi bayi stüdyosu 3.10.0'da kaldırıldı; POS'ta bayi/kurucu ucu yok.
 
 ## API (sözleşme — backend dili değişse de korunacak)
 - Hatalar: `{ok:false, error, code}`; kodlar `AUTH` 401, `BAD_KEY` 401, `BAD_PIN` 401, `LICENSE` 403, `NO_PIN` 409, `RATE_LIMIT` 429 + `Retry-After`.
@@ -74,7 +74,7 @@ Token ve verim:
 - Kontrol paneli (`control.php`): `POST /api/login {key}` (yalnızca kurucu), `GET /api/tenants` (+stats), `POST /api/tenants/save|rotate-key|delete`, `GET /api/package`, `GET /api/audit`. POS uçları burada YOK.
 - `POST /api/login {tenantId,key}` → `{token, role: founder|tenant}`; başlık `X-ProPos-Token`, 12 saat. Hatalı girişte 10 dk/8 deneme sınırı.
 - `GET /api/sync?tenantId&since=<rev>` → değişmediyse `{unchanged:true}`; `POST /api/sync?tenantId&deviceId` tüm durum (whole-state).
-- Kurucuya özel: `/api/tenants` (syncKey sunucu üretir), `/api/package` (müşteri ZIP: yalnızca o müşterinin verisi), `/api/apply-update`, `/api/prepare-github`, `/api/audit`. Açık: `/api/info`.
+- Kurucuya özel uçlar yalnızca panelde: `/api/tenants`, `/api/package` (müşteri ZIP: yalnızca o müşterinin verisi), `/api/audit`. POS'ta açık: `/api/info`.
 
 ## Yapılanlar (v3.1 — 24 Kasım 2026)
 - Test altyapısı (195 test, ~20 sn): normal + saldırgan (dizin aşımı, belirteç sahteciliği, çapraz işletme, yetki yükseltme, tip karışıklığı, boyut, başlık/denetim kaydı enjeksiyonu, CORS, sızıntı, kaba kuvvet, hız sınırı). Mutasyonla doğrulandı (savunma bozulunca test kırılıyor).
@@ -108,7 +108,7 @@ Token ve verim:
 - Bildirim/periodik işler: başta cron (5 dk), ileride socket/push.
 
 ## Yol haritası
-Güncel plan `TODO.md`, fikirler `docs/IDEAS.md`. Sıradaki: HTTPS rehberi (PWA için şart) → kampanya motoru → yazıcı ajanı (en son, çok önemli; marka/model/58-80 mm/bağlantı bilgisi kullanıcıdan beklenir) → roller → kalan yeniden tasarım.
+Güncel plan `TODO.md`, fikirler `docs/IDEAS.md`. Sıradaki: 3.11 roller/personel → HTTPS rehberi (PWA için şart) → yazıcı ajanı (en son, çok önemli; marka/model/58-80 mm/bağlantı bilgisi kullanıcıdan beklenir) → roller → kalan yeniden tasarım.
 
 ## Arayüz çalışma kuralı (kullanıcı kararı, 25 Kasım)
 - Yeni ekran/bileşen `design-prototype/` ile BİREBİR aynı sınıf, boşluk ve hareketle yapılır (giydirme/eşleme YOK). Prototipte olmayan ekranlar aynı bileşenlerle tasarlanır, önce kısa taslak onayı alınır.

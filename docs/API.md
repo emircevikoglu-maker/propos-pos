@@ -28,6 +28,14 @@ Yoklama, eylem ve IP kovaları ayrıdır (`PROPOS_RL_POLL|ACTION|IP`); aşımda 
 ## Kontrol paneli (`backend/control.php`, yalnızca kurucu)
 `POST /api/login {key}` · `GET /api/session` · `GET /api/tenants` (+istatistik) · `POST /api/tenants/save` · `POST /api/tenants/rotate-key` · `POST /api/tenants/delete` · `POST /api/users/save {tenantId, username, password?, role, displayName?, active?}` (parola yeni kullanıcıda zorunlu, ≥ 8) · `POST /api/users/delete {username}` · liste `tenants[].users[]` (hash'siz) · `GET /api/package` (müşteri ZIP'i) · `GET /api/audit`.
 
+## Senkron verisindeki alanlar (3.10.0 ekleri)
+Uç sözleşmesi değişmedi; durum paketine yeni alanlar eklendi (sunucu bilinmeyen alanları korur):
+- `voidLog[]` — iptal defteri (`id, timestamp, kind, tableName, name, qty, amount, afterSend, reason, user, staffId`); kimlikle birleşir.
+- `tables[].items[]` — `without[{ingredientId,name}]`, `sentQty`, `listPrice`, `campaignId`, `campaignName`.
+- `products[]` — `askContent`; `recipe[].fixed`.
+- `brandSettings.campaigns[]`, `brandSettings.printing {stations, footer}`.
+- Ürün olmayan satış satırları `productId: "__payment"`.
+
 ## CORS
 Varsayılan kapalı (uygulama kendi kökeninden çalışır). `PROPOS_CORS_ORIGIN`: tek köken, virgülle liste ya da `*`. Liste verilirse yalnızca isteğin `Origin`'i listedeyse yansıtılır (`Vary: Origin`). İzin verilen istek başlıkları: `Content-Type, X-ProPos-Token, Cache-Control, Pragma`; açığa çıkan: `Retry-After`. `/api/keepalive` bağımsızdır (her zaman `*`).
 

@@ -3,6 +3,34 @@
 Biçim: [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/). Sürüm numarası `package.json` ile birlikte artar.
 Başlıklar: Eklendi · Değişti · Düzeltildi · Güvenlik · Kaldırıldı.
 
+## [3.10.0] — 2026-11-28
+Satış masası tamamlandı. Plan: `docs/plans/3.10.0.md` · adım ve düşünce kaydı: `docs/logs/3.10.0-is-gunlugu.md`.
+### Eklendi
+- **Satışta ürün içeriği:** çeşit grupları + reçete içeriği (dokununca çıkar) + hazır/serbest not + adet. Ürün kartındaki ikon artık düğme; adisyon satırında "İçerik" (satırın bir kısmı da değiştirilebilir). Çıkarılan malzeme stoktan düşmez; adisyon, fiş ve caride "… yok" yazar. Ürün ayarı "Satışta içeriği sor".
+- **Malzeme paneli:** Stok sayfasından malzeme ekle/düzenle/sil (birim, stok, kritik sınır, birim maliyet, alıştan maliyet hesabı). Silme reçetelerden de çıkarır (geri al).
+- **Reçete düzenleyici:** miktar yerinde düzenlenir, çift satır olmaz, "satışta çıkarılabilir", maliyet ve brüt kâr, ürün penceresinden yeni malzeme.
+- **Gönder (n)** ve **fiş yazdırma:** yalnızca yeni adetler istasyona gider; kategori → Bar/Mutfak; 58/80 mm adisyon ve mutfak fişi; iptal ve tekrar fişi. Yönetim → Yazdırma.
+- **İptal kaydı:** gönderilmiş üründe neden seçimi; Analiz → İptaller; Z raporunda iptal toplamı; üst çubukta hatasız sipariş serisi.
+- **Patron görünümü** (`/patron`): KPI, 15 dk yoğunluk ve tahmin, önden haber, menü mühendisliği, en çok kazandıranlar, günün hikâyesi, hedef serisi, ekip, basılı tutarak gün kapanışı.
+- **Kampanya / happy hour:** Yönetim → Kampanyalar; Analiz → İndirimler.
+- Prototip ayrıntıları: masa kapanış onayı, geri al metninde para üstü, kutlama önizlemesi, liderlik tablosu anahtarı, arama ikonu.
+### Değişti
+- Eski pencereler prototip diline taşındı: tutarlı kısmi ödeme ve cariye yaz ödeme penceresinde adım; masa taşı/birleştir (geri al), stok, tahsilat, fiş inceleme, sıfırlama (yazarak + basılı tut), senkron, geri bildirim, yönetici PIN'i; çeşit düzenleyici.
+- Adisyon altı: İşlemler (ikon) · Gönder (n) · Ödeme.
+- `skin.css` yalnızca kontrol paneli paketinde; Tailwind renkleri `ui.css` tokenlarına bağlı.
+- Geniş ekranda rapor sayfaları ortalı ve sınırlı.
+### Düzeltildi
+- Kısmi ödeme / cari aktarım / tahsilat satırları ürün raporunda Latte ve Çay adedini şişiriyordu.
+- Kısmi ödemeden sonra cariye yazınca Z raporunda brüt iki kez sayılıyordu.
+- Notlu eklenen ürün notsuz satıra karışıp notunu kaybedebiliyordu.
+- "Yoğun saat" çipi ileri saatli kayıtlar yüzünden sürekli yanıyordu; demo satışları artık geleceğe yazılmıyor.
+- Adisyon kaydı silme artık iz bırakıyor ve geri alınabiliyor.
+### Güvenlik
+- POS API'sinden bayi/kurucu uçları kaldırıldı (404). `apply-update` (diske HTML yazan uç) ve `prepare-github` tamamen silindi. Paket üretici müşteri kurulumuna girmiyor.
+- İstemcideki lisans etkinleştirme katmanı kaldırıldı; lisans yalnızca sunucuda zorlanıyor.
+### Kaldırıldı
+- Uygulama içi bayi stüdyosu, kurucu girişi (Ctrl+Shift+K ve PIN alanı), GitHub güncelleme denetimi, `PosModals`, `OptionPicker`, eski ikon dosyası.
+
 ## [3.9.1] — 2026-11-28
 ### Eklendi
 - `php backend/users.php` (yalnızca komut satırı): `list`, `add <kullanici> <parola> [--tenant] [--role] [--name] [--allow-short]`, `passwd`, `disable`, `enable`, `delete`. `--allow-short` 4-7 karakterlik parolaya kurucunun bilinçli tercihiyle izin verir; panel/API en az 8 ister; 4'ün altı hiçbir yoldan geçmez.

@@ -13,7 +13,16 @@ npm run serve          # http://localhost:8586  (veya Mobil_ve_PC_Canli_Sunucu.p
 Apache/LiteSpeed: kök `.htaccess` her isteği `backend/router.php`'ye yönlendirir; `data/`, `backend/`, `src/` dışarıya kapalıdır.
 
 ## Arayüz ve yönlendirme
-Tasarım kaynağı `design-prototype/` (tokenlar, bileşenler, hareket). Uygulamadaki karşılığı `src/design/ui.css` (prototipten birebir) ve `src/ui/*` (React). Rapor/yönetim ekranları `src/ui/page.jsx` kalıbıyla (prototipin `.boss` ızgarası) kurulur. Adresler: `/masalar`, `/masalar/:id` (adisyon), `/stok`, `/esnaf`, `/analiz`, `/personel`, `/finans`, `/yonetim`; pencereler `?s=odeme|cesit|islem`. Geri tuşu önce pencereyi kapatır. Sunucu bilinmeyen yolları `index.html`'e düşürür.
+Tasarım kaynağı `design-prototype/` (tokenlar, bileşenler, hareket). Uygulamadaki karşılığı `src/design/ui.css` (prototipten birebir) ve `src/ui/*` (React). Rapor/yönetim ekranları `src/ui/page.jsx` kalıbıyla (prototipin `.boss` ızgarası) kurulur. Adresler: `/masalar`, `/masalar/:id` (adisyon), `/stok`, `/esnaf`, `/analiz`, `/patron`, `/personel`, `/finans`, `/yonetim`; pencereler `?s=…` (odeme, cesit, icerik, iptal, islem, stok, tahsilat, fis, malzeme, baglanti…). Geri tuşu önce pencereyi kapatır. Sunucu bilinmeyen yolları `index.html`'e düşürür.
+
+## Satış, içerik ve reçete
+- Malzemeler **Stok → Malzemeler** (yönetici PIN'i): ad, birim, kritik sınır, birim maliyet.
+- Reçete **Yönetim → Menü → ürün**: 1 adedin düşürdüğü malzeme ve miktar; "Çıkarılabilir" kapalıysa satışta çıkarılamaz. Çeşit seçeneklerine ek tüketim bağlanabilir.
+- Satışta ürün kartının sağ altındaki ikon ya da adisyon satırındaki **İçerik**: çeşit, malzeme çıkarma, not, adet.
+- Kampanyalar: **Yönetim → Kampanyalar**.
+
+## Fiş yazdırma
+**Gönder** yalnızca yeni adetleri bara/mutfağa ayırır; **Yönetim → Yazdırma**'da kategori → istasyon, 58/80 mm ve otomatik baskı ayarlanır. Tarayıcı yazdırma penceresi açılır. Kasada sessiz basmak için fiş yazıcısını Windows'ta varsayılan yapın ve Chrome'u ayrı bir kısayoldan şu bayrakla açın: `chrome.exe --kiosk-printing http://localhost:8586`. Android/iOS'ta yazdırma penceresi atlanamaz. Bu fişler **mali belge değildir**.
 
 ## Depolama
 Varsayılan dosya (`data/`). `PROPOS_STORAGE=supabase` + `.env` (`.env.example`) ile Supabase; yazma-geçişli yerel önbellek ve Realtime sinyali dahil. Kurulum, SQL ve keepalive cron: `docs/SUPABASE.md`. `.env` asla commit edilmez.

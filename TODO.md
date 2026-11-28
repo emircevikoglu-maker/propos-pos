@@ -4,16 +4,19 @@ Biçim: her plan bir hedef + adımlar. `[ ]` yapılacak, `[x]` bitti, `[~]` kıs
 Boyut: S (< 1 saat), M (yarım gün), L (1-2 gün), XL (daha fazla). Ayrıntı ve gerekçe: `docs/NOTES.md`. Fikir havuzu: `docs/IDEAS.md` (İ-n). Bitenler: `CHANGELOG.md`.
 Kural: her adım bitince `npm test` yeşil + CHANGELOG satırı.
 
-## GÜNCEL SÜRÜM: 3.10.0 (planlandı, başlanmadı) — `docs/plans/3.10.0.md`
-Önce okunacaklar o dosyanın 0. bölümünde. Kapsam: A eski pencereler → Sheet · B yazdırma P1-a · C iptal kaydı + rapor · D kampanya/happy hour · E yerel QR · F Tailwind'i tokenlara bağla + skin.css sil + 1920 kabulü. Yol haritası 3.11 (roller/personel) → 3.12 (patron) → 3.13 (QR menü/müşteri ekranı/KDS) → 3.14 (P14 çevrimdışı/lisans) → 3.15 (kod sağlığı) → 4.0 (syncKey kaldır, delta senkron).
-Biten: 3.9.0 (`docs/plans/3.9.0.md`: kullanıcı girişi, Vercel + Linux, kırık özellikler, responsive) · 3.9.1 (`php backend/users.php`, yerel kullanıcılar `pickys`/`emir`, çalışma yöntemi CLAUDE.md'de).
+## GÜNCEL SÜRÜM: 3.10.0 (tamamlandı) — `docs/plans/3.10.0.md`
+İş günlüğü: `docs/logs/3.10.0-is-gunlugu.md`. Sıradaki 3.11 (roller/personel) → 3.12 (patron PWA) → 3.13 (QR menü/müşteri ekranı/KDS) → 3.14 (P14 çevrimdışı/lisans) → 3.15 (kod sağlığı) → 4.0 (syncKey kaldır, delta senkron).
+3.10'dan kalan:
+- [ ] Yerel QR (`api.qrserver.com` kalksın): `qrcode-generator` bağımlılığı eklenecek — S
+- [ ] Gerçek yazıcıda 58/80 mm baskı ve iOS Safari yazdırma denemesi — kullanıcı
+- [ ] Kontrol panelini prototip diline taşı, `skin.css` tamamen silinsin — M (3.15)
 
 ## KardoPOS kıyas listesi — durum (kaynak `.chat-backup.md` 5. bölüm; hepsi hedef)
-Satış: ürün/kategori [x] · masalı satış/bölüm [x] · self servis/tezgah [x] hızlı satış · indirim/ikram/atık [x] · kampanya/happy hour [ ] 3.10-D · opsiyonel ürün (çeşit) [x] · müşteri ekranı [ ] 3.13 · masa tasarım modu/renk [ ] sonra · yazıcı/terminal [ ] 3.10-B + P1-b · sipariş görüntüleme (KDS) [ ] 3.13.
+Satış: ürün/kategori [x] · masalı satış/bölüm [x] · self servis/tezgah [x] hızlı satış · indirim/ikram/atık [x] · kampanya/happy hour [x] 3.10 · opsiyonel ürün (çeşit) [x] · müşteri ekranı [ ] 3.13 · masa tasarım modu/renk [ ] sonra · ürün içeriği/reçete paneli [x] 3.10 · yazıcı/terminal [~] tarayıcıdan fiş 3.10, ajan P1-b · sipariş görüntüleme (KDS) [ ] 3.13.
 Personel: ekleme (sınırsız) [x] · mesai/mola [ ] 3.11 · hedefler/bildirim [~] kutlama/hedef çubuğu · rol yönetimi [~] rol alanı var, izin 3.11 · görevlendirme [ ] 3.11 · denetim soruları/anket [ ] EK · mobil/tablet POS [x] PWA + responsive.
 Yönetim: adisyon yönetimi [x] · satılan ürün takibi [x] · kasa kapanış [x] Z + sayım (sunucuya yazım P7b) · tedarikçi [ ] P7 · müşteri işletme (cari) [x] · birim maliyet [x] · sabit maliyet [~] gider var, sabit/tekrarlayan ayrımı yok · personel ödemeleri [ ] 3.11.
 Stok: stoklu ürün/reçete [x] · stok girişi [x] · sayım [x] (oturum ekranı P7b) · atık [x] · depo/transfer/ürün talebi [ ] EK.
-Raporlar: satış sayısı [x] · ürün/kategori [x] · kuver [x] · masa raporu [~] · silinen ürün [ ] 3.10-C · personel satış [x] · stok tüketim [~] reçeteden · fatura gelir/gider [x] · ödeme tipi [x] · indirim [ ] 3.10-D · personel ürün alım [ ] 3.11.
+Raporlar: satış sayısı [x] · ürün/kategori [x] · kuver [x] · masa raporu [~] · silinen ürün [x] 3.10 · personel satış [x] · stok tüketim [~] reçeteden · fatura gelir/gider [x] · ödeme tipi [x] · indirim [x] 3.10 · personel ürün alım [ ] 3.11.
 Donanım/entegrasyon: barkod [x] · para çekmecesi [ ] P1-b · offline [x] (P14 ile güçlenir) · çoklu dil [ ] i18n · tartı [ ] EK · kiosk [ ] 3.13 ile · genel merkez [ ] EK · Paraşüt [ ] EK · mobil uygulama [x] PWA · paket servis/Yemeksepeti/Getir/Migros/Trendyol/Maxijett [ ] EK (iş ortaklığı) · QR menü [ ] 3.13 · ÖKC (Beko/Ingenico/Inpos/PAX/PAVO/PayGo) [ ] P1-c · BOSS patron [ ] 3.12 · IK/Management [~] personel + arka ofis · web sitesi sipariş [ ] QR menü uzantısı.
 
 ## ÖNCELİK DEĞİŞİKLİĞİ (25 Kasım, kullanıcı geri bildirimi) — P12, P13, P14 diğer her şeyin önünde
@@ -47,11 +50,11 @@ Durum: `react-router-dom` YOK; sekme ve açık masa `useState`; geri tuşu uygul
 
 ## P12 — yeni iş kalemleri (3.6.0 sonrası)
 - [x] (3.9.0) Dar ekranda `.dt` tabloları kart listesine çevir (tüm tablolar, `useTableLabels`)
-- [→] `ProductOptionsEditor`'ı prototip diliyle yeniden çiz — M (3.10-A12)
-- [→] Stok/tahsilat/fiş incele/sıfırlama onayı/bayi paneli modallarını `Sheet` ile yeniden yaz — M (3.10-A)
+- [x] (3.10.0) `ProductOptionsEditor` prototip diliyle
+- [x] (3.10.0) Eski pencereler `Sheet`'e taşındı; bayi paneli kaldırıldı
 - [x] (3.9.0) Giriş/lisans ekranları prototip dilinde (eşleştirme kalktı: kullanıcı girişi)
-- [→] Arama ikonu (3.10-F3), "Gönder" düğmesi (3.10-B3); mobil alt çubuk hizası [x] 3.9.0
-- [→] Yoğun saat çipi demo verisi (3.10-F4)
+- [x] (3.10.0) Arama ikonu, "Gönder" düğmesi; mobil alt çubuk hizası (3.9.0)
+- [x] (3.10.0) Yoğun saat çipi demo verisi
 - [ ] Shell/OrderView için bileşen testleri (MemoryRouter + sahte bağlam): ürün ekle, çeşit penceresi, ödeme, geri tuşu — M
 
 ## P12 — Prototip tasarıma TAM geçiş (giydirme yaklaşımı başarısız, terk edildi) — XL
@@ -61,7 +64,7 @@ Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını
 - [x] (3.6.0) P12-2 Kabuk: sol ray (ikon + etiket), üst çubuk (işletme, hedef çubuğu, seri, senkron noktası), dar ekranda alt gezinme.
 - [x] (3.6.0) P12-3 Masalar → Adisyon → Çeşit seçici → Ödeme (nakit/kart, para üstü) → 5 sn geri al; uçan ürün, sayaç sıçraması, rozet. Gerçek `motion.js` (prototipten); ikinci bir yeniden yazım değil.
 - [~] P12-4 Kutlamalar: mevcut `celebrateSale/Z` kancaları yeni ödeme akışında çalışıyor; kademe 0-3 görsel doğrulaması, "kutlamalar" sayfası, hatasız sipariş serisi göstergesi TODO — `PPCelebrate` kademe 0-3 gerçek kancalara bağlı; Z raporu basılı tut; yoğun saat/azaltılmış hareket kuralları; kutlamalar sayfası.
-- [ ] P12-5 Patron görünümü (KPI, yoğunluk, menü mühendisliği, günün hikâyesi, hedef serisi).
+- [x] (3.10.0) P12-5 Patron görünümü (KPI, yoğunluk, menü mühendisliği, günün hikâyesi, hedef serisi).
 - [~] P12-6 Kalan ekranlar prototip diliyle. (3.7.0) TAMAM: Stok/Reçete/Atık-Sayım, Personel, Finans + Z raporu/Kasa/Kuver, Esnaf. (3.7.1) Analiz da TAMAM (prototipin patron kartları — yoğunluk tahmini, menü matrisi, günün hikâyesi — P12-5'te ayrı eklenecek). (3.8.0) Yönetim da TAMAM. KALDI: giriş/eşleştirme/lisans ekranları ve modallar (stok, tahsilat, fiş incele, sıfırlama onayı, bayi paneli) + `ProductOptionsEditor` + `OptionPicker` (yalnızca testte). Bunlar bitince P12-7 (Tailwind/skin.css kaldır).
 - [ ] P12-7 (karar 28 Kasım: Tailwind KALIR) `tailwind.config.js` teması `ui.css` tokenlarına bağlanır; `skin.css` ve ham Tailwind renkleri (stone/amber…) eski ekranlar bitince kaldırılır; `font-black` ve ham renk yasağı testleri.
 - Kabul ölçütleri (sıkışıklık YASAK): ≥ 44 px hedef, birincil eylem 56 px; panel başına en çok 1 birincil + 2 ikincil eylem, gerisi "Daha fazla" sheet'inde; ekranın yarısından fazlası boş olmasın ama yoğun da olmasın: boşluk ölçeği 8/12/16/24; metin kırpma ("Demleme...") yok (2 satıra sarma); 1024×768, 1280×800, 1920×1080, 390×844'te ekran görüntüsü kontrolü (tarayıcı panelinde elle + `design-prototype` ile yan yana); animasyon süresi ≤ 600 ms, yalnızca transform/opacity.
@@ -80,13 +83,13 @@ Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını
 
 ## P1 — Yazdırma (en kritik özellik)
 ### P1-a Tarayıcıdan adisyon + mutfak fişi — M
-- [ ] Fiş şablonu bileşeni: 58/80 mm `@page`, ayar: kağıt genişliği, yazı boyutu, alt bilgi metni
-- [ ] Adisyon (bilgi fişi, "mali değeri yoktur" ibaresi): işletme adı/logo, masa, garson, satırlar + çeşit özeti + not, indirim, kısmi ödeme, toplam
-- [ ] Mutfak/bar fişi: yalnızca yeni eklenen satırlar (satıra `printedQty` alanı), büyük yazı, çeşitler belirgin, not vurgulu, fiyat yok
-- [ ] Kategori → istasyon yönlendirmesi (Kahveler → Bar, Tatlılar → Mutfak); ayar ekranı
-- [ ] "Siparişi gönder" düğmesi: yeni satırları fişe basar, `printedQty` günceller (tekrar basmaz)
-- [ ] Otomatik yazdır açık/kapalı; Chrome `--kiosk-printing` ile sessiz baskı rehberi (README)
-- [ ] Testler: şablon çıktısı escape (XSS), çeşitler fişte, ikinci basımda yalnızca yeni satırlar
+- [x] (3.10.0) Fiş şablonu 58/80 mm, kağıt genişliği ve alt bilgi ayarı (yazı boyutu ayarı yok)
+- [x] (3.10.0) Adisyon (bilgi fişi, "mali değeri yoktur" ibaresi): işletme adı/logo, masa, garson, satırlar + çeşit özeti + not, indirim, kısmi ödeme, toplam
+- [x] (3.10.0) Mutfak/bar fişi: yalnızca yeni eklenen satırlar (satıra `printedQty` alanı), büyük yazı, çeşitler belirgin, not vurgulu, fiyat yok
+- [x] (3.10.0) Kategori → istasyon yönlendirmesi (Kahveler → Bar, Tatlılar → Mutfak); ayar ekranı
+- [x] (3.10.0) "Siparişi gönder" düğmesi: yeni satırları fişe basar, `printedQty` günceller (tekrar basmaz)
+- [x] (3.10.0) Otomatik yazdır açık/kapalı; Chrome `--kiosk-printing` ile sessiz baskı rehberi (README)
+- [x] (3.10.0) Testler: şablon çıktısı escape (XSS), çeşitler fişte, ikinci basımda yalnızca yeni satırlar
 - [?] Kullanıcıdan: yazıcı modeli / genişlik / bağlantı
 ### P1-b Yerel yazdırma ajanı + YAZICI API'Sİ — L (en son yapılacak, ÇOK ÖNEMLİ)
 - [ ] API sözleşmesi (önce bunu yaz): `GET /v1/printers`, `POST /v1/print {job:"receipt|kitchen|label|z", printer, copies, model}`, `POST /v1/drawer`, `GET /v1/health`; iş modeli JSON (satırlar, çeşitler, notlar, toplamlar, işletme başlığı) — ESC/POS'a dönüşümü ajan yapar, POS yalnızca modeli gönderir
@@ -155,7 +158,7 @@ Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını
 - [ ] Personel PIN'i (hash), hızlı kullanıcı değiştirme ekranı
 - [ ] Rol/izin matrisi (garson, kasiyer, müdür, sahip; `sale:void`, `discount:>10`, `report:view`)
 - [ ] Müdür onayı (iptal, büyük indirim) + denetim kaydı
-- [→] Silinen ürün kaydı → "silinen ürün raporu" (3.10-C)
+- [x] (3.10.0) Silinen ürün kaydı ve raporu
 - [ ] Sunucu tarafı zorlama (whole-state senkron bitince mümkün; P2-b ile birlikte)
 - [?] "Personele özel hizmet" tanımı
 
@@ -170,7 +173,7 @@ Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını
 ## P7 — Özellikler (Kardo kıyasından, öncelik sırasıyla)
 - [x] İkram (mevcut "İkram / Zayi Kapat") + atık/sayım kaydı (3.4.0) — S
 - [x] Çeşit seçeneğine reçete — S
-- [→] Kampanya / happy hour kural motoru — M (3.10-D)
+- [x] (3.10.0) Kampanya / happy hour kural motoru
 - [x] Stok sayımı + fark kaydı (3.4.0; ayrı "sayım oturumu" ekranı TODO) — M
 - [x] Kuver + Z raporunda kuver — S
 - [x] Barkod alanı + arama kutusunda okutma — S
@@ -198,10 +201,10 @@ Kullanıcı kararı: geçiş yaklaşımı (skin.css ile Tailwind sınıflarını
 - [ ] POS'a CSP; QR'ı yerel üret (api.qrserver.com'a LAN adresi gidiyor) — S
 - [ ] Kontrol paneline TOTP + IP kısıtı — M
 - [ ] Kullanıcı başına giriş kilidi (IP'den bağımsız) + kısa parolaları (pickys/emir) internete açmadan uzat — S (NOTES "Kısa parola")
-- [ ] Uygulama içi bayi stüdyosunu ve GitHub güncelleme yolunu kaldır (`apply-update`, `prepare-github`, raw GitHub fetch) — M
+- [x] (3.10.0) Uygulama içi bayi stüdyosu ve GitHub güncelleme yolu kaldırıldı
 - [ ] Oturumu httpOnly çereze taşı / token TTL 15 dk + refresh — M (3.9.0 notu: Vercel ↔ Linux çapraz köken; çerez yerine başlık seçildi, NOTES)
 - [ ] 4.0: tenant bağlantı anahtarı (`syncKey`, `/api/login {tenantId,key}`, `rotate-key`) tamamen kaldırılır; yalnızca kullanıcı girişi + kurucu anahtarı — S
-- [→] QR'ı yerelde üret — S (3.10-E)
+- [ ] QR'ı yerelde üret — S (bağımlılık eklenecek)
 - [ ] Yedeği geri yüklemeyi bir kez gerçekten dene — S
 - [ ] Panoda: son senkron, hata oranı, tenant DB boyutu (kısmen var) — S
 

@@ -39,8 +39,8 @@ Son güncelleme: 28 Kasım 2026 (3.9.1). İ-3 kampanya motoru ve İ-12 yerel QR 
 - [ ] İ-24 Satış sonrası: kurulum + donanım (tablet, yazıcı, çekmece) paketi ayrı fiyat; yıllık peşin indirimi.
 
 ## 6. Yeni fikirler (28 Kasım, 3.9.1)
-- [→] İ-25 İptal kaydı + "gönderildikten sonra iptal" vurgusu (3.10 C): kaçağın bir numaralı göstergesi; neden çipleri tek dokunuş.
-- [→] İ-26 "Gönder (n)" düğmesi + yalnızca yeni satırları basan mutfak fişi (3.10 B): `sentQty`.
+- [x] İ-25 İptal kaydı + "gönderildikten sonra iptal" vurgusu (3.10 C): kaçağın bir numaralı göstergesi; neden çipleri tek dokunuş.
+- [x] İ-26 "Gönder (n)" düğmesi + yalnızca yeni satırları basan mutfak fişi (3.10 B): `sentQty`.
 - [ ] İ-27 Kullanıcı başına giriş kilidi + parola gücü göstergesi: IP'ye bağlı sınır dağıtık denemeye yetmez (kısa parola notu, NOTES).
 - [ ] İ-28 Personel hızlı geçişi: aynı tablette 4 haneli personel PIN'i ile "kim çalışıyor" değişir; giriş (işletme) ile personel (kişi) ayrılır. Satış/iptal kişiye yazılır (3.11).
 - [ ] İ-29 Masa birleştir / ayır: iki masayı tek adisyonda topla; adisyonu ürün ürün böl ("Böl" şu an eşit pay). Kafe/restoranda en sık istenen ikinci işlem.
@@ -55,6 +55,11 @@ Son güncelleme: 28 Kasım 2026 (3.9.1). İ-3 kampanya motoru ve İ-12 yerel QR 
 - [ ] İ-38 Müşteri sadakat (basit): telefonla kayıt, 10 kahveye 1 ikram; ücretsiz temel paket özelliği olabilir, yemek platformlarına karşı doğrudan müşteri bağı.
 - [ ] İ-39 Erişilebilirlik ve büyük yazı modu: yaşlı esnaf/garson için tek ayarla %115 ölçek (tokenlar zaten değişkenle).
 - [ ] İ-40 Hata görünürlüğü: istemci hatalarını (window.onerror) sunucuya özet olarak gönder, panelde listele; pilotta "bende çalışıyor" tartışmasını bitirir (İ-7 ile).
+
+## 7. 3.10.0 sırasında çıkan fikirler
+- [ ] İ-41 Çeşit "yerine geçer": "Yulaf sütü" seçilince reçetedeki normal süt otomatik düşülmesin (şu an elle "İçindekiler"den çıkarılıyor).
+- [ ] İ-42 Ekstra porsiyon: içerik penceresinde malzemeye "+1 ölçü" (fiyatlı/fiyatsız).
+- [ ] İ-43 Z raporuna kampanya indirimi satırı ve günün hikâyesine "kampanya saati cirosu".
 
 ## Dürüst notlar
 - En büyük risk özellik eksikliği değil, saha doğrulaması: gerçek bir işletmede iki tablet + bir yazıcıyla bir hafta çalışmadan hiçbir senkron/çevrimdışı varsayımı kanıtlanmış sayılmaz. Önce küçük bir pilot.

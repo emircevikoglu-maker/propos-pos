@@ -118,6 +118,19 @@ Nüanslar / riskler
 ## Fikir dosyası konumu
 - Kullanıcı "idea/ideas.md" dedi; dosya `docs/IDEAS.md`'de (tek kaynak, ikinci kopya açılmadı).
 
+## 3.10.0 kararları (28 Kasım)
+| Konu | Karar | Gerekçe |
+|---|---|---|
+| Bayi stüdyosu | POS'tan tamamen kalktı; yalnızca harici panel | Kullanıcı isteği; saldırı yüzeyi (diske HTML yazan uç) kapandı |
+| `skin.css` | Silinmedi, yalnızca panel paketinde | Panelin görünümü bozulmasın; panel taşınınca silinecek |
+| Satışta içerik | Dokunuş davranışı aynı; kart ikonundan içerik; "satışta içeriği sor" isteğe bağlı | Hız korunur, mekânsal hafıza bozulmaz |
+| Malzeme stoku | Düzenlemede stok miktarı değişmez | Her miktar değişimi iz bırakmalı |
+| Ödeme satırları | `__payment`; eski kayıtlar adından tanınır | Kullanıcı verisi yeniden yazılmaz |
+| İptal kaydı | Yalnızca gönderilmiş adet ya da tüm satır | Rapor gürültüsüz olsun |
+| Otomatik baskı | Cihaz ayarı, varsayılan kapalı | Yazıcısız cihazda pencere açılmasın |
+| Kampanya | `brandSettings.campaigns`; en uygunu, birikmez; satıra sabit | Açık adisyon sonradan değişmez |
+| Yerel QR | Ertelendi | Yeni paket indirmek onay ister; `api.qrserver.com`'a hâlâ LAN adresi gidiyor |
+
 ## Açık sorular (kullanıcıya)
 1. Yazıcı: marka/model, 58 mm mi 80 mm mi, bağlantı (USB/ağ/Bluetooth), mutfak ve bar ayrı yazıcı mı? (3.10 tarayıcı baskısı bunu beklemez; P1-b ajanı bekler.)
 5. Mali müşavir teyidi: adisyon (bilgi fişi) ibaresi ve zorunluluğu, e-Arşiv mi ÖKC mi (3.10 plan 5. bölüm).
