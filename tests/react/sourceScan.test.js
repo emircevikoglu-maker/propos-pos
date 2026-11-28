@@ -73,4 +73,13 @@ describe("kaynak taraması", () => {
   it("arayüz kuralı: font-black / font-extrabold kullanılmaz", () => {
     expect(grep(/font-black|font-extrabold/, (f) => rel(f) !== "design/skin.css")).toEqual([]);
   });
+
+  it("arayüz kuralı: POS kodunda ham Tailwind rengi yok (renkler ui.css tokenlarından; kontrol paneli ayrı)", () => {
+    expect(grep(/(bg|text|border|from|to|via|ring|accent)-(stone|amber|rose|emerald|orange|blue)-\d/, (f) => !rel(f).startsWith("admin/") && f.endsWith(".jsx"))).toEqual([]);
+  });
+
+  it("skin.css POS paketine girmez (yalnızca kontrol paneli)", () => {
+    const build = fs.readFileSync(path.resolve(SRC, "../scripts/build.js"), "utf8");
+    expect(build).toMatch(/const css = baseCss \+ readDesign\(\["ui\.css", "ui-extra\.css"\]\);/);
+  });
 });
