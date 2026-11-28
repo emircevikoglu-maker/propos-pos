@@ -1,6 +1,6 @@
 // ProPos Kurumsal POS - Başlangıç Sabitleri ve Varsayılan Veri Şablonları
 
-export const PROTECTED_TABS = ["analytics", "staff", "finance", "settings"];
+export const PROTECTED_TABS = ["analytics", "boss", "staff", "finance", "settings"];
 
 export const INITIAL_ZONES = ["Bahçe", "İç Mekan", "Teras", "Paket / Gel-Al"];
 export const INITIAL_CATEGORIES = ["Kahveler", "Soğuk İçecekler", "Tatlılar", "Atıştırmalıklar", "Ekstralar"];
@@ -232,6 +232,7 @@ export function generateInitialSales() {
     const template = sampleOrders[idx % sampleOrders.length];
     const d = new Date(now);
     d.setHours(hr, (idx * 13) % 55, 0, 0);
+    if (d > now) return; // demo: henüz gelmemiş saate satış yazılmaz
     const total = template.items.reduce((s, i) => s + i.price * i.qty, 0);
     sales.push({
       id: `sl-today-${idx + 1}`,

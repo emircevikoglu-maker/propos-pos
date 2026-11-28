@@ -4,6 +4,7 @@ export const TAB_PATHS = {
   esnaf: "/esnaf",
   inventory: "/stok",
   analytics: "/analiz",
+  boss: "/patron",
   staff: "/personel",
   finance: "/finans",
   settings: "/yonetim"

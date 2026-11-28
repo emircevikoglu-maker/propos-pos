@@ -4,7 +4,7 @@ import { PPMotion, PPCelebrate } from "./motion";
 import { mountIcons } from "./icons";
 
 const KEY = (tid) => `propos_celebrate_v1_${tid || "DEFAULT"}`;
-export const DEFAULT_SETTINGS = { enabled: true, motion: "auto", sound: false, goal: 0, autoSimplify: true };
+export const DEFAULT_SETTINGS = { enabled: true, motion: "auto", sound: false, goal: 0, autoSimplify: true, leaderboard: false };
 export const NON_REVENUE = ["İkram / İptal", "Esnaf Cariye Yazıldı"];
 export const STREAK_STEP = 25;
 const MIN_HISTORY_DAYS = 7; // rekor için en az bu kadar geçmiş gün gerekir (ilk günlerde "rekor" sahte olur)
@@ -20,6 +20,7 @@ export function loadCelebrationSettings(tenantId) {
     if (raw.motion === "reduce" || raw.motion === "auto") s.motion = raw.motion;
     if (typeof raw.sound === "boolean") s.sound = raw.sound;
     if (typeof raw.autoSimplify === "boolean") s.autoSimplify = raw.autoSimplify;
+    if (typeof raw.leaderboard === "boolean") s.leaderboard = raw.leaderboard;
     const g = Number(raw.goal);
     if (Number.isFinite(g) && g >= 0 && g <= 1e9) s.goal = g;
     return s;
@@ -43,7 +44,7 @@ export const revenueSales = (sales) => (Array.isArray(sales) ? sales : []).filte
 
 /** Son 10 dakikada 8+ ödeme = yoğun saat (kutlamalar sadeleşir). */
 export function isBusyNow(sales, now = Date.now()) {
-  return revenueSales(sales).filter((s) => now - Date.parse(s.timestamp) < 10 * 60000).length >= 8;
+  return revenueSales(sales).filter((s) => { const age = now - Date.parse(s.timestamp); return age >= 0 && age < 10 * 60000; }).length >= 8;
 }
 
 /**
@@ -98,6 +99,18 @@ export function celebrateZReport({ count, net, formatMoney, onClose }) {
     stats: [{ label: "İşlem", value: count }, { label: "Net ciro", value: Math.round(net), fmt: (n) => (formatMoney ? formatMoney(n) : `₺${Math.round(n)}`) }],
     onClose
   });
+}
+
+/** Ayarlar'dan deneme: günde-bir-kez ve soğuma kayıtlarını sıfırlayıp anı oynatır (satış verisine dokunmaz). */
+export function previewMoment(kind) {
+  const samples = {
+    firstSale: { sub: "Masa 3 · ₺215" }, goal: { sub: "₺12.000 / ₺12.000" }, record: { sub: "₺16.200 · önceki en iyi ₺15.800" },
+    streak: { n: STREAK_STEP }, zReport: { sub: "96 işlem · net ciro ₺11.380", stats: [{ label: "İşlem", value: 96 }, { label: "Net ciro", value: 11380, fmt: (n) => `₺${Math.round(n)}` }] }
+  };
+  if (!samples[kind]) return null;
+  PPCelebrate.resetDay();
+  PPCelebrate.resetCooldown();
+  return PPCelebrate.moment(kind, samples[kind]);
 }
 
 /** Günlük hedef ilerlemesi 0..1 (hedef yoksa null). */

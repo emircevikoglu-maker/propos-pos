@@ -17,12 +17,14 @@ import { StaffView } from "./StaffView";
 import { FinanceView } from "./FinanceView";
 import { SettingsView } from "./SettingsView";
 import { GlobalSheets } from "./GlobalSheets";
+import { BossView } from "./BossView";
 
 const NAV = [
   { id: "pos", label: "Masalar", icon: "grid" },
   { id: "inventory", label: "Stok", icon: "box" },
   { id: "esnaf", label: "Esnaf", icon: "bag" },
   { id: "analytics", label: "Analiz", icon: "chart" },
+  { id: "boss", label: "Patron", icon: "trophy" },
   { id: "staff", label: "Personel", icon: "users" },
   { id: "finance", label: "Finans", icon: "cash" },
   { id: "settings", label: "Yönetim", icon: "sliders" }
@@ -217,6 +219,7 @@ export function Shell() {
             <Route path="/stok" element={<section className="view"><StockView /></section>} />
             <Route path="/esnaf" element={<section className="view"><EsnafView /></section>} />
             <Route path="/analiz" element={<section className="view">{guard(isAdminUnlocked, <AnalyticsView />)}</section>} />
+            <Route path="/patron" element={<section className="view" aria-label="Patron">{guard(isAdminUnlocked, <BossView />)}</section>} />
             <Route path="/personel" element={<section className="view">{guard(isAdminUnlocked, <StaffView />)}</section>} />
             <Route path="/finans" element={<section className="view">{guard(isAdminUnlocked, <FinanceView />)}</section>} />
             <Route path="/yonetim" element={<section className="view">{guard(isAdminUnlocked, <SettingsView />)}</section>} />
